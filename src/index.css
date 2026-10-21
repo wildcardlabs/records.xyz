@@ -273,7 +273,10 @@
   .t-body { font: 500 13px/1.65 var(--font-mono-stack); color: var(--fg-muted); }
   .t-lede { font: 500 13.5px/1.65 var(--font-mono-stack); color: var(--fg-muted); }
   .t-small { font: 500 12px/1.6 var(--font-mono-stack); }
-  .t-fig { font: 500 11.5px/1.6 var(--font-mono-stack); }
+  /* inside figures everything sits on one scale: 13/600 titles, 12/1.6 body, 12 tables and code */
+  .t-fig { font: 500 12px/1.6 var(--font-mono-stack); }
+  .t-fig-title { font: 600 13px/1.4 var(--font-mono-stack); letter-spacing: -0.2px; color: var(--fg); }
+  .t-fig-body { font: 500 12px/1.6 var(--font-mono-stack); color: var(--fg-muted); }
   .t-label {
     font: 400 10px/1.4 var(--font-mono-stack);
     letter-spacing: 0.14em;
@@ -353,7 +356,7 @@
   .code {
     margin: 0;
     padding: 14px 16px;
-    font: 500 11.5px/1.7 var(--font-mono-stack);
+    font: 500 12px/1.7 var(--font-mono-stack);
     color: var(--fg);
     white-space: pre;
     overflow-x: auto;

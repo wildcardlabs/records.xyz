@@ -65,7 +65,8 @@ export default function DesignSystem() {
               ["t-h3", "18 / 600", "feature title, first letter capitalised"],
               ["t-lede", "13.5 / 1.65", "Taste tests, benchmarks, and self-improvement loops drive measurable crunch."],
               ["t-body", "13 / 1.65", "Body copy sits in warm grey so the ink headline carries the weight."],
-              ["t-fig", "11.5 / 1.6", "figure copy: 0x4f3a…c91e · base · expires 2027-01-01"],
+              ["t-fig-title", "13 / 600", "Feature title inside a figure"],
+              ["t-fig-body", "12 / 1.6", "figure body, tables and code all sit on 12px so panels read as one system."],
               ["t-label", "10 / 0.14em / upper", "layer 01 · kitchen.yaml · pass"],
               ["t-eyebrow", "11 / blue / lower", "# section name"],
             ].map(([cls, spec, sample]) => (
@@ -237,8 +238,8 @@ export default function DesignSystem() {
                 <button key={num} type="button" className={`hover-wash flex w-full gap-4 px-5 py-5 text-left ${i === 1 ? "wash" : ""}`}>
                   <span className="text-[12px] text-blue">{num}</span>
                   <span>
-                    <span className="t-h3 block">{t}</span>
-                    <span className="t-body block text-[12.5px]">{b}</span>
+                    <span className="t-fig-title block">{t}</span>
+                    <span className="t-fig-body block">{b}</span>
                   </span>
                 </button>
               ))}

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
+import { StatusMark, type RowStatus } from "@/components/record/StatusMark"
 import { Figure, FigSplit, Section, SectionHeader, Eyebrow, StatRow, LivePill, StatusText, Code, k, s, c, n, p, FaqRow } from "@/components/wrap"
 
 const steps = [
@@ -13,12 +14,12 @@ const steps = [
   { num: "03", title: "Publish", body: "The name owner writes every listing and proof to the resolver in one transaction." },
 ]
 
-const example: { chain: string; account: string; type: string; status: string; tone: "ok" | "wait" | "err"; expires: string }[] = [
-  { chain: "mainnet", account: "0xd8da…6045", type: "eoa", status: "verified", tone: "ok", expires: "2027-01-01" },
-  { chain: "mainnet", account: "0x9a6b…31c0", type: "contract", status: "verified", tone: "ok", expires: "2027-06-30" },
-  { chain: "base", account: "0xb8c2…67d5", type: "contract", status: "verified", tone: "ok", expires: "2026-12-01" },
-  { chain: "base", account: "0x41e0…8a2f", type: "7702", status: "verified", tone: "ok", expires: "2027-03-15" },
-  { chain: "optimism", account: "0x77ab…91fe", type: "eoa", status: "expired", tone: "err", expires: "2026-10-01" },
+const example: { chain: string; account: string; type: string; status: string; expires: string }[] = [
+  { chain: "mainnet", account: "0xd8da…6045", type: "eoa", status: "verified", expires: "2027-01-01" },
+  { chain: "mainnet", account: "0x9a6b…31c0", type: "contract", status: "verified", expires: "2027-06-30" },
+  { chain: "base", account: "0xb8c2…67d5", type: "contract", status: "verified", expires: "2026-12-01" },
+  { chain: "base", account: "0x41e0…8a2f", type: "7702", status: "verified", expires: "2027-03-15" },
+  { chain: "optimism", account: "0x77ab…91fe", type: "eoa", status: "expired", expires: "2026-10-01" },
 ]
 
 export default function Home() {
@@ -72,7 +73,7 @@ export default function Home() {
                   <TableCell>{r.chain}</TableCell>
                   <TableCell className="tabular">{r.account}</TableCell>
                   <TableCell><Badge variant="dim">{r.type}</Badge></TableCell>
-                  <TableCell><Badge variant={r.tone}>{r.status}</Badge></TableCell>
+                  <TableCell><StatusMark status={r.status as RowStatus} /></TableCell>
                   <TableCell className="text-right">{r.expires}</TableCell>
                 </TableRow>
               ))}
@@ -93,11 +94,11 @@ export default function Home() {
           <FigSplit>
             <div className="divide-y divide-line">
               {steps.map((st) => (
-                <div key={st.num} className="flex gap-4 px-5 py-5">
-                  <span className="text-[12px] text-blue">{st.num}</span>
+                <div key={st.num} className="flex gap-4 px-5 py-4">
+                  <span className="text-[11px] text-blue">{st.num}</span>
                   <span>
-                    <span className="t-h3 block">{st.title}</span>
-                    <span className="t-body block text-[12.5px]">{st.body}</span>
+                    <span className="t-fig-title block">{st.title}</span>
+                    <span className="t-fig-body block">{st.body}</span>
                   </span>
                 </div>
               ))}
