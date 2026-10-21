@@ -1,5 +1,7 @@
-import { type Address, type Hex, encodeFunctionData, namehash } from "viem"
-import { dataResolverAbi } from "./abis"
+import { type Address, type Hex, encodeFunctionData, namehash, toHex } from "viem"
+import { packetToBytes } from "viem/ens"
+import { dataResolverAbi, nameKeyedResolverAbi } from "./abis"
+import type { WriteFlavour } from "./capabilities"
 import { CHAINS_KEY, encodeChains, encodeListing, encodeProof, listingKey, proofKey } from "@/lib/ensip28"
 
 export type PublishPlan = {
@@ -11,12 +13,21 @@ export type PublishPlan = {
   removals: { chainId: number; account: Address }[]
 }
 
-/** Build the `multicall(bytes[])` calldata list that publishes a plan to the resolver. */
-export function buildPublishCalls(name: string, plan: PublishPlan): Hex[] {
+/**
+ * Build the `multicall(bytes[])` calldata list that publishes a plan to the resolver.
+ * `flavour` picks the setter: v1-style `setData(bytes32 node, …)` or the ENSv2
+ * PermissionedResolver's `setData(bytes name, …)` keyed by the DNS-encoded name.
+ */
+export function buildPublishCalls(name: string, plan: PublishPlan, flavour: WriteFlavour = "node"): Hex[] {
   const node = namehash(name)
+  const dns = toHex(packetToBytes(name))
   const calls: Hex[] = []
   const set = (key: string, value: Hex) =>
-    calls.push(encodeFunctionData({ abi: dataResolverAbi, functionName: "setData", args: [node, key, value] }))
+    calls.push(
+      flavour === "name"
+        ? encodeFunctionData({ abi: nameKeyedResolverAbi, functionName: "setData", args: [dns, key, value] })
+        : encodeFunctionData({ abi: dataResolverAbi, functionName: "setData", args: [node, key, value] })
+    )
 
   const chainIds = Object.keys(plan.listings).map(Number).sort((a, b) => a - b)
   for (const chainId of chainIds) set(listingKey(chainId), encodeListing(plan.listings[chainId]))

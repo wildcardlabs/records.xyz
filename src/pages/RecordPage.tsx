@@ -12,6 +12,7 @@ import { AddAccountDialog } from "@/components/record/AddAccountDialog"
 import { NetworkSelect } from "@/components/record/NetworkSelect"
 import { useRecord, recordQueryKey } from "@/hooks/useRecord"
 import { useNameOwner } from "@/hooks/useNameOwner"
+import { usePublishAuthority } from "@/hooks/usePublishAuthority"
 import { useDrafts } from "@/hooks/useDrafts"
 import { chainById, DEFAULT_RECORDS_CHAIN, RECORDS_CHAINS } from "@/lib/ens/chains"
 import { dataResolverAbi } from "@/lib/ens/abis"
@@ -56,8 +57,9 @@ export default function RecordPage() {
   const qc = useQueryClient()
   const [dialog, setDialog] = useState<{ open: boolean; chainId?: number }>({ open: false })
 
-  const isOwner = sameAddr(address, owner.data?.owner)
   const data = record.data
+  const authority = usePublishAuthority(name ?? undefined, recordsChainId, data?.resolver, data?.capabilities, address, owner.data?.owner)
+  const canPublish = authority.data?.canPublish ?? false
 
   // merge on-chain rows with local drafts and removals
   const rows: Row[] = useMemo(() => {
@@ -103,7 +105,7 @@ export default function RecordPage() {
       plan.listings[chainId] = merged
     }
     plan.proofs = drafts.adds.map((d) => ({ chainId: d.chainId, account: d.account, expiresAt: BigInt(d.expiresAt), signature: d.signature }))
-    const calls = buildPublishCalls(name, plan)
+    const calls = buildPublishCalls(name, plan, data.capabilities?.writeFlavour ?? "node")
     try {
       if (walletChainId !== recordsChainId) await switchChainAsync({ chainId: asChainId(recordsChainId) })
       const hash = await writeContractAsync({ address: data.resolver, abi: dataResolverAbi, functionName: "multicall", args: [calls], chainId: asChainId(recordsChainId) })
@@ -170,10 +172,24 @@ export default function RecordPage() {
 
         {data && data.resolver && !data.supportsData ? (
           <div className="mt-4 border border-line bg-paper px-4 py-3 text-[12px]">
-            <StatusText tone="wait">resolver does not implement ENSIP-24 data records.</StatusText>{" "}
+            <StatusText tone="wait">this name's resolver cannot {data.capabilities?.readsData ? "write" : "store"} data records.</StatusText>{" "}
             <span className="text-ink-muted">
-              the resolver at <a className="link-blue" href={`${explorer}/address/${data.resolver}`} target="_blank" rel="noreferrer">{shortAddr(data.resolver)}</a> has no <code>data(bytes32,string)</code> profile, so nothing can be listed under this name until it is migrated to a resolver that does.
+              owned accounts are ENSIP-24 data records. the resolver at{" "}
+              <a className="link-blue" href={`${explorer}/address/${data.resolver}`} target="_blank" rel="noreferrer">{shortAddr(data.resolver)}</a>{" "}
+              {data.capabilities?.readsData ? "answers data reads but exposes no setData, so nothing can be published through it." : "does not answer data(bytes32,string)."}{" "}
+              ENSv2 resolvers support them: {recordsChainId === 11155111 ? (
+                <>upgrade or re-register the name in the <a className="link-blue" href="https://sepolia.app.ens.domains/" target="_blank" rel="noreferrer">Sepolia ENS App</a>.</>
+              ) : (
+                <>upgrade the name to ENSv2 in the <a className="link-blue" href="https://app.ens.domains/" target="_blank" rel="noreferrer">ENS App</a> once ENSv2 is activated on mainnet.</>
+              )}
             </span>
+          </div>
+        ) : null}
+        {data?.capabilities && data.supportsData ? (
+          <div className="mt-4 text-[11px] text-ink-dim">
+            resolver <a className="link-blue" href={`${explorer}/address/${data.resolver}`} target="_blank" rel="noreferrer">{shortAddr(data.resolver!)}</a>
+            {" · "}{data.capabilities.writeFlavour === "name" ? "ENSv2 permissioned resolver" : data.capabilities.canModifyName ? "ENSv2 public resolver" : "v1-style resolver"}
+            {" · "}data records {data.capabilities.erc165Data ? "advertised via ERC-165" : "detected by probing"}
           </div>
         ) : null}
         {data?.chains.some((c) => c.malformed) ? (
@@ -215,10 +231,14 @@ export default function RecordPage() {
               <>
                 <Button variant="outline" onClick={() => setDialog({ open: true })}>+ add connected account</Button>
                 <span className="t-body">
-                  {isOwner ? (
-                    <><LivePill pulse={false}>owner</LivePill> {shortAddr(address!)} can publish.</>
+                  {authority.isLoading ? (
+                    <>checking whether {shortAddr(address!)} can write records…</>
+                  ) : canPublish ? (
+                    <><LivePill pulse={false}>{authority.data?.via === "owner" ? "owner" : "authorised"}</LivePill> {shortAddr(address!)} can publish{authority.data?.via === "roles" ? " (resolver role)" : authority.data?.via === "canModifyName" ? " (ENSv2 registry)" : ""}.</>
                   ) : owner.data?.owner ? (
-                    <>{shortAddr(address!)} is not the owner ({shortAddr(owner.data.owner)}). sign consents here, then connect the owner wallet to publish.</>
+                    <>{shortAddr(address!)} cannot write records for this name (owner {shortAddr(owner.data.owner)}{owner.data.source ? ` · ${owner.data.source}` : ""}). sign consents here, then connect the owner wallet to publish.</>
+                  ) : data?.capabilities?.roles || data?.capabilities?.canModifyName ? (
+                    <>{shortAddr(address!)} has no write role on this ENSv2 resolver. sign consents here, then connect a wallet that does.</>
                   ) : (
                     <>no owner found for this name on {recordsChain.label}.</>
                   )}
@@ -251,7 +271,7 @@ export default function RecordPage() {
               <div className="flex flex-wrap items-center gap-3 border-t border-line px-4 py-3">
                 <Button
                   variant="accent"
-                  disabled={!isOwner || !data?.resolver || !data?.supportsData || sending || receipt.isLoading}
+                  disabled={!canPublish || !data?.resolver || !data?.supportsData || sending || receipt.isLoading}
                   onClick={publish}
                 >
                   {sending ? "confirm in wallet…" : receipt.isLoading ? "mining…" : `publish ${drafts.pending} ${drafts.pending === 1 ? "change" : "changes"}`}
