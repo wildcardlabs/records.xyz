@@ -127,7 +127,7 @@ function AddAccountDialog({
               id="chain"
               value={chainId}
               onChange={(e) => setChainId(Number(e.target.value))}
-              className="h-9 border border-line bg-paper px-3 font-mono text-[12.5px] font-medium lowercase text-ink outline-none focus-visible:border-blue"
+              className="h-10 border border-line bg-paper px-3 font-mono text-[12.5px] font-medium lowercase text-ink outline-none focus-visible:border-blue"
             >
               {ACCOUNT_CHAINS.map((c) => (
                 <option key={c.chain.id} value={c.chain.id}>{c.label} · {c.chain.id}</option>
@@ -140,7 +140,7 @@ function AddAccountDialog({
               id="expiry"
               value={preset}
               onChange={(e) => setPreset(Number(e.target.value))}
-              className="h-9 border border-line bg-paper px-3 font-mono text-[12.5px] font-medium lowercase text-ink outline-none focus-visible:border-blue"
+              className="h-10 border border-line bg-paper px-3 font-mono text-[12.5px] font-medium lowercase text-ink outline-none focus-visible:border-blue"
             >
               {PRESETS.map((p, i) => (
                 <option key={p.label} value={i}>{p.label} · until {fmtDate(nowSeconds() + p.secs)}</option>

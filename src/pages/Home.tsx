@@ -62,9 +62,9 @@ export default function Home() {
           title="Put your accounts on the record"
           lede="Prove which wallets belong to your ENS name. Each wallet signs its own consent, and anyone can check it live on chain. No indexer, no trust in us."
         />
-        <form onSubmit={go} className="flex max-w-xl flex-col gap-2 sm:flex-row">
+        <form onSubmit={go} className="flex max-w-xl flex-col gap-2 sm:flex-row sm:items-stretch">
           <Input value={q} onChange={(e) => { setQ(e.target.value); setErr(null) }} placeholder="look up any ENS name, like alice.eth" aria-label="ens name" autoFocus />
-          <Button type="submit" variant="accent" size="lg">open the record</Button>
+          <Button type="submit" variant="accent" className="h-10 px-5 tracking-[.02em]">open the record</Button>
         </form>
         {err ? <StatusText tone="err" className="mt-2 block text-[12px]">{err}</StatusText> : null}
         <div className="mt-3 text-[12px] text-ink-dim">
