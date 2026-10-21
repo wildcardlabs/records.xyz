@@ -1,6 +1,6 @@
-import type { Address, Hex, PublicClient } from "viem"
+import { type Address, type Hex, type PublicClient, isAddressEqual, recoverTypedDataAddress, zeroAddress } from "viem"
 import { decodeProof } from "./encode"
-import { MAX_VALIDITY_SECONDS, consentTypedData } from "./typedData"
+import { MAX_VALIDITY_SECONDS, consentDigest, consentTypedData } from "./typedData"
 
 export type ProofStatus = "verified" | "expired" | "expiring" | "unverified" | "invalid"
 
@@ -10,6 +10,55 @@ export type ProofCheck = {
   reason: string
   expiresAt?: bigint
   signature?: Hex
+}
+
+const ERC1271_MAGIC = "0x1626ba7e"
+const erc1271Abi = [
+  {
+    type: "function",
+    name: "isValidSignature",
+    stateMutability: "view",
+    inputs: [
+      { name: "hash", type: "bytes32" },
+      { name: "signature", type: "bytes" },
+    ],
+    outputs: [{ name: "", type: "bytes4" }],
+  },
+] as const
+
+/**
+ * The spec's validation cascade for one account on its own chain:
+ *  - if the account has code, call isValidSignature; only the magic value passes
+ *    (a revert or any other value fails this account only);
+ *  - otherwise ecrecover; the recovered address must equal `account` and not be zero.
+ */
+export async function validateConsentSignature(
+  client: PublicClient,
+  account: Address,
+  typed: ReturnType<typeof consentTypedData>,
+  signature: Hex
+): Promise<boolean> {
+  let code: Hex | undefined
+  try {
+    code = await client.getCode({ address: account })
+  } catch {
+    return false
+  }
+  if (code && code !== "0x") {
+    try {
+      const digest = consentDigest(typed.domain.chainId as number, typed.message)
+      const result = await client.readContract({ address: account, abi: erc1271Abi, functionName: "isValidSignature", args: [digest, signature] })
+      return result.toLowerCase() === ERC1271_MAGIC
+    } catch {
+      return false
+    }
+  }
+  try {
+    const recovered = await recoverTypedDataAddress({ ...typed, signature })
+    return !isAddressEqual(recovered, zeroAddress) && isAddressEqual(recovered, account)
+  } catch {
+    return false
+  }
 }
 
 export type VerifyInput = {
@@ -31,9 +80,8 @@ export type VerifyInput = {
 }
 
 /**
- * ENSIP-28 verification for one listed account.
- * Order of checks mirrors the spec: presence, expiry bounds, then signature
- * (ERC-1271 when the account has code, ecrecover otherwise).
+ * ENSIP-28 verification for one listed account, in the spec's order:
+ * presence, expiry bounds, then the signature cascade above.
  */
 export async function verifyOwnedAccount(input: VerifyInput): Promise<ProofCheck> {
   const now = input.now ?? BigInt(Math.floor(Date.now() / 1000))
@@ -59,14 +107,7 @@ export async function verifyOwnedAccount(input: VerifyInput): Promise<ProofCheck
     account: input.account,
     expiresAt,
   })
-
-  let ok = false
-  try {
-    // viem's public verifyTypedData: ERC-1271 when the address has code, ecrecover otherwise.
-    ok = await input.client.verifyTypedData({ address: input.account, signature, ...typed })
-  } catch {
-    ok = false
-  }
+  const ok = await validateConsentSignature(input.client, input.account, typed, signature)
   if (!ok) return { status: "invalid", reason: "signature does not verify", expiresAt, signature }
 
   if (expiresAt - now <= expiringWithin) {

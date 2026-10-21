@@ -12,7 +12,7 @@ export default function App() {
       <Routes>
         <Route element={<Shell navRight={<ConnectButton />} />}>
           <Route index element={<Home />} />
-          <Route path="design" element={<DesignSystem />} />
+          {import.meta.env.DEV ? <Route path="design" element={<DesignSystem />} /> : null}
           <Route path=":name" element={<RecordPage />} />
           <Route path="*" element={<NotFound />} />
         </Route>

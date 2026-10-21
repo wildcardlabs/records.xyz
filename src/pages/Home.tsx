@@ -4,12 +4,21 @@ import { normalize } from "viem/ens"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Figure, FigSplit, Section, SectionHeader, Eyebrow, CellGrid, StatRow, LivePill, StatusText, Code, k, s, c, n, p, FaqRow } from "@/components/wrap"
+import { Badge } from "@/components/ui/badge"
+import { Figure, FigSplit, Section, SectionHeader, Eyebrow, StatRow, LivePill, StatusText, Code, k, s, c, n, p, FaqRow } from "@/components/wrap"
 
 const steps = [
   { num: "01", title: "List", body: "Add any account on any chain: an EOA, a Safe, a 7702 account, a token bound account." },
   { num: "02", title: "Consent", body: "The account itself signs an EIP-712 consent naming the name, the chain, itself and an expiry." },
   { num: "03", title: "Publish", body: "The name owner writes every listing and proof to the resolver in one transaction." },
+]
+
+const example: { chain: string; account: string; type: string; status: string; tone: "ok" | "wait" | "err"; expires: string }[] = [
+  { chain: "mainnet", account: "0xd8da…6045", type: "eoa", status: "verified", tone: "ok", expires: "2027-01-01" },
+  { chain: "mainnet", account: "0x9a6b…31c0", type: "contract", status: "verified", tone: "ok", expires: "2027-06-30" },
+  { chain: "base", account: "0xb8c2…67d5", type: "contract", status: "verified", tone: "ok", expires: "2026-12-01" },
+  { chain: "base", account: "0x41e0…8a2f", type: "7702", status: "verified", tone: "ok", expires: "2027-03-15" },
+  { chain: "optimism", account: "0x77ab…91fe", type: "eoa", status: "expired", tone: "err", expires: "2026-10-01" },
 ]
 
 export default function Home() {
@@ -46,18 +55,33 @@ export default function Home() {
           try <Link className="link-blue text-ink" to="/vitalik.eth">vitalik.eth</Link> · <Link className="link-blue text-ink" to="/nick.eth">nick.eth</Link>
         </div>
 
-        <Figure n={1} name="a record" className="mt-10">
-          <div className="flex flex-wrap items-start justify-between gap-6">
-            <CellGrid lit={7} />
-            <div className="flex flex-col items-end gap-2">
-              <span className="t-label">accounts[8453]</span>
-              <LivePill>verified live</LivePill>
-            </div>
+        <Figure n={1} name="example · alice.eth" className="mt-10" padded={false} dotted={false}>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-2.5">
+            <span className="t-caption normal-case tracking-normal">what a record page shows: every account alice.eth lists, with its proof checked live</span>
+            <LivePill>verified live</LivePill>
           </div>
-          <StatRow className="mt-5" stats={[
-            { label: "accounts", value: "7" },
-            { label: "chains", value: "4" },
-            { label: "verified", value: "6/7", hint: "1 expired" },
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>chain</TableHead><TableHead>account</TableHead><TableHead>type</TableHead><TableHead>status</TableHead><TableHead className="text-right">expires</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {example.map((r) => (
+                <TableRow key={r.account + r.chain}>
+                  <TableCell>{r.chain}</TableCell>
+                  <TableCell className="tabular">{r.account}</TableCell>
+                  <TableCell><Badge variant="dim">{r.type}</Badge></TableCell>
+                  <TableCell><Badge variant={r.tone}>{r.status}</Badge></TableCell>
+                  <TableCell className="text-right">{r.expires}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          <StatRow className="border-t border-line" stats={[
+            { label: "on the record", value: "5" },
+            { label: "chains", value: "3" },
+            { label: "verified", value: "4/5", hint: "1 expired" },
             { label: "next expiry", value: "41d", hint: "2026-12-01" },
           ]} />
         </Figure>
