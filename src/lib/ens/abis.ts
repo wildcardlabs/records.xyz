@@ -157,3 +157,69 @@ export const SELECTOR_SET_DATA_NAME = "eb4b73bb"
  * post-audit-2 (deployed) uses 1 << 24, main uses 1 << 36. Authority checks accept either.
  */
 export const ROLE_SET_DATA_BITS = [1n << 24n, 1n << 36n] as const
+
+/** v1-style node-keyed profile setters (PublicResolver). */
+export const nodeKeyedProfileAbi = [
+  {
+    type: "function",
+    name: "setText",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "node", type: "bytes32" },
+      { name: "key", type: "string" },
+      { name: "value", type: "string" },
+    ],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "setAddr",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "node", type: "bytes32" },
+      { name: "coinType", type: "uint256" },
+      { name: "a", type: "bytes" },
+    ],
+    outputs: [],
+  },
+] as const
+
+/** ENSv2 PermissionedResolver name-keyed profile setters. */
+export const nameKeyedProfileAbi = [
+  {
+    type: "function",
+    name: "setText",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "name", type: "bytes" },
+      { name: "key", type: "string" },
+      { name: "value", type: "string" },
+    ],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "setAddress",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "name", type: "bytes" },
+      { name: "coinType", type: "uint256" },
+      { name: "addressBytes", type: "bytes" },
+    ],
+    outputs: [],
+  },
+] as const
+
+export const PROFILE_SELECTORS = {
+  setTextNode: "10f13a8c", // setText(bytes32,string,string)
+  setAddrNode: "8b95dd71", // setAddr(bytes32,uint256,bytes)
+  setTextName: "c7279f88", // setText(bytes,string,string)
+  setAddressName: "b4436dde", // setAddress(bytes,uint256,bytes)
+} as const
+
+/** Role bits per record kind. data differs between contracts-v2 branches (post-audit-2: 1<<24, main: 1<<36); text and address agree. */
+export const ROLE_BITS = {
+  data: [1n << 24n, 1n << 36n],
+  text: [1n << 4n],
+  addr: [1n << 0n],
+} as const

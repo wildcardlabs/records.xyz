@@ -18,6 +18,7 @@ import { useRecord, recordQueryKey } from "@/hooks/useRecord"
 import { useNameOwner } from "@/hooks/useNameOwner"
 import { useProfile } from "@/hooks/useProfile"
 import { ProfileCard } from "@/components/record/ProfileCard"
+import { ProfileEditor, TEXT_FIELDS, addressFields } from "@/components/record/ProfileEditor"
 import { usePublishAuthority } from "@/hooks/usePublishAuthority"
 import { useDrafts } from "@/hooks/useDrafts"
 import { chainById, DEFAULT_RECORDS_CHAIN, RECORDS_CHAINS } from "@/lib/ens/chains"
@@ -65,8 +66,13 @@ export default function RecordPage() {
   const [dialog, setDialog] = useState<{ open: boolean; chainId?: number }>({ open: false })
 
   const data = record.data
-  const authority = usePublishAuthority(name ?? undefined, recordsChainId, data?.resolver, data?.capabilities, address, owner.data?.owner, owner.data?.manager)
+  const textPending = Object.keys(drafts.texts).length > 0
+  const addrPending = Object.keys(drafts.addrs).length > 0
+  const needs = drafts.pending === 0 ? { data: true } : { data: drafts.accountCount > 0, text: textPending, addr: addrPending }
+  const authority = usePublishAuthority(name ?? undefined, recordsChainId, data?.resolver, data?.capabilities, address, owner.data?.owner, owner.data?.manager, needs)
   const canPublish = authority.data?.canPublish ?? false
+  const profileWritable = !!data?.capabilities?.profileWrite
+  const canWriteAll = (drafts.accountCount === 0 || !!data?.supportsData) && (!(textPending || addrPending) || profileWritable)
 
   // merge on-chain rows with local drafts and removals
   const rows: Row[] = useMemo(() => {
@@ -112,7 +118,10 @@ export default function RecordPage() {
       plan.listings[chainId] = merged
     }
     plan.proofs = drafts.adds.map((d) => ({ chainId: d.chainId, account: d.account, expiresAt: BigInt(d.expiresAt), signature: d.signature }))
-    const calls = buildPublishCalls(name, plan, data.capabilities?.writeFlavour ?? "node")
+    if (drafts.accountCount === 0) plan.listings = {}
+    plan.texts = drafts.texts
+    plan.addrs = Object.fromEntries(Object.entries(drafts.addrs).map(([ct, a]) => [Number(ct), a as Address | ""]))
+    const calls = buildPublishCalls(name, plan, { data: data.capabilities?.writeFlavour ?? "node", profile: data.capabilities?.profileWrite ?? "node" })
     try {
       if (walletChainId !== recordsChainId) await switchChainAsync({ chainId: asChainId(recordsChainId) })
       const hash = await writeContractAsync({ address: data.resolver, abi: dataResolverAbi, functionName: "multicall", args: [calls], chainId: asChainId(recordsChainId) })
@@ -127,6 +136,7 @@ export default function RecordPage() {
   if (receipt.isSuccess && txHash && drafts.pending > 0) {
     drafts.clear()
     qc.invalidateQueries({ queryKey: recordQueryKey(name ?? "", recordsChainId) })
+    qc.invalidateQueries({ queryKey: ["profile", recordsChainId, name] })
     toast.success("record published", { description: `${shortAddr(txHash, 8)} · mined` })
   }
 
@@ -296,7 +306,7 @@ export default function RecordPage() {
         <SectionHeader
           eyebrow="manage"
           title="Put an account on the record"
-          lede="Three steps. The account you want to list signs its own consent; the name owner publishes. One transaction, as many accounts as you like."
+          lede="Three steps. Accounts sign their own consent, profile records are edited below, and the name owner publishes everything in one transaction."
         />
         <Figure n={3} name="publish" padded={false} dotted={false}>
           <div className="grid divide-y divide-line lg:grid-cols-3 lg:divide-x lg:divide-y-0">
@@ -346,12 +356,12 @@ export default function RecordPage() {
                 <span className="t-fig-title">Publish</span>
               </div>
               <p className="t-fig-body mt-2">
-                {pendingCount === 0 ? "Nothing waiting. Signed consents and removals collect here until you publish." : `${pendingCount} ${pendingCount === 1 ? "change" : "changes"} waiting. Publishing writes every listing and proof in one transaction.`}
+                {pendingCount === 0 ? "Nothing waiting. Signed consents, removals and record edits collect here until you publish." : `${pendingCount} ${pendingCount === 1 ? "change" : "changes"} waiting. Publishing writes all of them in one transaction.`}
               </p>
               <div className="mt-4 flex flex-wrap items-center gap-2">
                 <Button
                   variant={pendingCount > 0 ? "accent" : "outline"}
-                  disabled={!canPublish || pendingCount === 0 || !data?.resolver || !data?.supportsData || sending || receipt.isLoading}
+                  disabled={!canPublish || pendingCount === 0 || !data?.resolver || !canWriteAll || sending || receipt.isLoading}
                   onClick={publish}
                 >
                   {sending ? "confirm in wallet…" : receipt.isLoading ? "mining…" : pendingCount > 0 ? `publish ${pendingCount} ${pendingCount === 1 ? "change" : "changes"}` : "publish"}
@@ -389,6 +399,22 @@ export default function RecordPage() {
                     <Button size="sm" variant="ghost" className="ml-auto" onClick={() => drafts.unmarkRemoval(r)}>undo</Button>
                   </li>
                 ))}
+                {Object.entries(drafts.texts).map(([key, value]) => (
+                  <li key={`t:${key}`} className="flex flex-wrap items-center gap-3 py-2.5">
+                    <StatusMark status={value === "" ? "removing" : "draft"} />
+                    <span className="font-semibold">{TEXT_FIELDS.find((f) => f.key === key)?.label ?? key}</span>
+                    <span className="min-w-0 flex-1 truncate text-ink-dim">{value === "" ? "clear" : value}</span>
+                    <Button size="sm" variant="ghost" className="ml-auto" onClick={() => drafts.setText(key, null)}>discard</Button>
+                  </li>
+                ))}
+                {Object.entries(drafts.addrs).map(([ct, value]) => (
+                  <li key={`a:${ct}`} className="flex flex-wrap items-center gap-3 py-2.5">
+                    <StatusMark status={value === "" ? "removing" : "draft"} />
+                    <span className="font-semibold">{addressFields(recordsChainId).find((f) => String(f.coinType) === ct)?.label ?? `coin ${ct}`} address</span>
+                    <span className="tabular text-ink-dim">{value === "" ? "clear" : shortAddr(value, 6)}</span>
+                    <Button size="sm" variant="ghost" className="ml-auto" onClick={() => drafts.setAddr(Number(ct), null)}>discard</Button>
+                  </li>
+                ))}
               </ul>
               <div className="flex items-center justify-end border-t border-line-soft px-5 py-2">
                 <Button size="sm" variant="ghost" onClick={drafts.clear}>discard all</Button>
@@ -397,8 +423,18 @@ export default function RecordPage() {
           ) : null}
         </Figure>
 
+        <Figure n={4} name={`profile records · ${name}`} className="mt-6" padded={false} dotted={false}>
+          <ProfileEditor
+            recordsChainId={recordsChainId}
+            profile={profile.data}
+            drafts={drafts}
+            enabled={isConnected && profileWritable}
+            disabledReason={!isConnected ? "connect a wallet to edit." : !profileWritable ? "this name's resolver does not accept record writes from this app." : undefined}
+          />
+        </Figure>
+
         <div className="mt-6 grid gap-6 lg:grid-cols-2">
-          <Figure n={4} name="share">
+          <Figure n={5} name="share">
             <p className="t-fig-body">Link to this record from a bio, a readme or a profile.</p>
             <pre className="code mt-3 border border-line bg-paper text-[11px] whitespace-pre-wrap break-all">{embed}</pre>
             <div className="mt-3 flex gap-2">
