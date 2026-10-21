@@ -1,6 +1,6 @@
 import { useConnect, useConnection, useDisconnect } from "wagmi"
 import { Button } from "@/components/ui/button"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { chainById } from "@/lib/ens/chains"
 import { shortAddr } from "@/lib/format"
 
@@ -20,8 +20,10 @@ function ConnectButton() {
           <span className="text-ink-dim">· {chain?.label ?? `chain ${chainId}`}</span>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="min-w-52 font-mono text-[12px]">
-          <DropdownMenuLabel className="t-label text-ink-dim">{connector?.name ?? "wallet"}</DropdownMenuLabel>
-          <DropdownMenuItem onClick={() => navigator.clipboard?.writeText(address)}>copy address</DropdownMenuItem>
+          <DropdownMenuGroup>
+            <DropdownMenuLabel className="t-label text-ink-dim">{connector?.name ?? "wallet"}</DropdownMenuLabel>
+            <DropdownMenuItem onClick={() => navigator.clipboard?.writeText(address)}>copy address</DropdownMenuItem>
+          </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => disconnect()}>disconnect</DropdownMenuItem>
         </DropdownMenuContent>
@@ -33,12 +35,14 @@ function ConnectButton() {
     <DropdownMenu>
       <DropdownMenuTrigger render={<Button disabled={isPending} />}>{isPending ? "connecting…" : "connect wallet"}</DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-52 font-mono text-[12px]">
-        <DropdownMenuLabel className="t-label text-ink-dim">choose a wallet</DropdownMenuLabel>
-        {connectors.map((c) => (
-          <DropdownMenuItem key={c.uid} onClick={() => connectAsync({ connector: c }).catch(() => {})}>
-            {c.name.toLowerCase()}
-          </DropdownMenuItem>
-        ))}
+        <DropdownMenuGroup>
+          <DropdownMenuLabel className="t-label text-ink-dim">choose a wallet</DropdownMenuLabel>
+          {connectors.map((c) => (
+            <DropdownMenuItem key={c.uid} onClick={() => connectAsync({ connector: c }).catch(() => {})}>
+              {c.name.toLowerCase()}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>
   )

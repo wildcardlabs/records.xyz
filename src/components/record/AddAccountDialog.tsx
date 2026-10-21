@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { StatusText } from "@/components/wrap"
 import { ACCOUNT_CHAINS, chainById } from "@/lib/ens/chains"
 import { publicClient } from "@/lib/ens/clients"
-import { consentTypedData } from "@/lib/ensip28"
+import { consentTypedData, validateConsentSignature } from "@/lib/ensip28"
 import { asChainId } from "@/lib/wagmi"
 import { fmtDate, nowSeconds, shortAddr } from "@/lib/format"
 import type { Draft } from "@/hooks/useDrafts"
@@ -86,7 +86,7 @@ function AddAccountDialog({
       const message = { node, accountChainId: BigInt(chainId), account: address, expiresAt }
       const typed = consentTypedData(recordsChainId, message)
       const signature = await signTypedDataAsync(typed)
-      const ok = await publicClient(chainId).verifyTypedData({ address, signature, ...typed })
+      const ok = await validateConsentSignature(publicClient(chainId), address, typed, signature)
       if (!ok) {
         setError(`the signature does not verify for ${shortAddr(address)} on ${chainById(chainId)?.label}. contract accounts must be deployed on that chain.`)
         return
