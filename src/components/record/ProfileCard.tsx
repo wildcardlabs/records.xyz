@@ -26,7 +26,7 @@ function Banner({ src, theme }: { src: string | null; theme: string | null }) {
   const color = theme && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(theme) ? theme : null
   if ((!src || broken) && !color) return null
   return (
-    <div className="relative h-24 w-full overflow-hidden border-b border-line sm:h-28" style={color ? { background: color } : undefined}>
+    <div className="h-32 w-full overflow-hidden border-b border-line sm:h-40" style={color ? { background: color } : undefined}>
       {src && !broken ? <img src={src} alt="" className="size-full object-cover" onError={() => setBroken(true)} /> : null}
     </div>
   )
@@ -48,10 +48,10 @@ function ProfileCard({ name, profile, loading }: { name: string; profile: Profil
     <div>
       {!loading && profile ? <Banner src={profile.header} theme={profile.theme} /> : null}
       <FigSplit className="sm:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
-        <div className={cn("p-4 sm:p-5", hasBanner && "-mt-8 sm:-mt-10")}>
-          <div className="flex items-start gap-4">
+        <div className={cn("p-4 sm:p-5", hasBanner && "-mt-6 sm:-mt-7")}>
+          <div className="relative z-10 flex items-start gap-4">
             {loading ? <div className="size-16 shrink-0 bg-wash" /> : <Avatar src={profile?.avatarUrl ?? null} name={name} ring={hasBanner} />}
-            <div className={cn("min-w-0", hasBanner && "pt-8 sm:pt-10")}>
+            <div className={cn("min-w-0", hasBanner && "pt-6 sm:pt-7")}>
               <div className="t-fig-title truncate">{name}</div>
               {loading ? (
                 <div className="mt-2 h-3 w-40 bg-wash" />
