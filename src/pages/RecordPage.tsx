@@ -16,6 +16,8 @@ import { AddAccountDialog } from "@/components/record/AddAccountDialog"
 import { NetworkSelect } from "@/components/record/NetworkSelect"
 import { useRecord, recordQueryKey } from "@/hooks/useRecord"
 import { useNameOwner } from "@/hooks/useNameOwner"
+import { useProfile } from "@/hooks/useProfile"
+import { ProfileCard } from "@/components/record/ProfileCard"
 import { usePublishAuthority } from "@/hooks/usePublishAuthority"
 import { useDrafts } from "@/hooks/useDrafts"
 import { chainById, DEFAULT_RECORDS_CHAIN, RECORDS_CHAINS } from "@/lib/ens/chains"
@@ -52,6 +54,7 @@ export default function RecordPage() {
 
   const record = useRecord(name ?? undefined, recordsChainId)
   const owner = useNameOwner(name ?? undefined, recordsChainId)
+  const profile = useProfile(name ?? undefined, recordsChainId)
   const drafts = useDrafts(name ?? undefined, recordsChainId)
   const { address, chainId: walletChainId, isConnected } = useConnection()
   const { switchChainAsync } = useSwitchChain()
@@ -166,6 +169,8 @@ export default function RecordPage() {
                       : `${verified.length} of ${total} accounts verified · ${total - verified.length} ${total - verified.length === 1 ? "needs" : "need"} attention`
                   }
                 />
+              ) : record.isError ? (
+                <StatusMark size="lg" status="unverified" detail={`could not reach ${recordsChain.label} just now · try re-check`} />
               ) : data?.resolver ? (
                 <StatusMark size="lg" status="unverified" detail="no accounts on the record yet" />
               ) : (
@@ -179,7 +184,7 @@ export default function RecordPage() {
               ) : null}
             </div>
             <p className="t-lede mt-4 max-w-[60ch]">
-              These are the accounts {name} has publicly claimed. Each one signed its own consent, and this page verifies every signature in your browser, straight from chain.
+              The profile and payment addresses {name} publishes, and below them the accounts it has publicly claimed as its own. Each claimed account signed its own consent, and this page verifies every signature in your browser, straight from chain.
             </p>
           </div>
           <div className="flex flex-col items-start gap-2 sm:items-end">
@@ -209,12 +214,25 @@ export default function RecordPage() {
           <div className="mt-4 text-[12px]"><StatusText tone="err">one or more listing records are malformed and were ignored.</StatusText></div>
         ) : null}
         {record.isError ? (
-          <div className="mt-4 text-[12px]"><StatusText tone="err">could not read records: {(record.error as Error).message.split("\n")[0]}</StatusText></div>
+          <div className="mt-6 border border-line bg-paper px-4 py-3 text-[12px]">
+            <StatusText tone="err">could not read this name's records.</StatusText>{" "}
+            <span className="text-ink-muted">the {recordsChain.label} RPC did not answer. nothing is wrong with the name; </span>
+            <button type="button" className="link-blue text-ink" onClick={() => record.refetch()}>try again</button>
+            <span className="text-ink-muted">. ({(record.error as Error).message.split("\n")[0].slice(0, 120)})</span>
+          </div>
         ) : null}
 
-        <Figure n={1} name={`owned accounts · ${name}`} className="mt-8" padded={false} dotted={false}>
+        {data?.resolver || record.isLoading ? (
+          <Figure n={1} name={`profile · ${name}`} className="mt-8" padded={false} dotted={false}>
+            <ProfileCard name={name} profile={profile.data} loading={profile.isLoading || record.isLoading} />
+          </Figure>
+        ) : null}
+
+        <Figure n={2} name={`owned accounts · ${name}`} className="mt-6" padded={false} dotted={false}>
           {loading ? (
             <AccountsTableSkeleton />
+          ) : record.isError ? (
+            <div className="t-fig-body px-5 py-10 text-center text-ink-dim">waiting for the network…</div>
           ) : rows.length === 0 ? (
             <div className="px-5 py-10 text-center">
               <div className="t-fig-title">Nothing on the record yet</div>
@@ -275,7 +293,7 @@ export default function RecordPage() {
           title="Put an account on the record"
           lede="Three steps. The account you want to list signs its own consent; the name owner publishes. One transaction, as many accounts as you like."
         />
-        <Figure n={2} name="publish" padded={false} dotted={false}>
+        <Figure n={3} name="publish" padded={false} dotted={false}>
           <div className="grid divide-y divide-line lg:grid-cols-3 lg:divide-x lg:divide-y-0">
             {/* step 1 */}
             <div className="p-5">
@@ -375,7 +393,7 @@ export default function RecordPage() {
         </Figure>
 
         <div className="mt-6 grid gap-6 lg:grid-cols-2">
-          <Figure n={3} name="share">
+          <Figure n={4} name="share">
             <p className="t-fig-body">Link to this record from a bio, a readme or a profile.</p>
             <pre className="code mt-3 border border-line bg-paper text-[11px] whitespace-pre-wrap break-all">{embed}</pre>
             <div className="mt-3 flex gap-2">
