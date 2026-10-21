@@ -138,7 +138,7 @@ export default function RecordPage() {
 
   const explorer = recordsChain.explorer
   const canEdit = isConnected
-  const embed = `[![on the record](https://records.xyz/badge.svg)](https://records.xyz/${name})`
+  const embed = `[![${name} · on the record](https://records.xyz/badge.svg)](https://records.xyz/${name})`
   const loading = record.isLoading
   const total = onChain.length
   const summaryStatus = loading ? null : total === 0 ? null : verified.length === total ? "verified" : verified.length > 0 ? "expiring" : "expired"
