@@ -1,0 +1,138 @@
+import { useMemo } from "react"
+import type { Address } from "viem"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { LivePill } from "@/components/wrap"
+import { TEXT_FIELDS, addressFields } from "./ProfileEditor"
+import type { BigNameRoleRow } from "@/lib/ens/bigname"
+import { type AccessChange, type Power, POWER_LABEL, ROLE, adminOf, coinResource, keyResource, powersFromBigName } from "@/lib/ens/roles"
+import { shortAddr } from "@/lib/format"
+
+/** Label a resource id by matching it against the keys and chains the app knows. */
+function useResourceLabels(recordsChainId: number, extraKeys: string[]) {
+  return useMemo(() => {
+    const m = new Map<string, string>()
+    m.set("0", "all keys")
+    for (const f of TEXT_FIELDS) m.set(keyResource(f.key).toString(), `key ${f.key}`)
+    for (const k of extraKeys) m.set(keyResource(k).toString(), `key ${k}`)
+    for (const c of addressFields(recordsChainId)) m.set(coinResource(c.coinType).toString(), `${c.label} address`)
+    m.set(keyResource("accounts-chains").toString(), "key accounts-chains")
+    return m
+  }, [recordsChainId, extraKeys])
+}
+
+const SHOWN: Power[] = ["text", "address", "data", "contenthash", "name", "link", "upgrade", "canName", "abi", "interface"]
+
+/**
+ * Who can edit records on the name's ENSv2 resolver. Rows come from BigName; the owner can stage
+ * revokes here and grants through the dialog. Roles are per resolver, not per name.
+ */
+function AccessFigure({
+  name,
+  recordsChainId,
+  rows,
+  loading,
+  indexed,
+  connected,
+  canAdmin,
+  staged,
+  extraKeys,
+  onGrant,
+  onRevoke,
+}: {
+  name: string
+  recordsChainId: number
+  rows: BigNameRoleRow[] | null | undefined
+  loading: boolean
+  indexed: boolean
+  connected: Address | undefined
+  canAdmin: boolean
+  staged: AccessChange[]
+  extraKeys: string[]
+  onGrant: () => void
+  onRevoke: (c: AccessChange) => void
+}) {
+  const labels = useResourceLabels(recordsChainId, extraKeys)
+  const list = (rows ?? []).filter((r) => r.powers.length > 0)
+
+  return (
+    <div>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-2 sm:px-5">
+        <span className="t-caption normal-case tracking-normal">
+          permissions live on the resolver and apply to every name it serves for you, not only {name}.
+        </span>
+        <Button size="sm" variant={canAdmin ? "accent" : "outline"} disabled={!canAdmin} onClick={onGrant}>+ allow a wallet</Button>
+      </div>
+      {!indexed ? (
+        <p className="t-fig-body p-4 text-ink-dim sm:p-5">listing who holds roles needs an indexer; none covers this network yet. grants and revokes still work.</p>
+      ) : loading ? (
+        <div className="space-y-2 p-4"><div className="h-3 w-56 bg-wash" /><div className="h-3 w-40 bg-wash" /></div>
+      ) : list.length === 0 ? (
+        <p className="t-fig-body p-4 text-ink-dim sm:p-5">no roles found on this resolver.</p>
+      ) : (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>wallet</TableHead>
+              <TableHead>scope</TableHead>
+              <TableHead>may change</TableHead>
+              {canAdmin ? <TableHead className="text-right"></TableHead> : null}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {list.map((r) => {
+              const { powers, admin } = powersFromBigName(r.powers)
+              const isYou = connected && r.address.toLowerCase() === connected.toLowerCase()
+              const pendingRevoke = staged.some((s) => s.revoke && s.account.toLowerCase() === r.address.toLowerCase() && s.resource === r.resource)
+              const scopeLabel = labels.get(r.resource) ?? `resource ${r.resource.slice(0, 6)}…`
+              let bits = 0n
+              for (const p of powers) bits |= ROLE[p]
+              for (const p of admin) bits |= adminOf(ROLE[p])
+              return (
+                <TableRow key={`${r.address}:${r.resource}`} className={pendingRevoke ? "opacity-60" : undefined}>
+                  <TableCell>
+                    <span className="inline-flex items-center gap-2">
+                      <span className="tabular font-semibold text-ink">{shortAddr(r.address, 6)}</span>
+                      {isYou ? <LivePill pulse={false}>you</LivePill> : null}
+                    </span>
+                  </TableCell>
+                  <TableCell>{scopeLabel}</TableCell>
+                  <TableCell className="whitespace-normal">
+                    <span className="flex flex-wrap gap-1">
+                      {SHOWN.filter((p) => powers.includes(p)).map((p) => (
+                        <Tooltip key={p}>
+                          <TooltipTrigger render={<span />}>
+                            <Badge variant={admin.includes(p) ? "blue" : "outline"}>{POWER_LABEL[p]}</Badge>
+                          </TooltipTrigger>
+                          <TooltipContent className="font-mono text-[11px] lowercase">{admin.includes(p) ? "may change and may delegate" : "may change"}</TooltipContent>
+                        </Tooltip>
+                      ))}
+                      {admin.filter((p) => !powers.includes(p)).map((p) => (
+                        <Badge key={`a-${p}`} variant="blue">delegate {POWER_LABEL[p]}</Badge>
+                      ))}
+                    </span>
+                  </TableCell>
+                  {canAdmin ? (
+                    <TableCell className="text-right">
+                      {pendingRevoke ? (
+                        <span className="text-[11px] text-err">revoke staged</span>
+                      ) : isYou ? null : (
+                        <Button size="sm" variant="destructive" onClick={() => onRevoke({ account: r.address, resource: r.resource, roleBitmap: bits.toString(), revoke: true, scope: `${scopeLabel} · everything listed` })}>
+                          revoke
+                        </Button>
+                      )}
+                    </TableCell>
+                  ) : null}
+                </TableRow>
+              )
+            })}
+          </TableBody>
+        </Table>
+      )}
+    </div>
+  )
+}
+
+export { AccessFigure }

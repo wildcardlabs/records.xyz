@@ -19,6 +19,11 @@ import { useNameOwner } from "@/hooks/useNameOwner"
 import { useProfile } from "@/hooks/useProfile"
 import { ProfileCard } from "@/components/record/ProfileCard"
 import { ProfileEditor, TEXT_FIELDS, addressFields } from "@/components/record/ProfileEditor"
+import { AccessFigure } from "@/components/record/AccessFigure"
+import { GrantDialog } from "@/components/record/GrantDialog"
+import { useResolverRoles } from "@/hooks/useResolverRoles"
+import { adminBitsFor } from "@/lib/ens/roles"
+import { hasBigName } from "@/lib/ens/bigname"
 import { usePublishAuthority } from "@/hooks/usePublishAuthority"
 import { useDrafts } from "@/hooks/useDrafts"
 import { chainById, DEFAULT_RECORDS_CHAIN, RECORDS_CHAINS } from "@/lib/ens/chains"
@@ -66,15 +71,23 @@ export default function RecordPage() {
   const qc = useQueryClient()
   const [dialog, setDialog] = useState<{ open: boolean; chainId?: number }>({ open: false })
   const [editingProfile, setEditingProfile] = useState(false)
+  const [grantOpen, setGrantOpen] = useState(false)
 
   const data = record.data
   const textPending = Object.keys(drafts.texts).length > 0
   const addrPending = Object.keys(drafts.addrs).length > 0
-  const needs = drafts.pending === 0 ? { data: true } : { data: drafts.accountCount > 0, text: textPending, addr: addrPending }
+  const adminBits = drafts.access.reduce((acc, c) => acc | adminBitsFor(c), 0n)
+  const needs = drafts.pending === 0 ? { data: true } : { data: drafts.accountCount > 0, text: textPending, addr: addrPending, adminBits: adminBits ? adminBits.toString() : undefined }
   const authority = usePublishAuthority(name ?? undefined, recordsChainId, data?.resolver, data?.capabilities, address, owner.data?.owner, owner.data?.manager, needs)
   const canPublish = authority.data?.canPublish ?? false
   const profileWritable = !!data?.capabilities?.profileWrite
-  const canWriteAll = (drafts.accountCount === 0 || !!data?.supportsData) && (!(textPending || addrPending) || profileWritable)
+  const canWriteAll = (drafts.accountCount === 0 || !!data?.supportsData) && (!(textPending || addrPending) || profileWritable) && (drafts.accessCount === 0 || !!data?.capabilities?.roles)
+  const hasRoles = !!data?.capabilities?.roles
+  const resolverRoles = useResolverRoles(recordsChainId, data?.resolver, hasRoles)
+  // can the connected wallet administer the three record kinds the grant dialog offers?
+  const grantAdminNeeds = { adminBits: (adminBitsFor({ account: "0x0000000000000000000000000000000000000000", resource: "0", roleBitmap: ((1n << 0n) | (1n << 4n) | (1n << 24n)).toString(), revoke: false, scope: "" })).toString() }
+  const adminAuthority = usePublishAuthority(name ?? undefined, recordsChainId, data?.resolver, data?.capabilities, address, owner.data?.owner, owner.data?.manager, grantAdminNeeds)
+  const canAdmin = hasRoles && !!adminAuthority.data?.canPublish
 
   // merge on-chain rows with local drafts and removals
   const rows: Row[] = useMemo(() => {
@@ -129,6 +142,7 @@ export default function RecordPage() {
     if (drafts.accountCount === 0) plan.listings = {}
     plan.texts = drafts.texts
     plan.addrs = Object.fromEntries(Object.entries(drafts.addrs).map(([ct, a]) => [Number(ct), a as Address | ""]))
+    plan.access = drafts.access
     const calls = buildPublishCalls(name, plan, { data: data.capabilities?.writeFlavour ?? "node", profile: data.capabilities?.profileWrite ?? "node" })
     try {
       if (walletChainId !== recordsChainId) await switchChainAsync({ chainId: asChainId(recordsChainId) })
@@ -145,6 +159,7 @@ export default function RecordPage() {
     drafts.clear()
     qc.invalidateQueries({ queryKey: recordQueryKey(name ?? "", recordsChainId) })
     qc.invalidateQueries({ queryKey: ["profile", recordsChainId, name] })
+    qc.invalidateQueries({ queryKey: ["resolver-roles", recordsChainId] })
     toast.success("record published", { description: `${shortAddr(txHash, 8)} · mined` })
   }
 
@@ -450,6 +465,14 @@ export default function RecordPage() {
                     <Button size="sm" variant="ghost" className="ml-auto" onClick={() => drafts.setText(key, null)}>discard</Button>
                   </li>
                 ))}
+                {drafts.access.map((c) => (
+                  <li key={`g:${c.account}:${c.resource}:${c.revoke}`} className="flex flex-wrap items-center gap-3 py-2.5">
+                    <StatusMark status={c.revoke ? "removing" : "draft"} />
+                    <span className="font-semibold">{c.revoke ? "revoke" : "allow"} {shortAddr(c.account, 6)}</span>
+                    <span className="min-w-0 flex-1 truncate text-ink-dim">{c.scope}</span>
+                    <Button size="sm" variant="ghost" className="ml-auto" onClick={() => drafts.dropAccess(c)}>discard</Button>
+                  </li>
+                ))}
                 {Object.entries(drafts.addrs).map(([ct, value]) => (
                   <li key={`a:${ct}`} className="flex flex-wrap items-center gap-3 py-2.5">
                     <StatusMark status={value === "" ? "removing" : "draft"} />
@@ -466,8 +489,26 @@ export default function RecordPage() {
           ) : null}
         </Figure>
 
+        {hasRoles ? (
+          <Figure n={4} name={`access · who can edit ${name}`} className="mt-6" padded={false} dotted={false}>
+            <AccessFigure
+              name={name}
+              recordsChainId={recordsChainId}
+              rows={resolverRoles.data}
+              loading={resolverRoles.isLoading}
+              indexed={hasBigName(recordsChainId)}
+              connected={address}
+              canAdmin={canAdmin}
+              staged={drafts.access}
+              extraKeys={Object.keys(drafts.texts)}
+              onGrant={() => setGrantOpen(true)}
+              onRevoke={drafts.addAccess}
+            />
+          </Figure>
+        ) : null}
+
         <div className="mt-6 grid gap-6 lg:grid-cols-2">
-          <Figure n={4} name="share">
+          <Figure n={hasRoles ? 5 : 4} name="share">
             <p className="t-fig-body">Link to this record from a bio, a readme or a profile.</p>
             <pre className="code mt-3 border border-line bg-paper text-[11px] whitespace-pre-wrap break-all">{embed}</pre>
             <div className="mt-3 flex gap-2">
@@ -493,6 +534,7 @@ export default function RecordPage() {
         </div>
       </Section>
 
+      <GrantDialog open={grantOpen} onOpenChange={setGrantOpen} name={name} recordsChainId={recordsChainId} onStage={drafts.addAccess} />
       <AddAccountDialog
         open={dialog.open}
         onOpenChange={(open) => setDialog((d) => ({ ...d, open }))}

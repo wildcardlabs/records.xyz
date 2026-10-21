@@ -43,7 +43,7 @@ export async function getNameOwner(client: PublicClient, name: string): Promise<
 }
 
 export type PublishAuthority = { canPublish: boolean; via: "roles" | "canModifyName" | "owner" | "none" }
-export type PublishNeeds = { data?: boolean; text?: boolean; addr?: boolean }
+export type PublishNeeds = { data?: boolean; text?: boolean; addr?: boolean; /** admin bitmap required for staged access changes (decimal) */ adminBits?: string }
 
 /**
  * Whether `account` can write ENSIP-28 data records for `name` on its resolver.
@@ -68,7 +68,13 @@ export async function getPublishAuthority(
       const keyed = (resource: bigint, bit: bigint) =>
         client.readContract({ address: resolver, abi: permissionedResolverAbi, functionName: "hasRoles", args: [resource, bit, account] }).catch(() => false)
       const kinds: (keyof typeof ROLE_BITS)[] = (["data", "text", "addr"] as const).filter((k) => needs[k])
-      if (kinds.length === 0) return { canPublish: false, via: "roles" }
+      const adminBits = needs.adminBits ? BigInt(needs.adminBits) : 0n
+      if (kinds.length === 0 && adminBits === 0n) return { canPublish: false, via: "roles" }
+      if (adminBits !== 0n) {
+        const okAdmin = await root(adminBits)
+        if (!okAdmin) return { canPublish: false, via: "roles" }
+        if (kinds.length === 0) return { canPublish: true, via: "roles" }
+      }
       const perKind = await Promise.all(
         kinds.map(async (kind) => {
           const bits = ROLE_BITS[kind]
