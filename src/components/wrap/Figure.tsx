@@ -18,9 +18,9 @@ type FigureProps = React.ComponentProps<"figure"> & {
  */
 function Figure({ n, name, dotted = true, padded = true, className, children, ...props }: FigureProps) {
   return (
-    <figure data-slot="figure" className={cn("fig m-0 flex flex-col", className)} {...props}>
+    <figure data-slot="figure" className={cn("fig m-0 flex min-w-0 flex-col", className)} {...props}>
       <FigBar n={n} name={name} />
-      <div className={cn("flex-1", dotted && "fig-body", padded && "p-4 sm:p-5")}>{children}</div>
+      <div className={cn("min-w-0 flex-1", dotted && "fig-body", padded && "p-4 sm:p-5")}>{children}</div>
     </figure>
   )
 }
@@ -40,7 +40,7 @@ function FigBar({ n, name, className }: { n?: number | string; name: string; cla
 /** A hairline-divided split inside a figure body (e.g. list left, chart right). */
 function FigSplit({ className, children, ...props }: React.ComponentProps<"div">) {
   return (
-    <div className={cn("grid divide-line max-sm:divide-y sm:grid-cols-2 sm:divide-x", className)} {...props}>
+    <div className={cn("grid divide-line max-sm:divide-y sm:grid-cols-2 sm:divide-x [&>*]:min-w-0", className)} {...props}>
       {children}
     </div>
   )
