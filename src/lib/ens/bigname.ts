@@ -1,8 +1,10 @@
 import type { Address } from "viem"
 
 /**
- * BigName: ENS Labs' indexer for ENSv2. Sepolia only for now; mainnet reads stay on chain.
- * Response shape observed from GET /v1/names/<name>; every field is treated as optional.
+ * BigName: ENS Labs' indexer for ENS, ENSv2 and Basenames. Sepolia only for now; mainnet reads stay on chain.
+ * Uses the documented product read `GET /v1/names/{name}` (source=indexed, the default); the response is
+ * ETag-cacheable and the browser handles revalidation. Arbitrary data records (ENSIP-24) are outside the
+ * indexer's grammar, so owned accounts are never read from here. Docs: https://bigname.sh/docs/
  */
 export const BIGNAME_BASE: Record<number, string> = {
   11155111: "https://sepolia.api.bigname.sh/v1",
@@ -25,6 +27,7 @@ export type BigNameRecord = {
 
 type Raw = {
   data?: {
+    read_status?: string
     name?: string
     owner?: string
     manager?: string
@@ -52,6 +55,8 @@ export async function fetchBigName(chainId: number, name: string): Promise<BigNa
   if (!res.ok) throw new Error(`bigname ${res.status}`)
   const raw = (await res.json()) as Raw
   const d = raw.data ?? {}
+  // the docs define read_status as the read outcome; anything but "ok" means the indexer could not serve this name
+  if (d.read_status && d.read_status !== "ok") return null
   const addr = (v?: string | null): Address | null => (v && /^0x[0-9a-fA-F]{40}$/.test(v) && !/^0x0{40}$/.test(v) ? (v as Address) : null)
   const asOf = raw.meta?.as_of?.[String(chainId)]?.block_number ?? null
   return {
