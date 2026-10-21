@@ -65,7 +65,7 @@ export default function RecordPage() {
   const [dialog, setDialog] = useState<{ open: boolean; chainId?: number }>({ open: false })
 
   const data = record.data
-  const authority = usePublishAuthority(name ?? undefined, recordsChainId, data?.resolver, data?.capabilities, address, owner.data?.owner)
+  const authority = usePublishAuthority(name ?? undefined, recordsChainId, data?.resolver, data?.capabilities, address, owner.data?.owner, owner.data?.manager)
   const canPublish = authority.data?.canPublish ?? false
 
   // merge on-chain rows with local drafts and removals
@@ -226,6 +226,11 @@ export default function RecordPage() {
           <Figure n={1} name={`profile · ${name}`} className="mt-8" padded={false} dotted={false}>
             <ProfileCard name={name} profile={profile.data} loading={profile.isLoading || record.isLoading} />
           </Figure>
+        ) : null}
+        {profile.data?.source === "bigname" ? (
+          <p className="t-caption mt-2 normal-case tracking-normal">
+            profile indexed by <a className="link-blue" href="https://bigname.sh" target="_blank" rel="noreferrer">bigname</a> (ENS Labs){profile.data.asOfBlock ? ` · as of block ${profile.data.asOfBlock.toLocaleString()}` : ""} · owned accounts are read and verified on chain
+          </p>
         ) : null}
 
         <Figure n={2} name={`owned accounts · ${name}`} className="mt-6" padded={false} dotted={false}>

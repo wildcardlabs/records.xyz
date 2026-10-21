@@ -1,16 +1,27 @@
 import { type Address, type PublicClient, isAddressEqual, keccak256, namehash, toBytes, zeroAddress } from "viem"
 import { ENS_REGISTRY, NAME_WRAPPER, ROLE_SET_DATA_BITS, nameWrapperAbi, permissionedResolverAbi, registryAbi } from "./abis"
 import type { ResolverCapabilities } from "./capabilities"
+import { fetchBigName, hasBigName } from "./bigname"
 import { CHAINS_KEY } from "@/lib/ensip28"
 
 export type NameOwnership = {
   owner: Address | null
   /** where the answer came from; ENSv2-only names have no v1 owner */
-  source: "v1" | "v1-wrapped" | null
+  source: "bigname" | "v1" | "v1-wrapped" | null
+  /** ENSv2 manager (BigName), when different from the owner */
+  manager?: Address | null
 }
 
 /** v1 registry owner, unwrapped through the NameWrapper. ENSv2 ownership is not exposed by the live Universal Resolver yet. */
 export async function getNameOwner(client: PublicClient, name: string): Promise<NameOwnership> {
+  if (hasBigName(client.chain!.id)) {
+    try {
+      const bn = await fetchBigName(client.chain!.id, name)
+      if (bn?.owner) return { owner: bn.owner, source: "bigname", manager: bn.manager }
+    } catch {
+      /* indexer unavailable: fall back to the v1 registry */
+    }
+  }
   const node = namehash(name)
   let owner: Address
   try {
@@ -44,7 +55,8 @@ export async function getPublishAuthority(
   resolver: Address,
   caps: ResolverCapabilities,
   account: Address,
-  owner: Address | null
+  owner: Address | null,
+  manager: Address | null = null
 ): Promise<PublishAuthority> {
   const node = namehash(name)
   if (caps.roles) {
@@ -70,5 +82,6 @@ export async function getPublishAuthority(
     }
   }
   if (owner && isAddressEqual(owner, account)) return { canPublish: true, via: "owner" }
+  if (manager && isAddressEqual(manager, account)) return { canPublish: true, via: "owner" }
   return { canPublish: false, via: "none" }
 }
