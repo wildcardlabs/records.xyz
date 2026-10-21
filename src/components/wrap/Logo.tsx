@@ -5,7 +5,7 @@ import { cn } from "cn"
  * and two quarter-discs. Three cells take the current text colour; the tab is the
  * electric blue. `mono` renders every cell in currentColor (for the blue band).
  */
-function Logo({ className, size = 18, mono = false }: { className?: string; size?: number; mono?: boolean }) {
+function Logo({ className, size = 20, mono = false }: { className?: string; size?: number; mono?: boolean }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" className={cn("shrink-0", className)} aria-hidden="true">
       <path fill="currentColor" d="M0 0H16L0 16Z" />
