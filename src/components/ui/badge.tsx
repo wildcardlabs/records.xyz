@@ -1,36 +1,52 @@
-import * as React from "react"
+import { mergeProps } from "@base-ui/react/merge-props"
+import { useRender } from "@base-ui/react/use-render"
 import { cva, type VariantProps } from "class-variance-authority"
+import { cn } from "cn"
 
-import { cn } from "@/lib/utils"
-
+/**
+ * Wrap badges.
+ *  outline  square-cornered outlined rectangle, uppercase tracked (PASS / BEST)
+ *  pill     20px pill for status chips (LIVE, run badges, layer tags)
+ *  ok/wait/err  status colours: olive, ochre, brick. Never neon.
+ *  blue     blue outline + blue text (ink, not paint)
+ *  solid    ink fill
+ */
 const badgeVariants = cva(
-  "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  "inline-flex w-fit shrink-0 items-center justify-center gap-1.5 whitespace-nowrap border font-mono text-[10px] font-normal uppercase tracking-[.14em] leading-none transition-colors duration-150 [&>svg]:pointer-events-none [&>svg]:size-3",
   {
     variants: {
       variant: {
-        default:
-          "border-transparent bg-primary text-primary-foreground hover:bg-primary/80",
-        secondary:
-          "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        destructive:
-          "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
-        outline: "text-foreground",
+        outline: "rounded-none border-line bg-paper px-1.5 py-[3px] text-ink",
+        pill: "rounded-[20px] border-line bg-paper px-2 py-[3px] text-ink",
+        ok: "rounded-[20px] border-line bg-paper px-2 py-[3px] text-ok",
+        wait: "rounded-[20px] border-line bg-paper px-2 py-[3px] text-wait",
+        err: "rounded-[20px] border-line bg-paper px-2 py-[3px] text-err",
+        blue: "rounded-none border-blue bg-paper px-1.5 py-[3px] text-blue",
+        solid: "rounded-none border-ink bg-ink px-1.5 py-[3px] text-paper",
+        dim: "rounded-none border-line bg-paper px-1.5 py-[3px] text-ink-dim",
       },
     },
     defaultVariants: {
-      variant: "default",
+      variant: "outline",
     },
   }
 )
 
-export interface BadgeProps
-  extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof badgeVariants> {}
-
-function Badge({ className, variant, ...props }: BadgeProps) {
-  return (
-    <div className={cn(badgeVariants({ variant }), className)} {...props} />
-  )
+function Badge({
+  className,
+  variant = "outline",
+  render,
+  ...props
+}: useRender.ComponentProps<"span"> & VariantProps<typeof badgeVariants>) {
+  return useRender({
+    defaultTagName: "span",
+    props: mergeProps<"span">(
+      { className: cn(badgeVariants({ variant }), className) },
+      props
+    ),
+    render,
+    state: { slot: "badge", variant },
+  })
 }
 
 export { Badge, badgeVariants }
