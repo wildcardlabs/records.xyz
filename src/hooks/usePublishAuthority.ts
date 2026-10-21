@@ -11,11 +11,12 @@ export function usePublishAuthority(
   resolver: Address | null | undefined,
   caps: ResolverCapabilities | null | undefined,
   account: Address | undefined,
-  owner: Address | null | undefined
+  owner: Address | null | undefined,
+  manager: Address | null | undefined = null
 ) {
   return useQuery({
-    queryKey: ["publish-authority", recordsChainId, name, resolver, account, owner ?? null, caps?.roles, caps?.canModifyName],
-    queryFn: () => getPublishAuthority(publicClient(recordsChainId), name!, resolver!, caps!, account!, owner ?? null),
+    queryKey: ["publish-authority", recordsChainId, name, resolver, account, owner ?? null, manager ?? null, caps?.roles, caps?.canModifyName],
+    queryFn: () => getPublishAuthority(publicClient(recordsChainId), name!, resolver!, caps!, account!, owner ?? null, manager ?? null),
     enabled: !!name && !!resolver && !!caps && !!account,
     staleTime: 60_000,
   })
