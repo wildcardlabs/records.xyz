@@ -249,7 +249,15 @@ export default function RecordPage() {
                 <ProfileCard name={name} profile={profile.data} loading={profile.isLoading || record.isLoading} />
                 {isConnected && !record.isLoading ? (
                   <div className="flex flex-wrap items-center gap-3 border-t border-line px-4 py-2.5 sm:px-5">
-                    <Button size="sm" variant={drafts.profileCount > 0 ? "outline" : "primary"} disabled={!profileWritable} onClick={() => setEditingProfile(true)}>
+                    <Button
+                      size="sm"
+                      variant="accent"
+                      disabled={!data?.supportsData && !data?.resolver}
+                      onClick={() => (data?.supportsData ? setDialog({ open: true }) : document.getElementById("publish")?.scrollIntoView({ behavior: "smooth", block: "start" }))}
+                    >
+                      + verify an account
+                    </Button>
+                    <Button size="sm" variant="outline" disabled={!profileWritable} onClick={() => setEditingProfile(true)}>
                       edit profile
                     </Button>
                     {drafts.profileCount > 0 ? (
