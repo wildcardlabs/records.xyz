@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Check, Copy, ExternalLink } from "lucide-react"
+import { Copy, ExternalLink } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "cn"
 import { Badge } from "@/components/ui/badge"
@@ -42,12 +42,21 @@ function host(u: string) {
 }
 
 /** Read-only profile: avatar, description, links and the name's payment addresses per chain. */
-/** Small olive check shown on a payment address that also signed a live owned-account consent on its chain. */
+/** Scalloped verified seal in olive with a white check: shown on a payment address that also signed a live owned-account consent on its chain. */
+function VerifiedSeal({ className = "size-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
+      <path d="M12.00 1.40 L14.30 3.40 L17.30 2.82 L18.29 5.71 L21.18 6.70 L20.60 9.70 L22.60 12.00 L20.60 14.30 L21.18 17.30 L18.29 18.29 L17.30 21.18 L14.30 20.60 L12.00 22.60 L9.70 20.60 L6.70 21.18 L5.71 18.29 L2.82 17.30 L3.40 14.30 L1.40 12.00 L3.40 9.70 L2.82 6.70 L5.71 5.71 L6.70 2.82 L9.70 3.40 Z" fill="var(--ok)" stroke="var(--ok)" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M7.6 12.4l2.9 2.9 5.9-6.1" fill="none" stroke="var(--bg)" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
 function ConsentedMark({ name }: { name: string }) {
   return (
     <Tooltip>
-      <TooltipTrigger render={<span className="inline-flex size-4 items-center justify-center border border-ok text-ok" aria-label="consented" />}>
-        <Check className="size-3" strokeWidth={3} />
+      <TooltipTrigger render={<span className="inline-flex items-center text-ok" aria-label="consented" />}>
+        <VerifiedSeal />
       </TooltipTrigger>
       <TooltipContent className="max-w-xs font-mono text-[11px] lowercase whitespace-normal">
         this address signed a consent for {name} on this chain · checked on chain
@@ -157,4 +166,4 @@ function ProfileCard({
   )
 }
 
-export { ProfileCard }
+export { ProfileCard, VerifiedSeal }
