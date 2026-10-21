@@ -9,7 +9,7 @@ function Nav({ right }: { right?: React.ReactNode }) {
   return (
     <header className="relative z-20 bg-paper">
       <Wrap className="flex h-[62px] items-center gap-6">
-        <Link to="/" className="link-blue flex items-center gap-2.5 text-ink" aria-label="records.xyz home">
+        <Link to="/" className="link-blue flex items-center gap-2 text-ink" aria-label="records.xyz home">
           <Logo />
           <span className="font-mono text-[13px] font-semibold lowercase">records.xyz</span>
         </Link>
