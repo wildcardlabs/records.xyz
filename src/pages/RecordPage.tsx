@@ -25,6 +25,7 @@ import { chainById, DEFAULT_RECORDS_CHAIN, RECORDS_CHAINS } from "@/lib/ens/chai
 import { dataResolverAbi } from "@/lib/ens/abis"
 import { buildPublishCalls, type PublishPlan } from "@/lib/ens/write"
 import { isOwned } from "@/lib/ensip28"
+import { chainIdForCoinType } from "@/lib/ens/profile"
 import { asChainId } from "@/lib/wagmi"
 import { daysUntil, fmtDate, sameAddr, shortAddr } from "@/lib/format"
 
@@ -103,6 +104,12 @@ export default function RecordPage() {
 
   const onChain = data?.chains.flatMap((c) => c.accounts) ?? []
   const verified = onChain.filter((a) => isOwned(a.check.status))
+  // payment address ↔ owned account match, bound to the chain the consent names
+  const consentedKeys = useMemo(() => new Set(verified.map((a) => `${a.chainId}:${a.account.toLowerCase()}`)), [verified])
+  const consented = (coinType: number, addr: string) => {
+    const chainId = coinType === 60 ? (recordsChainId === 11155111 ? 11155111 : 1) : chainIdForCoinType(coinType)
+    return chainId !== null && consentedKeys.has(`${chainId}:${addr.toLowerCase()}`)
+  }
   const nextExpiry = verified.map((a) => a.check.expiresAt!).sort((a, b) => (a < b ? -1 : 1))[0]
   const chainCount = new Set(onChain.map((a) => a.chainId)).size
 
@@ -246,7 +253,7 @@ export default function RecordPage() {
               />
             ) : (
               <>
-                <ProfileCard name={name} profile={profile.data} loading={profile.isLoading || record.isLoading} />
+                <ProfileCard name={name} profile={profile.data} loading={profile.isLoading || record.isLoading} consented={consented} />
                 {isConnected && !record.isLoading ? (
                   <div className="flex flex-wrap items-center gap-3 border-t border-line px-4 py-2.5 sm:px-5">
                     <Button
