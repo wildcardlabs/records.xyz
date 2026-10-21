@@ -1,5 +1,5 @@
 import { type Address, type PublicClient, isAddressEqual, keccak256, namehash, toBytes, zeroAddress } from "viem"
-import { ENS_REGISTRY, NAME_WRAPPER, ROLE_SET_DATA_BITS, nameWrapperAbi, permissionedResolverAbi, registryAbi } from "./abis"
+import { ENS_REGISTRY, NAME_WRAPPER, ROLE_BITS, nameWrapperAbi, permissionedResolverAbi, registryAbi } from "./abis"
 import type { ResolverCapabilities } from "./capabilities"
 import { fetchBigName, hasBigName } from "./bigname"
 import { CHAINS_KEY } from "@/lib/ensip28"
@@ -43,6 +43,7 @@ export async function getNameOwner(client: PublicClient, name: string): Promise<
 }
 
 export type PublishAuthority = { canPublish: boolean; via: "roles" | "canModifyName" | "owner" | "none" }
+export type PublishNeeds = { data?: boolean; text?: boolean; addr?: boolean }
 
 /**
  * Whether `account` can write ENSIP-28 data records for `name` on its resolver.
@@ -56,19 +57,28 @@ export async function getPublishAuthority(
   caps: ResolverCapabilities,
   account: Address,
   owner: Address | null,
-  manager: Address | null = null
+  manager: Address | null = null,
+  needs: PublishNeeds = { data: true }
 ): Promise<PublishAuthority> {
   const node = namehash(name)
   if (caps.roles) {
     try {
-      const keyResource = BigInt(keccak256(toBytes(CHAINS_KEY)))
-      const checks = await Promise.all(
-        ROLE_SET_DATA_BITS.flatMap((bit) => [
-          client.readContract({ address: resolver, abi: permissionedResolverAbi, functionName: "hasRootRoles", args: [bit, account] }).catch(() => false),
-          client.readContract({ address: resolver, abi: permissionedResolverAbi, functionName: "hasRoles", args: [keyResource, bit, account] }).catch(() => false),
-        ])
+      const root = (bit: bigint) =>
+        client.readContract({ address: resolver, abi: permissionedResolverAbi, functionName: "hasRootRoles", args: [bit, account] }).catch(() => false)
+      const keyed = (resource: bigint, bit: bigint) =>
+        client.readContract({ address: resolver, abi: permissionedResolverAbi, functionName: "hasRoles", args: [resource, bit, account] }).catch(() => false)
+      const kinds: (keyof typeof ROLE_BITS)[] = (["data", "text", "addr"] as const).filter((k) => needs[k])
+      if (kinds.length === 0) return { canPublish: false, via: "roles" }
+      const perKind = await Promise.all(
+        kinds.map(async (kind) => {
+          const bits = ROLE_BITS[kind]
+          const checks = await Promise.all(
+            bits.flatMap((bit) => (kind === "data" ? [root(bit), keyed(BigInt(keccak256(toBytes(CHAINS_KEY))), bit)] : [root(bit)]))
+          )
+          return checks.some(Boolean)
+        })
       )
-      return { canPublish: checks.some(Boolean), via: "roles" }
+      return { canPublish: perKind.every(Boolean), via: "roles" }
     } catch {
       /* fall through */
     }

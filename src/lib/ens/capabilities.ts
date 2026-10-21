@@ -1,5 +1,5 @@
 import { type Address, type Hex, type PublicClient, getAddress, isAddressEqual, zeroAddress } from "viem"
-import { DATA_INTERFACE_ID, SELECTORS, SELECTOR_SET_DATA_NAME, dataResolverAbi } from "./abis"
+import { DATA_INTERFACE_ID, PROFILE_SELECTORS, SELECTORS, SELECTOR_SET_DATA_NAME, dataResolverAbi } from "./abis"
 import { readDataRecord } from "./resolve"
 
 export type WriteFlavour = "node" | "name"
@@ -9,8 +9,10 @@ export type ResolverCapabilities = {
   readsData: boolean
   /** ERC-165 answer for the ENSIP-24 profile (informational; several live builds omit it) */
   erc165Data: boolean
-  /** which setData the resolver exposes, or null when records cannot be written on chain */
+  /** which setData the resolver exposes, or null when data records cannot be written on chain */
   writeFlavour: WriteFlavour | null
+  /** which text/address setters the resolver exposes, or null when profile records cannot be written */
+  profileWrite: WriteFlavour | null
   multicall: boolean
   /** ENSv2 PermissionedResolver role queries (`hasRoles`) */
   roles: boolean
@@ -80,10 +82,13 @@ export async function resolverCapabilities(client: PublicClient, name: string, r
   const blob = codes.join("").toLowerCase()
   const has = (sel: string) => blob.includes(sel)
   const writeFlavour: WriteFlavour | null = has(SELECTOR_SET_DATA_NAME) ? "name" : has(SELECTORS.setData) ? "node" : null
+  const profileWrite: WriteFlavour | null =
+    has(PROFILE_SELECTORS.setTextName) || has(PROFILE_SELECTORS.setAddressName) ? "name" : has(PROFILE_SELECTORS.setTextNode) || has(PROFILE_SELECTORS.setAddrNode) ? "node" : null
   return {
     readsData: readsData || erc165Data,
     erc165Data,
     writeFlavour,
+    profileWrite,
     multicall: has(SELECTORS.multicall),
     roles: has(SELECTORS.hasRoles),
     canModifyName: has(SELECTORS.canModifyName),
