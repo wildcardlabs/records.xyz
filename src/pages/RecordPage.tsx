@@ -64,6 +64,7 @@ export default function RecordPage() {
   const receipt = useWaitForTransactionReceipt({ hash: txHash, chainId: asChainId(recordsChainId) })
   const qc = useQueryClient()
   const [dialog, setDialog] = useState<{ open: boolean; chainId?: number }>({ open: false })
+  const [editingProfile, setEditingProfile] = useState(false)
 
   const data = record.data
   const textPending = Object.keys(drafts.texts).length > 0
@@ -234,7 +235,34 @@ export default function RecordPage() {
 
         {data?.resolver || record.isLoading ? (
           <Figure n={1} name={`profile · ${name}`} className="mt-8" padded={false} dotted={false}>
-            <ProfileCard name={name} profile={profile.data} loading={profile.isLoading || record.isLoading} />
+            {editingProfile ? (
+              <ProfileEditor
+                recordsChainId={recordsChainId}
+                profile={profile.data}
+                drafts={drafts}
+                enabled={isConnected && profileWritable}
+                disabledReason={!isConnected ? "connect a wallet to edit." : !profileWritable ? "this name's resolver does not accept record writes from this app." : undefined}
+                onDone={() => setEditingProfile(false)}
+              />
+            ) : (
+              <>
+                <ProfileCard name={name} profile={profile.data} loading={profile.isLoading || record.isLoading} />
+                {isConnected && !record.isLoading ? (
+                  <div className="flex flex-wrap items-center gap-3 border-t border-line px-4 py-2.5 sm:px-5">
+                    <Button size="sm" variant={drafts.profileCount > 0 ? "outline" : "primary"} disabled={!profileWritable} onClick={() => setEditingProfile(true)}>
+                      edit profile
+                    </Button>
+                    {drafts.profileCount > 0 ? (
+                      <span className="text-[12px] text-ink-muted">
+                        {drafts.profileCount} {drafts.profileCount === 1 ? "change" : "changes"} waiting · <a className="link-blue text-ink" href="#publish">publish below</a>
+                      </span>
+                    ) : !profileWritable ? (
+                      <span className="t-caption normal-case tracking-normal">this name's resolver does not accept record writes from this app.</span>
+                    ) : null}
+                  </div>
+                ) : null}
+              </>
+            )}
           </Figure>
         ) : null}
         {profile.data?.source === "bigname" ? (
@@ -306,9 +334,9 @@ export default function RecordPage() {
         <SectionHeader
           eyebrow="manage"
           title="Put an account on the record"
-          lede="Three steps. Accounts sign their own consent, profile records are edited below, and the name owner publishes everything in one transaction."
+          lede="Three steps. Each account signs its own consent; the name owner publishes. Profile edits made above are published here too, in the same transaction."
         />
-        <Figure n={3} name="publish" padded={false} dotted={false}>
+        <Figure n={3} name="publish" padded={false} dotted={false} id="publish">
           <div className="grid divide-y divide-line lg:grid-cols-3 lg:divide-x lg:divide-y-0">
             {/* step 1 */}
             <div className="p-5">
@@ -423,18 +451,8 @@ export default function RecordPage() {
           ) : null}
         </Figure>
 
-        <Figure n={4} name={`profile records · ${name}`} className="mt-6" padded={false} dotted={false}>
-          <ProfileEditor
-            recordsChainId={recordsChainId}
-            profile={profile.data}
-            drafts={drafts}
-            enabled={isConnected && profileWritable}
-            disabledReason={!isConnected ? "connect a wallet to edit." : !profileWritable ? "this name's resolver does not accept record writes from this app." : undefined}
-          />
-        </Figure>
-
         <div className="mt-6 grid gap-6 lg:grid-cols-2">
-          <Figure n={5} name="share">
+          <Figure n={4} name="share">
             <p className="t-fig-body">Link to this record from a bio, a readme or a profile.</p>
             <pre className="code mt-3 border border-line bg-paper text-[11px] whitespace-pre-wrap break-all">{embed}</pre>
             <div className="mt-3 flex gap-2">

@@ -72,12 +72,15 @@ function ProfileEditor({
   drafts,
   enabled,
   disabledReason,
+  onDone,
 }: {
   recordsChainId: number
   profile: Profile | undefined
   drafts: DraftsApi
   enabled: boolean
   disabledReason?: string
+  /** called after a successful stage; the caller usually closes edit mode */
+  onDone?: () => void
 }) {
   const current = useMemo(() => currentTexts(profile), [profile])
   const currentA = useMemo(() => currentAddrs(profile), [profile])
@@ -116,6 +119,7 @@ function ProfileEditor({
       const was = currentA[ct] ?? ""
       drafts.setAddr(Number(ct), next.toLowerCase() === was.toLowerCase() ? null : next)
     }
+    onDone?.()
   }
 
   function addCustom() {
@@ -170,8 +174,9 @@ function ProfileEditor({
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-3 border-t border-line px-4 py-3 sm:px-5">
-        <Button variant={enabled ? "accent" : "outline"} disabled={!enabled} onClick={stage}>stage changes</Button>
-        {staged > 0 ? <span className="text-[12px] text-ink-muted">{staged} record {staged === 1 ? "change" : "changes"} staged · publish below to write {staged === 1 ? "it" : "them"}.</span> : null}
+        <Button variant={enabled ? "accent" : "outline"} disabled={!enabled} onClick={stage}>save changes for publishing</Button>
+        {onDone ? <Button variant="ghost" onClick={onDone}>cancel</Button> : null}
+        {staged > 0 ? <span className="text-[12px] text-ink-muted">{staged} {staged === 1 ? "change" : "changes"} waiting · nothing is written until you publish.</span> : null}
         {!enabled && disabledReason ? <span className="t-caption normal-case tracking-normal">{disabledReason}</span> : null}
         {error ? <StatusText tone="err" className="text-[12px]">{error}</StatusText> : null}
       </div>
