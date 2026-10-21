@@ -1,19 +1,16 @@
 import { createConfig, http } from "wagmi"
 import { arbitrum, base, mainnet, optimism, sepolia } from "wagmi/chains"
-import { coinbaseWallet, injected, safe, walletConnect } from "wagmi/connectors"
+import { injected, walletConnect } from "wagmi/connectors"
 
 const env = import.meta.env as Record<string, string | undefined>
 /** WalletConnect needs a project id whose allowlist includes this site; without one the option is not offered. */
 const projectId = env.VITE_WALLETCONNECT_PROJECT_ID?.trim()
 const rpc = (id: number) => http(env[`VITE_RPC_URL_${id}`])
-/** The Safe connector only works when the site runs inside the Safe app's iframe. */
-const inIframe = typeof window !== "undefined" && window.parent !== window
-
 export const wagmiConfig = createConfig({
   chains: [mainnet, base, optimism, arbitrum, sepolia],
+  // browser wallets via EIP-6963 discovery (wagmi default) plus WalletConnect when a project id is set
   connectors: [
     injected(),
-    coinbaseWallet({ appName: "records.xyz", appLogoUrl: "https://records.xyz/favicon.svg" }),
     ...(projectId
       ? [
           walletConnect({
@@ -23,7 +20,6 @@ export const wagmiConfig = createConfig({
           }),
         ]
       : []),
-    ...(inIframe ? [safe()] : []),
   ],
   transports: {
     [mainnet.id]: rpc(mainnet.id),
