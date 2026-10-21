@@ -74,3 +74,18 @@ export async function fetchBigName(chainId: number, name: string): Promise<BigNa
     source: raw.meta?.source ?? null,
   }
 }
+
+export type BigNameRoleRow = { address: Address; resource: string; powers: string[] }
+
+/** `GET /v1/resolvers/{chainId}/{resolver}/roles`: who holds which roles on a resolver, per resource ("0" = root). */
+export async function fetchResolverRoles(chainId: number, resolver: Address): Promise<BigNameRoleRow[] | null> {
+  const base = BIGNAME_BASE[chainId]
+  if (!base) return null
+  const res = await fetch(`${base}/resolvers/${chainId}/${resolver.toLowerCase()}/roles?page_size=200`, { headers: { accept: "application/json" } })
+  if (res.status === 404) return null
+  if (!res.ok) throw new Error(`bigname ${res.status}`)
+  const raw = (await res.json()) as { data?: { address?: string; eac_resource?: string; powers?: string[] }[] }
+  return (raw.data ?? [])
+    .filter((r) => r.address && /^0x[0-9a-fA-F]{40}$/.test(r.address))
+    .map((r) => ({ address: r.address as Address, resource: r.eac_resource ?? "0", powers: r.powers ?? [] }))
+}

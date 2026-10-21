@@ -3,6 +3,7 @@ import { packetToBytes } from "viem/ens"
 import { dataResolverAbi, nameKeyedProfileAbi, nameKeyedResolverAbi, nodeKeyedProfileAbi } from "./abis"
 import type { WriteFlavour } from "./capabilities"
 import { CHAINS_KEY, encodeChains, encodeListing, encodeProof, listingKey, proofKey } from "@/lib/ensip28"
+import { type AccessChange, buildAccessCall } from "./roles"
 
 export type PublishPlan = {
   /** final listings per chain after drafts and removals are applied */
@@ -15,6 +16,8 @@ export type PublishPlan = {
   texts?: Record<string, string>
   /** address records by coin type; an empty string clears the record */
   addrs?: Record<number, Address | "">
+  /** ENSv2 resolver role grants and revokes */
+  access?: AccessChange[]
 }
 
 export type PublishFlavours = { data: WriteFlavour; profile: WriteFlavour }
@@ -60,6 +63,7 @@ export function buildPublishCalls(name: string, plan: PublishPlan, flavour: Writ
   // profile records
   for (const [key, value] of Object.entries(plan.texts ?? {})) setText(key, value)
   for (const [ct, address] of Object.entries(plan.addrs ?? {})) setAddr(Number(ct), address)
+  for (const c of plan.access ?? []) calls.push(buildAccessCall(c))
   return calls
 }
 

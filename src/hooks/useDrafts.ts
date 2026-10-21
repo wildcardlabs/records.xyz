@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react"
 import type { Address, Hex } from "viem"
 import type { AccountKind } from "./useRecord"
+import type { AccessChange } from "@/lib/ens/roles"
 
 export type Draft = {
   chainId: number
@@ -15,9 +16,9 @@ export type Draft = {
 export type Removal = { chainId: number; account: Address }
 
 /** profile record changes: text key -> value ("" clears), coin type (as string) -> address ("" clears) */
-type Store = { adds: Draft[]; removals: Removal[]; texts: Record<string, string>; addrs: Record<string, string> }
+type Store = { adds: Draft[]; removals: Removal[]; texts: Record<string, string>; addrs: Record<string, string>; access: AccessChange[] }
 
-const empty: Store = { adds: [], removals: [], texts: {}, addrs: {} }
+const empty: Store = { adds: [], removals: [], texts: {}, addrs: {}, access: [] }
 const key = (chainId: number, name: string) => `records.xyz:drafts:${chainId}:${name}`
 
 function load(k: string): Store {
@@ -25,7 +26,7 @@ function load(k: string): Store {
     const raw = localStorage.getItem(k)
     if (!raw) return empty
     const parsed = JSON.parse(raw) as Partial<Store>
-    return { adds: parsed.adds ?? [], removals: parsed.removals ?? [], texts: parsed.texts ?? {}, addrs: parsed.addrs ?? {} }
+    return { adds: parsed.adds ?? [], removals: parsed.removals ?? [], texts: parsed.texts ?? {}, addrs: parsed.addrs ?? {}, access: parsed.access ?? [] }
   } catch {
     return empty
   }
@@ -45,7 +46,7 @@ export function useDrafts(name: string | undefined, recordsChainId: number) {
 
   const persist = (next: Store) => {
     try {
-      const n = next.adds.length + next.removals.length + Object.keys(next.texts).length + Object.keys(next.addrs).length
+      const n = next.adds.length + next.removals.length + Object.keys(next.texts).length + Object.keys(next.addrs).length + next.access.length
       if (n === 0) localStorage.removeItem(k)
       else localStorage.setItem(k, JSON.stringify(next))
     } catch {
@@ -96,6 +97,9 @@ export function useDrafts(name: string | undefined, recordsChainId: number) {
       }),
     [update]
   )
+  const sameAccess = (a: AccessChange, b: AccessChange) => a.account.toLowerCase() === b.account.toLowerCase() && a.resource === b.resource && a.revoke === b.revoke
+  const addAccess = useCallback((c: AccessChange) => update((s) => ({ ...s, access: [...s.access.filter((x) => !sameAccess(x, c)), c] })), [update])
+  const dropAccess = useCallback((c: AccessChange) => update((s) => ({ ...s, access: s.access.filter((x) => !sameAccess(x, c)) })), [update])
   const profileCount = Object.keys(store.texts).length + Object.keys(store.addrs).length
 
   return {
@@ -109,9 +113,13 @@ export function useDrafts(name: string | undefined, recordsChainId: number) {
     unmarkRemoval,
     setText,
     setAddr,
+    access: store.access,
+    addAccess,
+    dropAccess,
     clear,
     accountCount: store.adds.length + store.removals.length,
     profileCount,
-    pending: store.adds.length + store.removals.length + profileCount,
+    accessCount: store.access.length,
+    pending: store.adds.length + store.removals.length + profileCount + store.access.length,
   }
 }
