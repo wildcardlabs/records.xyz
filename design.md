@@ -81,7 +81,8 @@ Color rules: blue is ink, not paint — it colours text and 1px outlines, and fi
 ## Typography
 
 - Display: `"Azeret Mono", ui-monospace, monospace` — weight 500, 56px hero / 34px section, line-height 1.05 / 1.3, tracking -2px, sentence case
-- Body: same mono — 13px/1.65 weight 500, grey; ledes 13.5px, figure copy 11–12.5px
+- Body: same mono — 13px/1.65 weight 500, grey; ledes 13.5px
+- Inside figures, one scale only: titles 13px/600 (`.t-fig-title`), body 12px/1.6 (`.t-fig-body`), tables and code 12px. A figure never carries an 18px title; section headlines stay outside the frame.
 - Labels: 10–10.5px uppercase with 0.1–0.14em tracking for fig titles, edge labels and chips; eyebrows are lowercase `# section name` in blue at 11px
 - Sans (Inter): only inside figures — layer titles, chart labels
 - Scale: 9.5 / 10.5 / 11 / 12 / 12.5 / 13 / 18 / 22 / 34 / 56
@@ -119,7 +120,7 @@ Flat graph paper. Depth comes from hairlines and the dot grid, not from shadows.
 
 - **Numbered figure (signature).** Frame + `fig-bar`: `>_` icon box, a 1px rule, `[ fig. N · name ]` in 10.5px dim tracked mono, another rule, a `⌗` icon box. Body is the lavender dotted panel. Use it for every product visual.
 - **Cell grid hero figure.** 16×7 grid of 18px outlined squares with a handful filled `accent-2` (count is a knob), one dash, an uppercase `KITCHEN.YAML` edge label and a `● LIVE` pill, then a four-cell stat row underneath.
-- **Feature rail.** Left: stacked buttons, 20px padding, blue `01` number, 18px/600 title, 12.5px grey body; the active row gets the 7% wash. Right: a figure whose `<pre>` swaps to the matching YAML/CLI snippet (keys blue, strings olive, comments dim).
+- **Feature rail.** Left: stacked buttons, 20px padding, blue `01` number at 11px, 13px/600 title, 12px grey body (the figure scale); the active row gets the 7% wash. Right: a figure whose `<pre>` swaps to the matching YAML/CLI snippet (keys blue, strings olive, comments dim).
 - **Quality loop.** Three figure columns: title, outlined `PASS`/`BEST` badge plus a 20px number, a thin `accent-2` polyline chart with dim axis labels, and a three-row table with pass/fail in olive/brick.
 - **Blue case-study band.** Full-bleed `#2a1eff` with a white dot grid, 28px white headline at line-height 1.65, a white button with blue text that hovers to yellow, and a scatter chart card with a blue-edged "benchmark winner" tooltip.
 - **Layer stack.** Four horizontal bars, each wider than the one above, filled with blue at 5% / 14% / 30% / 100%; tiny uppercase `LAYER 01`, a sans title, pill tags and right-aligned mono copy.

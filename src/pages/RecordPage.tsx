@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react"
+import { Copy, RefreshCw } from "lucide-react"
 import { Link, useParams, useSearchParams } from "react-router-dom"
 import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
@@ -6,7 +7,10 @@ import { useConnection, useSwitchChain, useWaitForTransactionReceipt, useWriteCo
 import type { Address, Hex } from "viem"
 import { normalize } from "viem/ens"
 import { Button } from "@/components/ui/button"
-import { Figure, Section, SectionHeader, StatRow, StatusText, LivePill, Code, k, s, c, p } from "@/components/wrap"
+import { Figure, Section, SectionHeader, StatRow, StatusText, LivePill, Code, FaqRow, k, s, c, p } from "@/components/wrap"
+import { AccountsTableSkeleton } from "@/components/record/AccountsTable"
+import { StatusMark, statusHelp } from "@/components/record/StatusMark"
+import { ConnectButton } from "@/components/wallet/ConnectButton"
 import { AccountsTable, type Row } from "@/components/record/AccountsTable"
 import { AddAccountDialog } from "@/components/record/AddAccountDialog"
 import { NetworkSelect } from "@/components/record/NetworkSelect"
@@ -135,43 +139,59 @@ export default function RecordPage() {
   const explorer = recordsChain.explorer
   const canEdit = isConnected
   const embed = `[![on the record](https://records.xyz/badge.svg)](https://records.xyz/${name})`
+  const loading = record.isLoading
+  const total = onChain.length
+  const summaryStatus = loading ? null : total === 0 ? null : verified.length === total ? "verified" : verified.length > 0 ? "expiring" : "expired"
+  const checkedAt = data ? new Date(data.fetchedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : null
+  const pendingCount = drafts.pending
 
   return (
     <>
+      {/* ---------------------------------------------------------------- header */}
       <Section>
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <SectionHeader
-            as="h1"
-            eyebrow="record"
-            title={name}
-            lede={
-              record.isLoading ? "reading records…" : data?.resolver
-                ? `${verified.length} verified ${verified.length === 1 ? "account" : "accounts"} across ${chainCount} ${chainCount === 1 ? "chain" : "chains"}, read live from ${recordsChain.label} and verified in your browser.`
-                : `no resolver found for this name on ${recordsChain.label}.`
-            }
-            className="mb-0"
-          />
-          <div className="flex flex-col items-end gap-2 pt-2">
-            <NetworkSelect value={recordsChainId} onChange={setRecordsChain} />
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => { navigator.clipboard?.writeText(window.location.href); toast("link copied") }}>copy link</Button>
-              <Button variant="outline" size="sm" onClick={() => record.refetch()}>re-verify</Button>
+        <div className="flex flex-wrap items-start justify-between gap-6">
+          <div>
+            <div className="t-eyebrow"># record · {recordsChain.label}</div>
+            <h1 className="t-display mt-2 break-all text-ink">{name}</h1>
+            <div className="mt-5 flex flex-wrap items-center gap-3">
+              {loading ? (
+                <div className="h-12 w-56 bg-wash" />
+              ) : summaryStatus ? (
+                <StatusMark
+                  size="lg"
+                  status={summaryStatus}
+                  detail={
+                    verified.length === total
+                      ? `${total} ${total === 1 ? "account" : "accounts"} across ${chainCount} ${chainCount === 1 ? "chain" : "chains"} · every consent checks out`
+                      : `${verified.length} of ${total} accounts verified · ${total - verified.length} ${total - verified.length === 1 ? "needs" : "need"} attention`
+                  }
+                />
+              ) : data?.resolver ? (
+                <StatusMark size="lg" status="unverified" detail="no accounts on the record yet" />
+              ) : (
+                <StatusMark size="lg" status="invalid" detail={`no resolver for this name on ${recordsChain.label}`} />
+              )}
+              {checkedAt ? (
+                <button type="button" onClick={() => record.refetch()} className="link-blue inline-flex items-center gap-1.5 text-[11px] text-ink-dim">
+                  <RefreshCw className={`size-3 ${record.isFetching ? "animate-spin" : ""}`} />
+                  checked live at {checkedAt} · re-check
+                </button>
+              ) : null}
             </div>
+            <p className="t-lede mt-4 max-w-[60ch]">
+              These are the accounts {name} has publicly claimed. Each one signed its own consent, and this page verifies every signature in your browser, straight from chain.
+            </p>
+          </div>
+          <div className="flex flex-col items-start gap-2 sm:items-end">
+            <NetworkSelect value={recordsChainId} onChange={setRecordsChain} />
+            <Button variant="outline" size="sm" onClick={() => { navigator.clipboard?.writeText(window.location.href); toast("link copied") }}>
+              <Copy data-icon="inline-start" /> copy link
+            </Button>
           </div>
         </div>
 
-        <StatRow
-          className="mt-8"
-          stats={[
-            { label: "on the record", value: record.isLoading ? "…" : String(onChain.length) },
-            { label: "chains", value: record.isLoading ? "…" : String(chainCount) },
-            { label: "verified", value: record.isLoading ? "…" : `${verified.length}/${onChain.length || 0}` },
-            { label: "next expiry", value: nextExpiry ? `${daysUntil(nextExpiry)}d` : "—", hint: nextExpiry ? fmtDate(nextExpiry) : undefined },
-          ]}
-        />
-
         {data && data.resolver && !data.supportsData ? (
-          <div className="mt-4 border border-line bg-paper px-4 py-3 text-[12px]">
+          <div className="mt-6 border border-line bg-paper px-4 py-3 text-[12px]">
             <StatusText tone="wait">this name's resolver cannot {data.capabilities?.readsData ? "write" : "store"} data records.</StatusText>{" "}
             <span className="text-ink-muted">
               owned accounts are ENSIP-24 data records. the resolver at{" "}
@@ -185,13 +205,6 @@ export default function RecordPage() {
             </span>
           </div>
         ) : null}
-        {data?.capabilities && data.supportsData ? (
-          <div className="mt-4 text-[11px] text-ink-dim">
-            resolver <a className="link-blue" href={`${explorer}/address/${data.resolver}`} target="_blank" rel="noreferrer">{shortAddr(data.resolver!)}</a>
-            {" · "}{data.capabilities.writeFlavour === "name" ? "ENSv2 permissioned resolver" : data.capabilities.canModifyName ? "ENSv2 public resolver" : "v1-style resolver"}
-            {" · "}data records {data.capabilities.erc165Data ? "advertised via ERC-165" : "detected by probing"}
-          </div>
-        ) : null}
         {data?.chains.some((c) => c.malformed) ? (
           <div className="mt-4 text-[12px]"><StatusText tone="err">one or more listing records are malformed and were ignored.</StatusText></div>
         ) : null}
@@ -200,8 +213,15 @@ export default function RecordPage() {
         ) : null}
 
         <Figure n={1} name={`owned accounts · ${name}`} className="mt-8" padded={false} dotted={false}>
-          {record.isLoading ? (
-            <div className="t-body px-5 py-8 text-center">reading listings and verifying proofs…</div>
+          {loading ? (
+            <AccountsTableSkeleton />
+          ) : rows.length === 0 ? (
+            <div className="px-5 py-10 text-center">
+              <div className="t-fig-title">Nothing on the record yet</div>
+              <p className="t-fig-body mx-auto mt-2 max-w-[48ch]">
+                {canEdit ? "add the wallet you are connected with below, then publish from the owner wallet." : "if this is your name, connect a wallet below to add your first account."}
+              </p>
+            </div>
           ) : (
             <AccountsTable
               rows={rows}
@@ -212,94 +232,172 @@ export default function RecordPage() {
             />
           )}
         </Figure>
-        <p className="t-caption mt-3 normal-case tracking-normal">
-          owned accounts are not payment addresses. do not send funds to them on the strength of this page. verification: ERC-1271 for contracts, ecrecover for EOAs, expiry ≤ 2 years.
-        </p>
+
+        <StatRow
+          className="mt-4"
+          stats={[
+            { label: "on the record", value: loading ? "…" : String(total) },
+            { label: "verified", value: loading ? "…" : `${verified.length}/${total}` },
+            { label: "chains", value: loading ? "…" : String(chainCount) },
+            { label: "next expiry", value: nextExpiry ? `${daysUntil(nextExpiry)} days` : "—", hint: nextExpiry ? fmtDate(nextExpiry) : undefined },
+          ]}
+        />
+
+        <div className="mt-6 border-t border-line">
+          <FaqRow q="what do the statuses mean?">
+            <ul className="space-y-2">
+              {statusHelp.map((h) => (
+                <li key={h.status} className="flex flex-wrap items-center gap-3">
+                  <StatusMark status={h.status} />
+                  <span>{h.text}</span>
+                </li>
+              ))}
+            </ul>
+          </FaqRow>
+          <FaqRow q="can i send funds to these accounts?">
+            No. An owned account is an identity claim, not a payment address. The standard says clients must not show the name in place of the address and should not send funds to owned accounts. Use the name's address records to pay it.
+          </FaqRow>
+          {data?.capabilities && data.supportsData ? (
+            <FaqRow q="where is this stored?">
+              On the name's own resolver,{" "}
+              <a className="link-blue" href={`${explorer}/address/${data.resolver}`} target="_blank" rel="noreferrer">{shortAddr(data.resolver!)}</a>{" "}
+              ({data.capabilities.writeFlavour === "name" ? "an ENSv2 permissioned resolver" : data.capabilities.canModifyName ? "the ENSv2 public resolver" : "a v1-style resolver"}), as ENSIP-24 data records, read through the Universal Resolver.
+              {" "}Data support was {data.capabilities.erc165Data ? "advertised via ERC-165" : "detected by probing the resolver"}.
+            </FaqRow>
+          ) : null}
+        </div>
       </Section>
 
+      {/* ---------------------------------------------------------------- manage */}
       <Section>
         <SectionHeader
           eyebrow="manage"
           title="Put an account on the record"
-          lede="Each account signs its own consent. The name owner publishes every listing and proof in one transaction."
+          lede="Three steps. The account you want to list signs its own consent; the name owner publishes. One transaction, as many accounts as you like."
         />
-        <Figure n={2} name="publish">
-          <div className="flex flex-wrap items-center gap-3">
-            {!isConnected ? (
-              <span className="t-body">connect a wallet to sign consents or publish.</span>
-            ) : (
-              <>
-                <Button variant="outline" onClick={() => setDialog({ open: true })}>+ add connected account</Button>
-                <span className="t-body">
-                  {authority.isLoading ? (
-                    <>checking whether {shortAddr(address!)} can write records…</>
-                  ) : canPublish ? (
-                    <><LivePill pulse={false}>{authority.data?.via === "owner" ? "owner" : "authorised"}</LivePill> {shortAddr(address!)} can publish{authority.data?.via === "roles" ? " (resolver role)" : authority.data?.via === "canModifyName" ? " (ENSv2 registry)" : ""}.</>
-                  ) : owner.data?.owner ? (
-                    <>{shortAddr(address!)} cannot write records for this name (owner {shortAddr(owner.data.owner)}{owner.data.source ? ` · ${owner.data.source}` : ""}). sign consents here, then connect the owner wallet to publish.</>
-                  ) : data?.capabilities?.roles || data?.capabilities?.canModifyName ? (
-                    <>{shortAddr(address!)} has no write role on this ENSv2 resolver. sign consents here, then connect a wallet that does.</>
-                  ) : (
-                    <>no owner found for this name on {recordsChain.label}.</>
-                  )}
-                </span>
-              </>
-            )}
+        <Figure n={2} name="publish" padded={false} dotted={false}>
+          <div className="grid divide-y divide-line lg:grid-cols-3 lg:divide-x lg:divide-y-0">
+            {/* step 1 */}
+            <div className="p-5">
+              <div className="flex items-baseline gap-3">
+                <span className="text-[11px] text-blue">01</span>
+                <span className="t-fig-title">Connect</span>
+              </div>
+              <p className="t-fig-body mt-2">Connect the wallet you want to list. To publish, connect the wallet that owns {name}.</p>
+              <div className="mt-4">
+                {!isConnected ? (
+                  <ConnectButton />
+                ) : (
+                  <div className="flex flex-wrap items-center gap-2 text-[12px]">
+                    <span className="dot text-ok" />
+                    <span className="tabular font-semibold">{shortAddr(address!, 6)}</span>
+                    {authority.isLoading ? (
+                      <span className="text-ink-dim">· checking permissions…</span>
+                    ) : canPublish ? (
+                      <LivePill pulse={false}>{authority.data?.via === "owner" ? "owner" : "can publish"}</LivePill>
+                    ) : (
+                      <span className="text-ink-dim">· can sign, cannot publish</span>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+            {/* step 2 */}
+            <div className="p-5">
+              <div className="flex items-baseline gap-3">
+                <span className="text-[11px] text-blue">02</span>
+                <span className="t-fig-title">Sign a consent</span>
+              </div>
+              <p className="t-fig-body mt-2">The connected wallet signs a message saying it belongs to {name}. Switch wallets and repeat for each account.</p>
+              <div className="mt-4">
+                <Button variant={isConnected && pendingCount === 0 ? "accent" : "outline"} disabled={!isConnected || !data?.supportsData} onClick={() => setDialog({ open: true })}>
+                  + add connected wallet
+                </Button>
+                {isConnected && !data?.supportsData ? <div className="t-caption mt-2 normal-case tracking-normal">this name's resolver cannot store records yet.</div> : null}
+              </div>
+            </div>
+            {/* step 3 */}
+            <div className="p-5">
+              <div className="flex items-baseline gap-3">
+                <span className="text-[11px] text-blue">03</span>
+                <span className="t-fig-title">Publish</span>
+              </div>
+              <p className="t-fig-body mt-2">
+                {pendingCount === 0 ? "Nothing waiting. Signed consents and removals collect here until you publish." : `${pendingCount} ${pendingCount === 1 ? "change" : "changes"} waiting. Publishing writes every listing and proof in one transaction.`}
+              </p>
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <Button
+                  variant={pendingCount > 0 ? "accent" : "outline"}
+                  disabled={!canPublish || pendingCount === 0 || !data?.resolver || !data?.supportsData || sending || receipt.isLoading}
+                  onClick={publish}
+                >
+                  {sending ? "confirm in wallet…" : receipt.isLoading ? "mining…" : pendingCount > 0 ? `publish ${pendingCount} ${pendingCount === 1 ? "change" : "changes"}` : "publish"}
+                </Button>
+                {isConnected && pendingCount > 0 && !canPublish && !authority.isLoading ? (
+                  <span className="t-caption normal-case tracking-normal">connect the owner wallet to publish.</span>
+                ) : null}
+              </div>
+              {txHash ? (
+                <div className="mt-3 text-[11px]">
+                  {receipt.isSuccess ? <StatusText tone="ok">published</StatusText> : receipt.isLoading ? <StatusText tone="wait">mining</StatusText> : <StatusText tone="dim">sent</StatusText>}{" "}
+                  <a className="link-blue text-ink-dim" href={`${explorer}/tx/${txHash}`} target="_blank" rel="noreferrer">{shortAddr(txHash, 6)}</a>
+                </div>
+              ) : null}
+            </div>
           </div>
 
-          {drafts.pending > 0 ? (
-            <div className="mt-5 border border-line bg-paper">
-              <div className="t-label border-b border-line px-4 py-2 text-ink-dim">pending · {drafts.pending}</div>
-              <ul className="divide-y divide-line-soft px-4 text-[12px]">
+          {pendingCount > 0 ? (
+            <div className="border-t border-line">
+              <div className="t-label px-5 py-2 text-ink-dim">waiting to be published</div>
+              <ul className="divide-y divide-line-soft border-t border-line-soft px-5 text-[12px]">
                 {drafts.adds.map((d) => (
-                  <li key={`a:${d.chainId}:${d.account}`} className="flex flex-wrap items-center gap-3 py-2">
-                    <StatusText tone="blue">add</StatusText>
-                    <span className="tabular">{shortAddr(d.account, 6)}</span>
-                    <span className="text-ink-dim">{chainById(d.chainId)?.label} · until {fmtDate(BigInt(d.expiresAt))}</span>
+                  <li key={`a:${d.chainId}:${d.account}`} className="flex flex-wrap items-center gap-3 py-2.5">
+                    <StatusMark status="draft" />
+                    <span className="tabular font-semibold">{shortAddr(d.account, 6)}</span>
+                    <span className="text-ink-dim">{chainById(d.chainId)?.label} · valid until {fmtDate(BigInt(d.expiresAt))}</span>
                     <Button size="sm" variant="ghost" className="ml-auto" onClick={() => drafts.dropDraft(d)}>discard</Button>
                   </li>
                 ))}
                 {drafts.removals.map((r) => (
-                  <li key={`r:${r.chainId}:${r.account}`} className="flex flex-wrap items-center gap-3 py-2">
-                    <StatusText tone="err">remove</StatusText>
-                    <span className="tabular">{shortAddr(r.account, 6)}</span>
+                  <li key={`r:${r.chainId}:${r.account}`} className="flex flex-wrap items-center gap-3 py-2.5">
+                    <StatusMark status="removing" />
+                    <span className="tabular font-semibold">{shortAddr(r.account, 6)}</span>
                     <span className="text-ink-dim">{chainById(r.chainId)?.label}</span>
                     <Button size="sm" variant="ghost" className="ml-auto" onClick={() => drafts.unmarkRemoval(r)}>undo</Button>
                   </li>
                 ))}
               </ul>
-              <div className="flex flex-wrap items-center gap-3 border-t border-line px-4 py-3">
-                <Button
-                  variant="accent"
-                  disabled={!canPublish || !data?.resolver || !data?.supportsData || sending || receipt.isLoading}
-                  onClick={publish}
-                >
-                  {sending ? "confirm in wallet…" : receipt.isLoading ? "mining…" : `publish ${drafts.pending} ${drafts.pending === 1 ? "change" : "changes"}`}
-                </Button>
-                <span className="t-caption normal-case tracking-normal">
-                  one <code>multicall</code> on the resolver, from the owner wallet on {recordsChain.label}.
-                  {txHash ? <> tx <a className="link-blue" href={`${explorer}/tx/${txHash}`} target="_blank" rel="noreferrer">{shortAddr(txHash, 6)}</a></> : null}
-                </span>
-                <Button size="sm" variant="ghost" className="ml-auto" onClick={drafts.clear}>clear all</Button>
+              <div className="flex items-center justify-end border-t border-line-soft px-5 py-2">
+                <Button size="sm" variant="ghost" onClick={drafts.clear}>discard all</Button>
               </div>
             </div>
           ) : null}
         </Figure>
 
         <div className="mt-6 grid gap-6 lg:grid-cols-2">
-          <Figure n={3} name="what gets written" padded={false}>
-            <Code lines={[
-              [c(`# resolver ${data?.resolver ? shortAddr(data.resolver) : "0x…"} · ${recordsChain.label}`)],
-              [k("accounts-chains"), p(": "), s(`[${Array.from(new Set([...onChain.map((a) => a.chainId), ...drafts.adds.map((d) => d.chainId)])).join(", ") || "…"}]`)],
-              ...rows.filter((r) => r.pending !== "remove").slice(0, 4).map((r) => [k(`accounts[${r.chainId}]`), p(" ∋ "), s(shortAddr(r.account, 6))]),
-              ...rows.filter((r) => r.pending !== "remove").slice(0, 2).map((r) => [k(`accounts[${r.chainId}][${shortAddr(r.account, 3)}]`), p(": "), s(`(${r.expiresAt ?? "expiresAt"}, sig)`)]),
-            ]} />
-          </Figure>
-          <Figure n={4} name="embed">
-            <p className="t-body">link to this record from a bio or readme.</p>
+          <Figure n={3} name="share">
+            <p className="t-fig-body">Link to this record from a bio, a readme or a profile.</p>
             <pre className="code mt-3 border border-line bg-paper text-[11px] whitespace-pre-wrap break-all">{embed}</pre>
-            <Button size="sm" variant="outline" className="mt-3" onClick={() => { navigator.clipboard?.writeText(embed); toast("snippet copied") }}>copy markdown</Button>
+            <div className="mt-3 flex gap-2">
+              <Button size="sm" variant="outline" onClick={() => { navigator.clipboard?.writeText(embed); toast("snippet copied") }}>copy markdown</Button>
+              <Button size="sm" variant="outline" onClick={() => { navigator.clipboard?.writeText(`https://records.xyz/${name}`); toast("link copied") }}>copy link</Button>
+            </div>
           </Figure>
+          <div className="border-t border-line lg:border-t-0">
+            <FaqRow q="technical details: what gets written">
+              <Figure name="records on the resolver" padded={false} className="mt-1">
+                <Code lines={[
+                  [c(`# resolver ${data?.resolver ? shortAddr(data.resolver) : "0x…"} · ${recordsChain.label}`)],
+                  [k("accounts-chains"), p(": "), s(`[${Array.from(new Set([...onChain.map((a) => a.chainId), ...drafts.adds.map((d) => d.chainId)])).join(", ") || "…"}]`)],
+                  ...rows.filter((r) => r.pending !== "remove").slice(0, 4).map((r) => [k(`accounts[${r.chainId}]`), p(" ∋ "), s(shortAddr(r.account, 6))]),
+                  ...rows.filter((r) => r.pending !== "remove").slice(0, 2).map((r) => [k(`accounts[${r.chainId}][${shortAddr(r.account, 3)}]`), p(": "), s(`(${r.expiresAt ?? "expiresAt"}, sig)`)]),
+                ]} />
+              </Figure>
+              <p className="t-caption mt-2 normal-case tracking-normal">
+                verification: ERC-1271 for contracts, ecrecover for wallets, expiry at most two years. written with one <code>multicall</code> of {data?.capabilities?.writeFlavour === "name" ? "setData(name, key, value)" : "setData(node, key, value)"}.
+              </p>
+            </FaqRow>
+          </div>
         </div>
       </Section>
 

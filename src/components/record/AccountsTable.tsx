@@ -1,8 +1,9 @@
+import { Copy, ExternalLink } from "lucide-react"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { StatusBadge, type RowStatus } from "./StatusBadge"
+import { StatusMark, statusSpec, type RowStatus } from "./StatusMark"
 import { chainById } from "@/lib/ens/chains"
 import { daysUntil, fmtDate, shortAddr } from "@/lib/format"
 import type { AccountKind } from "@/hooks/useRecord"
@@ -18,7 +19,16 @@ export type Row = {
   pending?: "add" | "remove"
 }
 
-const kindLabel: Record<AccountKind, string> = { eoa: "eoa", contract: "contract", "7702": "7702" }
+const kindLabel: Record<AccountKind, { label: string; hint: string }> = {
+  eoa: { label: "wallet", hint: "externally owned account · verified by ecrecover" },
+  contract: { label: "smart account", hint: "contract account · verified via ERC-1271" },
+  "7702": { label: "delegated wallet", hint: "EIP-7702 delegated EOA · verified via its delegate (ERC-1271)" },
+}
+
+function copy(text: string, what: string) {
+  navigator.clipboard?.writeText(text)
+  toast(`${what} copied`)
+}
 
 function AccountsTable({
   rows,
@@ -33,19 +43,16 @@ function AccountsTable({
   onUndo?: (r: Row) => void
   onRenew?: (r: Row) => void
 }) {
-  if (rows.length === 0) {
-    return <div className="t-body px-5 py-8 text-center">nothing on the record yet.</div>
-  }
   return (
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>chain</TableHead>
-          <TableHead>account</TableHead>
-          <TableHead>type</TableHead>
           <TableHead>status</TableHead>
-          <TableHead className="text-right">expires</TableHead>
-          {canEdit ? <TableHead className="text-right">actions</TableHead> : null}
+          <TableHead>account</TableHead>
+          <TableHead>chain</TableHead>
+          <TableHead>type</TableHead>
+          <TableHead className="text-right">consent valid until</TableHead>
+          {canEdit ? <TableHead className="text-right"></TableHead> : null}
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -53,40 +60,54 @@ function AccountsTable({
           const chain = chainById(r.chainId)
           const href = chain ? `${chain.explorer}/address/${r.account}` : undefined
           const days = r.expiresAt ? daysUntil(r.expiresAt) : undefined
+          const kind = kindLabel[r.kind]
           return (
             <TableRow key={`${r.chainId}:${r.account}`} className={r.pending === "remove" ? "opacity-60" : undefined}>
-              <TableCell>{chain?.label ?? r.chainId}</TableCell>
-              <TableCell>
-                <Tooltip>
-                  <TooltipTrigger render={<a className="link-blue tabular" href={href} target="_blank" rel="noreferrer" />}>
-                    {shortAddr(r.account, 6)}
-                  </TooltipTrigger>
-                  <TooltipContent className="font-mono text-[11px]">{r.account}</TooltipContent>
-                </Tooltip>
-              </TableCell>
-              <TableCell>
-                <Badge variant="dim">{kindLabel[r.kind]}</Badge>
-              </TableCell>
-              <TableCell>
+              <TableCell className="py-3">
                 <Tooltip>
                   <TooltipTrigger render={<span />}>
-                    <StatusBadge status={r.status} />
+                    <StatusMark status={r.status} />
                   </TooltipTrigger>
-                  <TooltipContent className="font-mono text-[11px] lowercase">{r.reason}</TooltipContent>
+                  <TooltipContent className="max-w-xs font-mono text-[11px] lowercase whitespace-normal">{r.reason || statusSpec[r.status].short}</TooltipContent>
                 </Tooltip>
               </TableCell>
-              <TableCell className="text-right">
+              <TableCell className="py-3">
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="tabular text-[12.5px] font-semibold text-ink">{shortAddr(r.account, 6)}</span>
+                  <button type="button" className="link-blue text-ink-dim" aria-label="copy address" onClick={() => copy(r.account, "address")}>
+                    <Copy className="size-3.5" />
+                  </button>
+                  {href ? (
+                    <a className="link-blue text-ink-dim" href={href} target="_blank" rel="noreferrer" aria-label="open in explorer">
+                      <ExternalLink className="size-3.5" />
+                    </a>
+                  ) : null}
+                </span>
+              </TableCell>
+              <TableCell className="py-3">
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="dot text-blue-2" />
+                  {chain?.label ?? `chain ${r.chainId}`}
+                </span>
+              </TableCell>
+              <TableCell className="py-3">
+                <Tooltip>
+                  <TooltipTrigger render={<span className="text-ink-muted" />}>{kind.label}</TooltipTrigger>
+                  <TooltipContent className="font-mono text-[11px] lowercase">{kind.hint}</TooltipContent>
+                </Tooltip>
+              </TableCell>
+              <TableCell className="py-3 text-right">
                 {r.expiresAt ? (
                   <span className={days !== undefined && days <= 30 ? "text-wait" : undefined}>
                     {fmtDate(r.expiresAt)}
-                    {days !== undefined ? <span className="text-ink-dim"> · {days > 0 ? `${days}d` : "past"}</span> : null}
+                    <span className="text-ink-dim"> · {days !== undefined && days > 0 ? `${days} days` : "past"}</span>
                   </span>
                 ) : (
                   <span className="text-ink-dim">—</span>
                 )}
               </TableCell>
               {canEdit ? (
-                <TableCell className="text-right">
+                <TableCell className="py-3 text-right">
                   <div className="flex justify-end gap-1.5">
                     {r.pending ? (
                       <Button size="sm" variant="outline" onClick={() => onUndo?.(r)}>undo</Button>
@@ -107,4 +128,19 @@ function AccountsTable({
   )
 }
 
-export { AccountsTable }
+function AccountsTableSkeleton() {
+  return (
+    <div className="divide-y divide-line-soft">
+      {[0, 1].map((i) => (
+        <div key={i} className="flex items-center gap-6 px-3 py-3.5">
+          <div className="h-5 w-24 bg-wash" />
+          <div className="h-4 w-36 bg-wash" />
+          <div className="h-4 w-16 bg-wash" />
+          <div className="ml-auto h-4 w-28 bg-wash" />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+export { AccountsTable, AccountsTableSkeleton }
