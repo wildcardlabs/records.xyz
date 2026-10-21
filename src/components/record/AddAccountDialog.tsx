@@ -106,23 +106,23 @@ function AddAccountDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="font-mono">
         <DialogHeader>
-          <DialogTitle className="t-h3 lowercase">Add an account to {name}</DialogTitle>
+          <DialogTitle className="t-h3 lowercase">Add this wallet to {name}</DialogTitle>
           <DialogDescription className="t-body">
-            The connected wallet signs an EIP-712 consent saying it belongs to this name. Nothing is written until the owner publishes.
+            Your wallet will ask you to sign a message. It says this wallet belongs to {name} until the date you pick. Signing is free; nothing goes on chain until the owner publishes.
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4 py-2">
           <div className="grid gap-2">
-            <Label>account (connected wallet)</Label>
+            <Label>wallet being added (the one connected now)</Label>
             {isConnected && address ? (
               <div className="border border-line bg-paper-2 px-3 py-2 text-[12px] tabular">{address}</div>
             ) : (
-              <StatusText tone="err" className="text-[12px]">connect the wallet you want to list first.</StatusText>
+              <StatusText tone="err" className="text-[12px]">connect the wallet you want to add first.</StatusText>
             )}
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="chain">account lives on</Label>
+            <Label htmlFor="chain">which chain is this wallet on?</Label>
             <select
               id="chain"
               value={chainId}
@@ -135,7 +135,7 @@ function AddAccountDialog({
             </select>
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="expiry">valid for</Label>
+            <Label htmlFor="expiry">how long should this consent last?</Label>
             <select
               id="expiry"
               value={preset}
@@ -146,10 +146,10 @@ function AddAccountDialog({
                 <option key={p.label} value={i}>{p.label} · until {fmtDate(nowSeconds() + p.secs)}</option>
               ))}
             </select>
-            <span className="t-caption normal-case tracking-normal">signatures cannot be revoked. pick the shortest window that works; stop renewing to withdraw.</span>
+            <span className="t-caption normal-case tracking-normal">a consent cannot be cancelled once signed, only left to expire. pick the shortest window that works; you can renew later.</span>
           </div>
           <div className="t-caption normal-case tracking-normal">
-            domain chain: {recordsChain?.label} ({recordsChainId}) · your wallet may ask to switch networks before signing.
+            your wallet may ask to switch to {recordsChain?.label} before signing. that is expected: the message is tied to the network the name lives on.
           </div>
           {error ? <StatusText tone="err" className="text-[12px]">{error}</StatusText> : null}
         </div>
@@ -157,7 +157,7 @@ function AddAccountDialog({
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>cancel</Button>
           <Button variant="accent" disabled={!isConnected || busy} onClick={sign}>
-            {busy ? "waiting for signature…" : "sign consent"}
+            {busy ? "check your wallet…" : "sign consent"}
           </Button>
         </DialogFooter>
       </DialogContent>

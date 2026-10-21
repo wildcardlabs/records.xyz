@@ -360,6 +360,7 @@
     color: var(--fg);
     white-space: pre;
     overflow-x: auto;
+    max-width: 100%;
   }
   .code .k { color: var(--blue); }
   .code .s { color: var(--ok); }

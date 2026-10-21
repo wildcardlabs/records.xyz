@@ -5,23 +5,35 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { StatusMark, type RowStatus } from "@/components/record/StatusMark"
-import { Figure, FigSplit, Section, SectionHeader, Eyebrow, StatRow, LivePill, StatusText, Code, k, s, c, n, p, FaqRow } from "@/components/wrap"
+import { AccountsTable, type Row } from "@/components/record/AccountsTable"
+import { Figure, FigSplit, Section, SectionHeader, Eyebrow, StatRow, StatusText, Code, k, s, c, n, p, FaqRow } from "@/components/wrap"
 
 const steps = [
-  { num: "01", title: "List", body: "Add any account on any chain: an EOA, a Safe, a 7702 account, a token bound account." },
-  { num: "02", title: "Consent", body: "The account itself signs an EIP-712 consent naming the name, the chain, itself and an expiry." },
-  { num: "03", title: "Publish", body: "The name owner writes every listing and proof to the resolver in one transaction." },
+  {
+    num: "01",
+    title: "Add a wallet",
+    body: "Any wallet or smart account you control, on any chain: a normal wallet, a Safe, a delegated wallet, a token-bound account.",
+  },
+  {
+    num: "02",
+    title: "Sign a consent",
+    body: "That wallet signs a short message: \"I belong to alice.eth, until this date.\" Signing is free and nothing goes on chain yet.",
+  },
+  {
+    num: "03",
+    title: "Publish",
+    body: "The wallet that owns the name writes every consent to the name in one transaction. From then on anyone can verify it.",
+  },
 ]
 
-const example: { chain: string; account: string; type: string; status: string; expires: string }[] = [
-  { chain: "mainnet", account: "0xd8da…6045", type: "eoa", status: "verified", expires: "2027-01-01" },
-  { chain: "mainnet", account: "0x9a6b…31c0", type: "contract", status: "verified", expires: "2027-06-30" },
-  { chain: "base", account: "0xb8c2…67d5", type: "contract", status: "verified", expires: "2026-12-01" },
-  { chain: "base", account: "0x41e0…8a2f", type: "7702", status: "verified", expires: "2027-03-15" },
-  { chain: "optimism", account: "0x77ab…91fe", type: "eoa", status: "expired", expires: "2026-10-01" },
+const at = (iso: string) => BigInt(Math.floor(Date.parse(iso) / 1000))
+const example: Row[] = [
+  { chainId: 1, account: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045", kind: "eoa", status: "verified", reason: "example", expiresAt: at("2027-01-01") },
+  { chainId: 1, account: "0x9a6b3f1c0e2d4b5a6c7d8e9f0a1b2c3d4e5f31c0", kind: "contract", status: "verified", reason: "example", expiresAt: at("2027-06-30") },
+  { chainId: 8453, account: "0xb8c2C29ee19D8307cb7255e1Cd9CbDE883A267d5", kind: "contract", status: "verified", reason: "example", expiresAt: at("2026-12-01") },
+  { chainId: 8453, account: "0x41e0a1b2c3d4e5f60718293a4b5c6d7e8f908a2f", kind: "7702", status: "verified", reason: "example", expiresAt: at("2027-03-15") },
+  { chainId: 10, account: "0x77ab1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f91fe", kind: "eoa", status: "expired", reason: "example", expiresAt: at("2026-10-01") },
 ]
-
 export default function Home() {
   const [q, setQ] = useState("")
   const [err, setErr] = useState<string | null>(null)
@@ -29,12 +41,15 @@ export default function Home() {
 
   function go(e: React.FormEvent) {
     e.preventDefault()
+    const raw = q.trim()
+    if (!raw) return setErr("type an ENS name first, like alice.eth")
     try {
-      const name = normalize(q.trim())
-      if (!name.includes(".")) throw new Error("enter a full name, like alice.eth")
+      const name = normalize(raw)
+      if (!name.includes(".")) throw new Error("that is not a full name. include the ending, like alice.eth")
       nav(`/${name}`)
     } catch (x) {
-      setErr((x as Error).message.split("\n")[0].toLowerCase())
+      const msg = (x as Error).message.split("\n")[0]
+      setErr(msg.startsWith("that is not") ? msg : `"${raw}" is not a valid ENS name`)
     }
   }
 
@@ -43,54 +58,44 @@ export default function Home() {
       <Section>
         <SectionHeader
           as="h1"
-          eyebrow="ensip-28 · name owned accounts"
+          eyebrow="built on ensip-28 · name owned accounts"
           title="Put your accounts on the record"
-          lede="One ENS name, every account you control, verified from both sides. Each account signs its own consent; anyone can check it live from chain."
+          lede="Prove which wallets belong to your ENS name. Each wallet signs its own consent, and anyone can check it live on chain. No indexer, no trust in us."
         />
         <form onSubmit={go} className="flex max-w-xl flex-col gap-2 sm:flex-row">
-          <Input value={q} onChange={(e) => { setQ(e.target.value); setErr(null) }} placeholder="alice.eth" aria-label="ens name" autoFocus />
+          <Input value={q} onChange={(e) => { setQ(e.target.value); setErr(null) }} placeholder="look up any ENS name, like alice.eth" aria-label="ens name" autoFocus />
           <Button type="submit" variant="accent" size="lg">open the record</Button>
         </form>
         {err ? <StatusText tone="err" className="mt-2 block text-[12px]">{err}</StatusText> : null}
         <div className="mt-3 text-[12px] text-ink-dim">
-          try <Link className="link-blue text-ink" to="/vitalik.eth">vitalik.eth</Link> · <Link className="link-blue text-ink" to="/nick.eth">nick.eth</Link>
+          see a live record: <Link className="link-blue text-ink" to="/steve.eth?net=sepolia">steve.eth</Link> on sepolia · or look up <Link className="link-blue text-ink" to="/vitalik.eth">vitalik.eth</Link>
         </div>
 
-        <Figure n={1} name="example · alice.eth" className="mt-10" padded={false} dotted={false}>
+        <div className="mt-6 max-w-2xl border border-line bg-paper px-4 py-3 text-[12px]">
+          <StatusText tone="wait">ENSv2 names only, for now.</StatusText>{" "}
+          <span className="text-ink-muted">
+            Publishing needs a resolver that can store data records, which ENSv2 resolvers do and today's mainnet public resolver does not. ENSv2 is live on Sepolia and comes to mainnet with the activation vote. Looking up any name works already.
+          </span>
+        </div>
+
+        <Figure n={1} name="example · what a record looks like" className="mt-10" padded={false} dotted={false}>
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-2.5">
-            <span className="t-caption normal-case tracking-normal">what a record page shows: every account alice.eth lists, with its proof checked live</span>
-            <LivePill>verified live</LivePill>
+            <span className="t-caption normal-case tracking-normal">a made-up alice.eth with five wallets: four still verified, one whose consent ran out</span>
+            <Badge variant="dim">example</Badge>
           </div>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>chain</TableHead><TableHead>account</TableHead><TableHead>type</TableHead><TableHead>status</TableHead><TableHead className="text-right">expires</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {example.map((r) => (
-                <TableRow key={r.account + r.chain}>
-                  <TableCell>{r.chain}</TableCell>
-                  <TableCell className="tabular">{r.account}</TableCell>
-                  <TableCell><Badge variant="dim">{r.type}</Badge></TableCell>
-                  <TableCell><StatusMark status={r.status as RowStatus} /></TableCell>
-                  <TableCell className="text-right">{r.expires}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <AccountsTable rows={example} canEdit={false} />
           <StatRow className="border-t border-line" stats={[
             { label: "on the record", value: "5" },
-            { label: "chains", value: "3" },
             { label: "verified", value: "4/5", hint: "1 expired" },
-            { label: "next expiry", value: "41d", hint: "2026-12-01" },
+            { label: "chains", value: "3" },
+            { label: "next expiry", value: "41 days", hint: "2026-12-01" },
           ]} />
         </Figure>
       </Section>
 
       <Section>
-        <SectionHeader eyebrow="how it works" title="Consent from both sides, stored as records" lede="ENSIP-9 maps one address per chain for payments. ENSIP-28 lists the rest of your accounts, each with a signed proof." />
-        <Figure n={2} name="three steps" padded={false} dotted={false}>
+        <SectionHeader eyebrow="how it works" title="Three steps, one transaction" lede="Your ENS name already resolves to one address per chain for payments. This adds the rest of your wallets, each with a signed consent that proves it agreed." />
+        <Figure n={2} name="how it works" padded={false} dotted={false}>
           <FigSplit>
             <div className="divide-y divide-line">
               {steps.map((st) => (
@@ -104,6 +109,7 @@ export default function Home() {
               ))}
             </div>
             <div className="fig-body">
+              <div className="t-caption px-4 pt-3 normal-case tracking-normal">under the hood: what ends up stored on the name</div>
               <Code lines={[
                 [c("# data records on alice.eth")],
                 [k("accounts[8453]"), p(":          "), s("abi.encode(0xb8c2…, 0xd8da…)")],
@@ -111,7 +117,7 @@ export default function Home() {
                 [k("accounts[8453][0xd8da…]"), p(": "), s("abi.encode("), n("1798761600"), s(", sig)")],
                 [k("accounts-chains"), p(":         "), s("abi.encode("), n("1"), s(", "), n("8453"), s(")")],
                 [p("")],
-                [c("# consent (eip-712)")],
+                [c("# the message each wallet signs (eip-712)")],
                 [k("domain"), p(":  "), s("ENS Name Owned Accounts v1 · chainId 1")],
                 [k("Consent"), p(": "), s("{ node, accountChainId, account, expiresAt }")],
               ]} />
@@ -121,20 +127,20 @@ export default function Home() {
       </Section>
 
       <Section>
-        <SectionHeader eyebrow="verification" title="What this page checks before it says verified" lede="Everything runs in your browser against public RPCs. No indexer, no trust in records.xyz." />
+        <SectionHeader eyebrow="verification" title="What verified means here" lede="Every check runs in your browser against public RPCs. records.xyz never holds the data and cannot fake a result." />
         <Figure n={3} name="checks" padded={false} dotted={false}>
           <Table>
             <TableHeader>
-              <TableRow><TableHead>#</TableHead><TableHead>check</TableHead><TableHead>on failure</TableHead></TableRow>
+              <TableRow><TableHead>#</TableHead><TableHead>check</TableHead><TableHead>if it fails</TableHead></TableRow>
             </TableHeader>
             <TableBody>
               {[
-                ["1", "listing decodes into whole 32-byte address words", "listing ignored"],
-                ["2", "a proof record exists for the account", "unverified"],
-                ["3", "expiresAt is non-zero, in the future, and at most two years ahead", "expired / invalid"],
-                ["4", "signature is non-empty", "invalid"],
-                ["5", "account has code → ERC-1271 isValidSignature returns 0x1626ba7e", "invalid"],
-                ["6", "otherwise ecrecover equals the account and is not zero", "invalid"],
+                ["1", "the name's list of accounts is well formed", "the list is ignored"],
+                ["2", "a signed consent exists for the account", "unverified"],
+                ["3", "the consent has not expired and is dated at most two years out", "expired / invalid"],
+                ["4", "the signature is not empty", "invalid"],
+                ["5", "smart accounts: the account itself confirms the signature (ERC-1271)", "invalid"],
+                ["6", "wallets: the signature recovers to exactly this address (ecrecover)", "invalid"],
               ].map((r) => (
                 <TableRow key={r[0]}>
                   <TableCell className="text-blue">{r[0]}</TableCell>
@@ -150,11 +156,12 @@ export default function Home() {
       <Section>
         <Eyebrow>faq</Eyebrow>
         <div className="mt-3 border-t border-line">
-          <FaqRow q="is an owned account a payment address?">No. The standard is explicit: owned accounts are not payment addresses. Clients must not show the name in place of the address, and should not send funds to them.</FaqRow>
-          <FaqRow q="who can publish?">Only the name owner (or a manager the resolver authorises) can write records. Anyone can sign a consent for an account they control; the owner publishes it.</FaqRow>
-          <FaqRow q="can a proof be revoked?">Signatures cannot be revoked, so every proof carries an expiry of at most two years. Pick a short window and stop renewing to withdraw. ERC-1271 proofs also lapse when a contract account's signers rotate.</FaqRow>
-          <FaqRow q="which resolvers work?">Any resolver implementing ENSIP-24 data records (interface 0xecbfada3). The record page tells you when a name's resolver does not.</FaqRow>
-          <FaqRow q="is this standard final?">ENSIP-28 is a draft. records.xyz tracks it closely; keys, encodings and the consent struct live in one module so a revision is a small change.</FaqRow>
+          <FaqRow q="what do i need to get started?">An ENS name whose resolver can store data records. ENSv2 names qualify, on Sepolia today and on mainnet once ENSv2 is activated. Open your name's record page and it will tell you whether you are ready.</FaqRow>
+          <FaqRow q="does it cost anything?">Signing a consent is free. Publishing is one normal transaction from the wallet that owns the name, so you pay gas once for all the wallets you add at the same time.</FaqRow>
+          <FaqRow q="where are my signatures kept before i publish?">In your browser only. Sign with each wallet, then switch to the owner wallet in the same browser to publish. Nothing is uploaded to us. Signing from another person's device is not supported yet.</FaqRow>
+          <FaqRow q="can i send money to an account listed here?">No. A listing says a wallet belongs to the name. It is not a payment address, and apps must never show the name in place of the address. Use the name's normal address records to pay it.</FaqRow>
+          <FaqRow q="how do i remove a wallet?">The owner can remove it from the list at any time. The signed consent itself cannot be cancelled, which is why every consent has an expiry of at most two years. Pick a short window and let it lapse.</FaqRow>
+          <FaqRow q="is this an official ENS standard?">It follows ENSIP-28, a draft standard from the ENS Labs protocol team. Drafts can change; records.xyz tracks it and keeps the format in one place so updates are quick.</FaqRow>
         </div>
       </Section>
     </>

@@ -4,7 +4,7 @@ import { RECORDS_CHAINS } from "@/lib/ens/chains"
 function NetworkSelect({ value, onChange }: { value: number; onChange: (chainId: number) => void }) {
   return (
     <label className="inline-flex items-center gap-2 font-mono text-[11px] text-ink-dim">
-      records on
+      network
       <select
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}

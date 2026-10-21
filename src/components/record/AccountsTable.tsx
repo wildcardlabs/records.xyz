@@ -1,4 +1,5 @@
 import { Copy, ExternalLink } from "lucide-react"
+import { cn } from "cn"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -44,6 +45,58 @@ function AccountsTable({
   onRenew?: (r: Row) => void
 }) {
   return (
+    <>
+    {/* phones: one card per account */}
+    <ul className="divide-y divide-line-soft sm:hidden">
+      {rows.map((r) => {
+        const chain = chainById(r.chainId)
+        const href = chain ? `${chain.explorer}/address/${r.account}` : undefined
+        const days = r.expiresAt ? daysUntil(r.expiresAt) : undefined
+        return (
+          <li key={`${r.chainId}:${r.account}`} className={cn("px-4 py-3", r.pending === "remove" && "opacity-60")}>
+            <div className="flex items-center justify-between gap-3">
+              <StatusMark status={r.status} />
+              <span className="inline-flex items-center gap-1.5 text-[11px] text-ink-muted">
+                <span className="dot text-blue-2" />
+                {chain?.label ?? `chain ${r.chainId}`} · {kindLabel[r.kind].label}
+              </span>
+            </div>
+            <div className="mt-2 flex items-center gap-2">
+              <span className="tabular text-[13px] font-semibold text-ink">{shortAddr(r.account, 6)}</span>
+              <button type="button" className="link-blue text-ink-dim" aria-label="copy address" onClick={() => copy(r.account, "address")}>
+                <Copy className="size-3.5" />
+              </button>
+              {href ? (
+                <a className="link-blue text-ink-dim" href={href} target="_blank" rel="noreferrer" aria-label="open in explorer">
+                  <ExternalLink className="size-3.5" />
+                </a>
+              ) : null}
+            </div>
+            <div className="mt-1 text-[11px] text-ink-dim">
+              {r.expiresAt ? (
+                <>consent valid until {fmtDate(r.expiresAt)}{days !== undefined ? ` · ${days > 0 ? `${days} days left` : "past"}` : ""}</>
+              ) : (
+                <>{r.reason || statusSpec[r.status].short}</>
+              )}
+            </div>
+            {canEdit ? (
+              <div className="mt-2.5 flex gap-1.5">
+                {r.pending ? (
+                  <Button size="sm" variant="outline" onClick={() => onUndo?.(r)}>undo</Button>
+                ) : (
+                  <>
+                    <Button size="sm" variant="outline" onClick={() => onRenew?.(r)}>renew</Button>
+                    <Button size="sm" variant="destructive" onClick={() => onRemove?.(r)}>remove</Button>
+                  </>
+                )}
+              </div>
+            ) : null}
+          </li>
+        )
+      })}
+    </ul>
+    {/* wider screens: the ledger */}
+    <div className="max-sm:hidden">
     <Table>
       <TableHeader>
         <TableRow>
@@ -125,6 +178,8 @@ function AccountsTable({
         })}
       </TableBody>
     </Table>
+    </div>
+    </>
   )
 }
 
