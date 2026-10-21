@@ -1,24 +1,19 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { Web3Provider } from "@/components/providers/Web3Provider";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
+import { BrowserRouter, Route, Routes } from "react-router-dom"
+import { Shell } from "@/components/layout/Shell"
+import Home from "@/pages/Home"
+import DesignSystem from "@/pages/DesignSystem"
+import NotFound from "@/pages/NotFound"
 
-const App = () => (
-  <Web3Provider>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route element={<Shell />}>
+          <Route index element={<Home />} />
+          <Route path="design" element={<DesignSystem />} />
           <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </Web3Provider>
-);
-
-export default App;
+        </Route>
+      </Routes>
+    </BrowserRouter>
+  )
+}
