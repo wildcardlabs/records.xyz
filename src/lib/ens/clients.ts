@@ -3,10 +3,15 @@ import { ACCOUNT_CHAINS } from "./chains"
 
 const cache = new Map<number, PublicClient>()
 
-/** Optional per-chain RPC override: VITE_RPC_URL_<chainId>. Falls back to the chain's public RPC. */
+/** Public RPCs that answer reliably where viem's chain default is slow or rate limited. */
+const DEFAULT_RPC: Record<number, string> = {
+  11155111: "https://sepolia.drpc.org",
+}
+
+/** Per-chain RPC: VITE_RPC_URL_<chainId> override, then our default, then the chain's own public RPC. */
 function rpcUrl(chainId: number): string | undefined {
   const env = import.meta.env as Record<string, string | undefined>
-  return env[`VITE_RPC_URL_${chainId}`]
+  return env[`VITE_RPC_URL_${chainId}`] ?? DEFAULT_RPC[chainId]
 }
 
 export function publicClient(chainId: number): PublicClient {

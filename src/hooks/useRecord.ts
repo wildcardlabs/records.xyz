@@ -2,7 +2,8 @@ import { useQuery } from "@tanstack/react-query"
 import { type Address, type Hex, namehash } from "viem"
 import { ACCOUNT_CHAINS } from "@/lib/ens/chains"
 import { publicClient } from "@/lib/ens/clients"
-import { findResolver, readDataRecord, readDataRecords, supportsDataRecords } from "@/lib/ens/resolve"
+import { findResolver, readDataRecord, readDataRecords } from "@/lib/ens/resolve"
+import { type ResolverCapabilities, resolverCapabilities, supportsOwnedAccounts } from "@/lib/ens/capabilities"
 import { CHAINS_KEY, type ProofCheck, decodeChains, decodeListing, listingKey, proofKey, verifyOwnedAccount } from "@/lib/ensip28"
 
 export type AccountKind = "eoa" | "contract" | "7702"
@@ -27,7 +28,9 @@ export type RecordData = {
   node: Hex
   recordsChainId: number
   resolver: Address | null
+  /** records can be read and written on this resolver (ENSIP-24 data profile) */
   supportsData: boolean
+  capabilities: ResolverCapabilities | null
   /** chain ids that carry a listing (from accounts-chains, or probed) */
   chains: ChainListing[]
   fetchedAt: number
@@ -48,9 +51,10 @@ export async function fetchRecord(name: string, recordsChainId: number): Promise
   const client = publicClient(recordsChainId)
   const node = namehash(name)
   const resolver = await findResolver(client, name)
-  const base: RecordData = { name, node, recordsChainId, resolver, supportsData: false, chains: [], fetchedAt: Date.now() }
+  const base: RecordData = { name, node, recordsChainId, resolver, supportsData: false, capabilities: null, chains: [], fetchedAt: Date.now() }
   if (!resolver) return base
-  base.supportsData = await supportsDataRecords(client, resolver)
+  base.capabilities = await resolverCapabilities(client, name, resolver)
+  base.supportsData = supportsOwnedAccounts(base.capabilities)
 
   // which chains to look at: the optional accounts-chains record, else probe every supported chain
   const chainsValue = await readDataRecord(client, name, CHAINS_KEY).catch(() => "0x" as Hex)

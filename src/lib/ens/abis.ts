@@ -75,3 +75,85 @@ export const NAME_WRAPPER: Record<number, `0x${string}`> = {
   1: "0xD4416b13d2b3a9aBae7AcD5D6C2BbDBE25686401",
   11155111: "0x0635513f179D50A207757E05759CbD106d7dFcE8",
 }
+
+/** Function selectors used to detect what a deployed resolver can do, independent of ERC-165 (deployments lag their sources). */
+export const SELECTORS = {
+  data: "ecbfada3", // data(bytes32,string)
+  setData: "4eb9c45e", // setData(bytes32,string,bytes)
+  multicall: "ac9650d8", // multicall(bytes[])
+  resolve: "9061b923", // resolve(bytes,bytes)  ENSIP-10
+  hasRoles: "d3bf89b1", // hasRoles(uint256,uint256,address)  ENSv2 PermissionedResolver
+  hasRootRoles: "781ef8db", // hasRootRoles(uint256,address)
+  canModifyName: "41415eab", // canModifyName(bytes32,address)  ENSv2 PublicResolverV2
+} as const
+
+export const permissionedResolverAbi = [
+  {
+    type: "function",
+    name: "hasRoles",
+    stateMutability: "view",
+    inputs: [
+      { name: "resource", type: "uint256" },
+      { name: "roleBitmap", type: "uint256" },
+      { name: "account", type: "address" },
+    ],
+    outputs: [{ type: "bool" }],
+  },
+  {
+    type: "function",
+    name: "hasRootRoles",
+    stateMutability: "view",
+    inputs: [
+      { name: "roleBitmap", type: "uint256" },
+      { name: "account", type: "address" },
+    ],
+    outputs: [{ type: "bool" }],
+  },
+  {
+    type: "function",
+    name: "canModifyName",
+    stateMutability: "view",
+    inputs: [
+      { name: "node", type: "bytes32" },
+      { name: "operator", type: "address" },
+    ],
+    outputs: [{ type: "bool" }],
+  },
+] as const
+
+/** PermissionedResolverLib.ROLE_SET_DATA */
+export const ROLE_SET_DATA = 1n << 36n
+
+export const universalResolverV2Abi = [
+  {
+    type: "function",
+    name: "findOwner",
+    stateMutability: "view",
+    inputs: [{ name: "name", type: "bytes" }],
+    outputs: [{ type: "address" }],
+  },
+] as const
+
+/** ENSv2 PermissionedResolver (post-audit-2 branch, live on Sepolia since 2026-10-01): setters take the DNS-encoded name. */
+export const nameKeyedResolverAbi = [
+  {
+    type: "function",
+    name: "setData",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "name", type: "bytes" },
+      { name: "key", type: "string" },
+      { name: "value", type: "bytes" },
+    ],
+    outputs: [],
+  },
+] as const
+
+/** `setData(bytes,string,bytes)` on the name-keyed ENSv2 resolver */
+export const SELECTOR_SET_DATA_NAME = "eb4b73bb"
+
+/**
+ * ROLE_SET_DATA differs between contracts-v2 branches:
+ * post-audit-2 (deployed) uses 1 << 24, main uses 1 << 36. Authority checks accept either.
+ */
+export const ROLE_SET_DATA_BITS = [1n << 24n, 1n << 36n] as const
