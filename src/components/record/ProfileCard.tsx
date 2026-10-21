@@ -1,9 +1,10 @@
 import { useState } from "react"
-import { Copy, ExternalLink } from "lucide-react"
+import { Check, Copy, ExternalLink } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "cn"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { FigSplit } from "@/components/wrap"
 import type { Profile } from "@/lib/ens/profile"
 import { shortAddr } from "@/lib/format"
@@ -41,7 +42,32 @@ function host(u: string) {
 }
 
 /** Read-only profile: avatar, description, links and the name's payment addresses per chain. */
-function ProfileCard({ name, profile, loading }: { name: string; profile: Profile | undefined; loading: boolean }) {
+/** Small olive check shown on a payment address that also signed a live owned-account consent on its chain. */
+function ConsentedMark({ name }: { name: string }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger render={<span className="inline-flex size-4 items-center justify-center border border-ok text-ok" aria-label="consented" />}>
+        <Check className="size-3" strokeWidth={3} />
+      </TooltipTrigger>
+      <TooltipContent className="max-w-xs font-mono text-[11px] lowercase whitespace-normal">
+        this address signed a consent for {name} on this chain · checked on chain
+      </TooltipContent>
+    </Tooltip>
+  )
+}
+
+function ProfileCard({
+  name,
+  profile,
+  loading,
+  consented,
+}: {
+  name: string
+  profile: Profile | undefined
+  loading: boolean
+  /** returns true when the address is a live verified owned account on the chain of this coin type */
+  consented?: (coinType: number, address: string) => boolean
+}) {
   const empty = !loading && profile && !profile.avatar && !profile.description && !profile.url && profile.socials.length === 0 && profile.addresses.length === 0
   const hasBanner = !!(profile?.header || (profile?.theme && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(profile.theme)))
   return (
@@ -107,6 +133,7 @@ function ProfileCard({ name, profile, loading }: { name: string; profile: Profil
                     <TableCell>
                       <span className="inline-flex items-center gap-1.5">
                         <span className="tabular font-semibold text-ink">{shortAddr(a.address, 6)}</span>
+                        {consented?.(a.coinType, a.address) ? <ConsentedMark name={name} /> : null}
                         <button type="button" className="link-blue text-ink-dim" aria-label="copy address" onClick={() => { navigator.clipboard?.writeText(a.address); toast("address copied") }}>
                           <Copy className="size-3.5" />
                         </button>
