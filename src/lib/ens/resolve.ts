@@ -31,12 +31,20 @@ const universalResolverResolveAbi = [
   },
 ] as const
 
-/** Resolver address for a name (ENSIP-10 aware, via the Universal Resolver). */
+/**
+ * Resolver address for a name (ENSIP-10 aware, via the Universal Resolver).
+ * Returns null only when the name genuinely has no resolver; network and RPC
+ * failures are thrown so callers can tell "no resolver" from "could not check".
+ */
 export async function findResolver(client: PublicClient, name: string): Promise<Address | null> {
   try {
     return await client.getEnsResolver({ name })
-  } catch {
-    return null
+  } catch (e) {
+    const msg = String((e as Error).message ?? e)
+    if (/ResolverNotFound|ResolverNotContract|returned no data|0x/.test(msg) && !/HTTP request failed|status of 5\d\d|timeout|fetch failed|rate limit|429/i.test(msg)) {
+      return null
+    }
+    throw e
   }
 }
 
