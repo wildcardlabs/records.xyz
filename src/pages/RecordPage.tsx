@@ -174,7 +174,6 @@ export default function RecordPage() {
 
   const explorer = recordsChain.explorer
   const canEdit = isConnected
-  const embed = `[![${name} · on the record](https://records.xyz/badge.svg)](https://records.xyz/${name})`
   const loading = record.isLoading
   const total = onChain.length
   const summaryStatus = loading ? null : total === 0 ? null : verified.length === total ? "verified" : verified.length > 0 ? "expiring" : "expired"
@@ -489,8 +488,32 @@ export default function RecordPage() {
           ) : null}
         </Figure>
 
-        {hasRoles ? (
-          <Figure n={4} name={`access · who can edit ${name}`} className="mt-6" padded={false} dotted={false}>
+        <div className="mt-6 border-t border-line">
+          <FaqRow q="technical details: what gets written">
+            <Figure name="records on the resolver" padded={false} className="mt-1">
+              <Code lines={[
+                [c(`# resolver ${data?.resolver ? shortAddr(data.resolver) : "0x…"} · ${recordsChain.label}`)],
+                [k("accounts-chains"), p(": "), s(`[${Array.from(new Set([...onChain.map((a) => a.chainId), ...drafts.adds.map((d) => d.chainId)])).join(", ") || "…"}]`)],
+                ...rows.filter((r) => r.pending !== "remove").slice(0, 4).map((r) => [k(`accounts[${r.chainId}]`), p(" ∋ "), s(shortAddr(r.account, 6))]),
+                ...rows.filter((r) => r.pending !== "remove").slice(0, 2).map((r) => [k(`accounts[${r.chainId}][${shortAddr(r.account, 3)}]`), p(": "), s(`(${r.expiresAt ?? "expiresAt"}, sig)`)]),
+              ]} />
+            </Figure>
+            <p className="t-caption mt-2 normal-case tracking-normal">
+              verification: ERC-1271 for contracts, ecrecover for wallets, expiry at most two years. written with one <code>multicall</code> of {data?.capabilities?.writeFlavour === "name" ? "setData(name, key, value)" : "setData(node, key, value)"}.
+            </p>
+          </FaqRow>
+        </div>
+      </Section>
+
+      {/* ---------------------------------------------------------------- access */}
+      {hasRoles ? (
+        <Section>
+          <SectionHeader
+            eyebrow="access"
+            title={`Who can edit ${name}`}
+            lede="ENSv2 resolvers grant rights per record type and per key. Let a teammate, an agent or a service change one record without handing over the name."
+          />
+          <Figure n={4} name={`access · who can edit ${name}`} padded={false} dotted={false}>
             <AccessFigure
               name={name}
               recordsChainId={recordsChainId}
@@ -505,34 +528,13 @@ export default function RecordPage() {
               onRevoke={drafts.addAccess}
             />
           </Figure>
-        ) : null}
-
-        <div className="mt-6 grid gap-6 lg:grid-cols-2">
-          <Figure n={hasRoles ? 5 : 4} name="share">
-            <p className="t-fig-body">Link to this record from a bio, a readme or a profile.</p>
-            <pre className="code mt-3 border border-line bg-paper text-[11px] whitespace-pre-wrap break-all">{embed}</pre>
-            <div className="mt-3 flex gap-2">
-              <Button size="sm" variant="outline" onClick={() => { navigator.clipboard?.writeText(embed); toast("snippet copied") }}>copy markdown</Button>
-              <Button size="sm" variant="outline" onClick={() => { navigator.clipboard?.writeText(`https://records.xyz/${name}`); toast("link copied") }}>copy link</Button>
-            </div>
-          </Figure>
-          <div className="border-t border-line lg:border-t-0">
-            <FaqRow q="technical details: what gets written">
-              <Figure name="records on the resolver" padded={false} className="mt-1">
-                <Code lines={[
-                  [c(`# resolver ${data?.resolver ? shortAddr(data.resolver) : "0x…"} · ${recordsChain.label}`)],
-                  [k("accounts-chains"), p(": "), s(`[${Array.from(new Set([...onChain.map((a) => a.chainId), ...drafts.adds.map((d) => d.chainId)])).join(", ") || "…"}]`)],
-                  ...rows.filter((r) => r.pending !== "remove").slice(0, 4).map((r) => [k(`accounts[${r.chainId}]`), p(" ∋ "), s(shortAddr(r.account, 6))]),
-                  ...rows.filter((r) => r.pending !== "remove").slice(0, 2).map((r) => [k(`accounts[${r.chainId}][${shortAddr(r.account, 3)}]`), p(": "), s(`(${r.expiresAt ?? "expiresAt"}, sig)`)]),
-                ]} />
-              </Figure>
-              <p className="t-caption mt-2 normal-case tracking-normal">
-                verification: ERC-1271 for contracts, ecrecover for wallets, expiry at most two years. written with one <code>multicall</code> of {data?.capabilities?.writeFlavour === "name" ? "setData(name, key, value)" : "setData(node, key, value)"}.
-              </p>
-            </FaqRow>
-          </div>
-        </div>
-      </Section>
+          {drafts.accessCount > 0 ? (
+            <p className="t-caption mt-3 normal-case tracking-normal">
+              {drafts.accessCount} access {drafts.accessCount === 1 ? "change" : "changes"} waiting · <a className="link-blue text-ink" href="#publish">publish above</a>
+            </p>
+          ) : null}
+        </Section>
+      ) : null}
 
       <GrantDialog open={grantOpen} onOpenChange={setGrantOpen} name={name} recordsChainId={recordsChainId} onStage={drafts.addAccess} />
       <AddAccountDialog
