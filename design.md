@@ -114,7 +114,7 @@ Flat graph paper. Depth comes from hairlines and the dot grid, not from shadows.
 - Radius 0 on everything structural: buttons, figures, cards, inputs, stat cells, covers, layer bars
 - 20px pills only for status chips (LIVE, run badges, layer tags); 50% circles for the live dot, run dots and avatars
 - Grid cells are 18px squares; badges are square-cornered outlined rectangles
-- The logo is a pixel-stepped square (corners notched 1px at a time) with a slanted parallelogram inside
+- The logo is the records.xyz mark: four cells on a 2×2 grid (triangle, half-disc tab, two quarter-discs). Three cells in ink, the tab in blue; all cells in one colour on the blue band. Source: `public/brand/logo-original.svg`, clean build in `src/components/wrap/Logo.tsx` and `public/favicon.svg`.
 
 ## Components
 
