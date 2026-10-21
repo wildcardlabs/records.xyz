@@ -1,16 +1,19 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom"
 import { Shell } from "@/components/layout/Shell"
+import { ConnectButton } from "@/components/wallet/ConnectButton"
 import Home from "@/pages/Home"
 import DesignSystem from "@/pages/DesignSystem"
+import RecordPage from "@/pages/RecordPage"
 import NotFound from "@/pages/NotFound"
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route element={<Shell />}>
+        <Route element={<Shell navRight={<ConnectButton />} />}>
           <Route index element={<Home />} />
           <Route path="design" element={<DesignSystem />} />
+          <Route path=":name" element={<RecordPage />} />
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>
