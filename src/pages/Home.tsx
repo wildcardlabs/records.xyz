@@ -178,7 +178,7 @@ export default function Home() {
       </Section>
 
       <Section>
-        <SectionHeader eyebrow="one page" title="One page for the whole name" lede="A record page is the name's public profile, its payment addresses, and the wallets it has proven are its own. Owners manage all three here, in one transaction." />
+        <SectionHeader eyebrow="one page" title="One page for the whole name" lede="A record page is the name's public profile, its payment addresses, and the wallets it has proven are its own. Owners manage all three here, each published from where it is edited." />
         <Figure n={3} name="what a record page holds" padded={false} dotted={false}>
           <div className="grid divide-y divide-line lg:grid-cols-3 lg:divide-x lg:divide-y-0">
             {[

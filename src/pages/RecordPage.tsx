@@ -3,7 +3,7 @@ import { Copy, RefreshCw } from "lucide-react"
 import { Link, useParams, useSearchParams } from "react-router-dom"
 import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
-import { useConnection, useSwitchChain, useWaitForTransactionReceipt, useWriteContract } from "wagmi"
+import { useConnection } from "wagmi"
 import type { Address, Hex } from "viem"
 import { normalize } from "viem/ens"
 import { Button } from "@/components/ui/button"
@@ -31,12 +31,12 @@ import { hasBigName } from "@/lib/ens/bigname"
 import { usePublishAuthority } from "@/hooks/usePublishAuthority"
 import { useDrafts } from "@/hooks/useDrafts"
 import { chainById, DEFAULT_RECORDS_CHAIN, RECORDS_CHAINS } from "@/lib/ens/chains"
-import { dataResolverAbi } from "@/lib/ens/abis"
-import { buildPublishCalls, type PublishPlan } from "@/lib/ens/write"
+import type { PublishPlan } from "@/lib/ens/write"
+import { type PublishGroup, usePublisher } from "@/hooks/usePublisher"
+import { type PendingRow, PendingRows, PublishButton, PublishPanel, type PublishState } from "@/components/record/PublishPanel"
 import { isOwned } from "@/lib/ensip28"
 import { addressLabel } from "@/lib/ens/profile"
 import { COIN_TYPE_DEFAULT, chainIdForCoinType, decodeValue, defFromId } from "@/lib/records"
-import { asChainId } from "@/lib/wagmi"
 import { daysUntil, fmtDate, sameAddr, shortAddr } from "@/lib/format"
 
 function useRecordsChain() {
@@ -68,11 +68,7 @@ export default function RecordPage() {
   const owner = useNameOwner(name ?? undefined, recordsChainId)
   const drafts = useDrafts(name ?? undefined, recordsChainId)
   const profile = useProfile(name ?? undefined, recordsChainId, Object.keys(drafts.records))
-  const { address, chainId: walletChainId, isConnected } = useConnection()
-  const { switchChainAsync } = useSwitchChain()
-  const { writeContractAsync, isPending: sending } = useWriteContract()
-  const [txHash, setTxHash] = useState<Hex | undefined>()
-  const receipt = useWaitForTransactionReceipt({ hash: txHash, chainId: asChainId(recordsChainId) })
+  const { address, isConnected } = useConnection()
   const qc = useQueryClient()
   const [dialog, setDialog] = useState<{ open: boolean; chainId?: number }>({ open: false })
   const [editingProfile, setEditingProfile] = useState(false)
@@ -80,30 +76,36 @@ export default function RecordPage() {
   const [linkOpen, setLinkOpen] = useState(false)
 
   const data = record.data
-  // which record kinds the staged edits touch, so the permission check asks for exactly those
+  const auth = (needs: Parameters<typeof usePublishAuthority>[7]) =>
+    usePublishAuthority(name ?? undefined, recordsChainId, data?.resolver, data?.capabilities, address, owner.data?.owner, owner.data?.manager, needs)
+  // each section publishes its own group, so each asks for exactly the roles its writes need
   const stagedKinds = useMemo(() => new Set(Object.keys(drafts.records).map((id) => defFromId(id)?.kind)), [drafts.records])
   const stagedTextKeys = useMemo(() => Object.keys(drafts.records).filter((id) => id.startsWith("text:")).map((id) => id.slice(5)), [drafts.records])
   const adminBits = drafts.access.reduce((acc, c) => acc | adminBitsFor(c), 0n)
-  const needs = drafts.pending === 0
-    ? { data: true }
-    : {
-        data: drafts.accountCount > 0 || stagedKinds.has("data"),
-        text: stagedKinds.has("text"),
-        addr: stagedKinds.has("address"),
-        contenthash: stagedKinds.has("contenthash"),
-        abi: stagedKinds.has("abi"),
-        interface: stagedKinds.has("interface"),
-        link: drafts.linkCount > 0,
-        adminBits: adminBits ? adminBits.toString() : undefined,
-      }
-  const authority = usePublishAuthority(name ?? undefined, recordsChainId, data?.resolver, data?.capabilities, address, owner.data?.owner, owner.data?.manager, needs)
-  const canPublish = authority.data?.canPublish ?? false
+  const accountsAuthority = auth({ data: true })
+  const recordsAuthority = auth({
+    data: stagedKinds.has("data"),
+    text: stagedKinds.has("text"),
+    addr: stagedKinds.has("address"),
+    contenthash: stagedKinds.has("contenthash"),
+    abi: stagedKinds.has("abi"),
+    interface: stagedKinds.has("interface"),
+  })
+  const accessAuthority = auth({ adminBits: adminBits ? adminBits.toString() : undefined })
+  const linkAuthority = auth({ link: true })
+  const canPublish = accountsAuthority.data?.canPublish ?? false
   const profileWritable = !!data?.capabilities?.profileWrite
   const hasLinks = !!data?.capabilities?.links
-  const canWriteAll = (drafts.accountCount === 0 || !!data?.supportsData) && (drafts.profileCount === 0 || profileWritable) && (drafts.accessCount === 0 || !!data?.capabilities?.roles) && (drafts.linkCount === 0 || hasLinks)
   const hasRoles = !!data?.capabilities?.roles
+  const publisher = usePublisher(name ?? undefined, recordsChainId, data?.resolver, { data: data?.capabilities?.writeFlavour ?? "node", profile: data?.capabilities?.profileWrite ?? "node" })
+  const stateFor = (group: PublishGroup): PublishState => ({
+    sending: publisher.sending && publisher.active === group,
+    mining: publisher.mining && publisher.active === group,
+    blocked: publisher.busy && publisher.active !== group,
+    txHash: publisher.active === group ? publisher.txHash : undefined,
+    mined: publisher.active === group && publisher.mined,
+  })
   const links = useResolverLinks(name ?? undefined, recordsChainId, data?.resolver, hasLinks)
-  const linkAuthority = usePublishAuthority(name ?? undefined, recordsChainId, data?.resolver, data?.capabilities, address, owner.data?.owner, owner.data?.manager, { link: true })
   const canLink = hasLinks && !!linkAuthority.data?.canPublish
   const defaultRecordId = links.data?.rows.find((r) => r.isDefault)?.recordId ?? "0"
   const myRecordId = effectiveRecord(links.data?.rows.find((r) => !r.isDefault && r.name === name), defaultRecordId)
@@ -152,7 +154,19 @@ export default function RecordPage() {
   const nextExpiry = verified.map((a) => a.check.expiresAt!).sort((a, b) => (a < b ? -1 : 1))[0]
   const chainCount = new Set(onChain.map((a) => a.chainId)).size
 
-  async function publish() {
+  const refetchAll = () => {
+    qc.invalidateQueries({ queryKey: recordQueryKey(name ?? "", recordsChainId) })
+    qc.invalidateQueries({ queryKey: ["profile", recordsChainId, name] })
+    qc.invalidateQueries({ queryKey: ["resolver-roles", recordsChainId] })
+    qc.invalidateQueries({ queryKey: linksQueryKey(recordsChainId, data?.resolver) })
+  }
+  const publishGroup = (group: PublishGroup, plan: PublishPlan) =>
+    publisher.publish(group, plan, () => {
+      drafts.clearGroup(group)
+      refetchAll()
+    })
+
+  function publishAccounts() {
     if (!data || !data.resolver || !name) return
     const plan: PublishPlan = { listings: {}, proofs: [], removals: drafts.removals }
     const chainIds = new Set<number>([...data.chains.map((c) => c.chainId), ...drafts.adds.map((d) => d.chainId)])
@@ -166,29 +180,28 @@ export default function RecordPage() {
     }
     plan.proofs = drafts.adds.map((d) => ({ chainId: d.chainId, account: d.account, expiresAt: BigInt(d.expiresAt), signature: d.signature }))
     if (drafts.accountCount === 0) plan.listings = {}
-    plan.records = drafts.records
-    plan.access = drafts.access
-    plan.links = drafts.links
-    const calls = buildPublishCalls(name, plan, { data: data.capabilities?.writeFlavour ?? "node", profile: data.capabilities?.profileWrite ?? "node" })
-    try {
-      if (walletChainId !== recordsChainId) await switchChainAsync({ chainId: asChainId(recordsChainId) })
-      const hash = await writeContractAsync({ address: data.resolver, abi: dataResolverAbi, functionName: "multicall", args: [calls], chainId: asChainId(recordsChainId) })
-      setTxHash(hash)
-      toast("transaction sent", { description: shortAddr(hash, 8) })
-    } catch (e) {
-      toast.error("publish failed", { description: (e as Error).message?.split("\n")[0] })
-    }
+    void publishGroup("accounts", plan)
   }
+  const empty: PublishPlan = { listings: {}, proofs: [], removals: [] }
+  const publishRecords = () => publishGroup("records", { ...empty, records: drafts.records })
+  const publishAccess = () => publishGroup("access", { ...empty, access: drafts.access })
+  const publishLinks = () => publishGroup("links", { ...empty, links: drafts.links })
 
-  // once mined: clear drafts and refetch
-  if (receipt.isSuccess && txHash && drafts.pending > 0) {
-    drafts.clear()
-    qc.invalidateQueries({ queryKey: recordQueryKey(name ?? "", recordsChainId) })
-    qc.invalidateQueries({ queryKey: ["profile", recordsChainId, name] })
-    qc.invalidateQueries({ queryKey: ["resolver-roles", recordsChainId] })
-    qc.invalidateQueries({ queryKey: linksQueryKey(recordsChainId, data?.resolver) })
-    toast.success("record published", { description: `${shortAddr(txHash, 8)} · mined` })
-  }
+  // pending rows per group, each discardable where it was staged
+  const accountRows: PendingRow[] = [
+    ...drafts.adds.map((d) => ({ key: `a:${d.chainId}:${d.account}`, status: "draft" as const, label: shortAddr(d.account, 6), detail: `${chainById(d.chainId)?.label} · valid until ${fmtDate(BigInt(d.expiresAt))}`, tabular: true, onDiscard: () => drafts.dropDraft(d) })),
+    ...drafts.removals.map((r) => ({ key: `r:${r.chainId}:${r.account}`, status: "removing" as const, label: shortAddr(r.account, 6), detail: `${chainById(r.chainId)?.label} · remove`, tabular: true, onDiscard: () => drafts.unmarkRemoval(r) })),
+  ]
+  const recordRows: PendingRow[] = Object.entries(drafts.records).flatMap(([id, value]) => {
+    const def = defFromId(id)
+    if (!def) return []
+    const clearing = value === "" || value === "0x"
+    const label = def.kind === "address" ? `${addressLabel(def.arg as number, recordsChainId).label} address` : def.kind === "text" ? def.label : def.longName ?? def.label
+    const shown = clearing ? "clear" : decodeValue(def, value)
+    return [{ key: `rec:${id}`, status: clearing ? ("removing" as const) : ("draft" as const), label, detail: def.kind === "address" && !clearing && shown.length > 20 ? shortAddr(shown, 6) : shown, tabular: def.kind === "address", onDiscard: () => drafts.setRecord(id, null) }]
+  })
+  const accessRows: PendingRow[] = drafts.access.map((c) => ({ key: `g:${c.account}:${c.resource}:${c.revoke}`, status: c.revoke ? ("removing" as const) : ("draft" as const), label: `${c.revoke ? "revoke" : "allow"} ${shortAddr(c.account, 6)}`, detail: c.scope, onDiscard: () => drafts.dropAccess(c) }))
+  const linkRows: PendingRow[] = drafts.links.map((l) => ({ key: `l:${l.sourceName}`, status: l.recordId === "0" ? ("removing" as const) : ("draft" as const), label: "link", detail: l.scope, onDiscard: () => drafts.dropLink(l) }))
 
   if (!name) {
     return (
@@ -205,7 +218,7 @@ export default function RecordPage() {
   const total = onChain.length
   const summaryStatus = loading ? null : total === 0 ? null : verified.length === total ? "verified" : verified.length > 0 ? "expiring" : "expired"
   const checkedAt = data ? new Date(data.fetchedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : null
-  const pendingCount = drafts.pending
+  const pendingCount = drafts.accountCount
 
   return (
     <>
@@ -309,15 +322,24 @@ export default function RecordPage() {
                     <Button size="sm" variant="outline" disabled={!profileWritable} onClick={() => setEditingProfile(true)}>
                       edit records
                     </Button>
-                    {drafts.profileCount > 0 ? (
-                      <span className="text-[12px] text-ink-muted">
-                        {drafts.profileCount} {drafts.profileCount === 1 ? "change" : "changes"} waiting · <a className="link-blue text-ink" href="#publish">publish below</a>
-                      </span>
-                    ) : !profileWritable ? (
+                    {!profileWritable ? (
                       <span className="t-caption normal-case tracking-normal">this name's resolver does not accept record writes from this app.</span>
                     ) : null}
                   </div>
                 ) : null}
+                <PublishPanel
+                  rows={recordRows}
+                  onDiscardAll={() => drafts.clearGroup("records")}
+                  count={drafts.profileCount}
+                  what="record change"
+                  canPublish={recordsAuthority.data?.canPublish ?? false}
+                  checking={recordsAuthority.isLoading}
+                  capable={profileWritable}
+                  incapableReason="this name's resolver does not accept record writes from this app."
+                  explorer={explorer}
+                  state={stateFor("records")}
+                  onPublish={publishRecords}
+                />
               </>
             )}
           </Figure>
@@ -391,7 +413,7 @@ export default function RecordPage() {
         <SectionHeader
           eyebrow="manage"
           title="Put an account on the record"
-          lede="Three steps. Each account signs its own consent; the name owner publishes. Profile edits made above are published here too, in the same transaction."
+          lede="Three steps. Each account signs its own consent; the name owner publishes all of them in one transaction."
         />
         <Figure n={3} name="publish" padded={false} dotted={false} id="publish">
           <div className="grid divide-y divide-line lg:grid-cols-3 lg:divide-x lg:divide-y-0">
@@ -409,10 +431,10 @@ export default function RecordPage() {
                   <div className="flex flex-wrap items-center gap-2 text-[12px]">
                     <span className="dot text-ok" />
                     <span className="tabular font-semibold">{shortAddr(address!, 6)}</span>
-                    {authority.isLoading ? (
+                    {accountsAuthority.isLoading ? (
                       <span className="text-ink-dim">· checking permissions…</span>
                     ) : canPublish ? (
-                      <LivePill pulse={false}>{authority.data?.via === "owner" ? "owner" : "can publish"}</LivePill>
+                      <LivePill pulse={false}>{accountsAuthority.data?.via === "owner" ? "owner" : "can publish"}</LivePill>
                     ) : (
                       <span className="text-ink-dim">· can sign, cannot publish</span>
                     )}
@@ -441,84 +463,27 @@ export default function RecordPage() {
                 <span className="t-fig-title">Publish</span>
               </div>
               <p className="t-fig-body mt-2">
-                {pendingCount === 0 ? "Nothing waiting. Signed consents, removals and record edits collect here until you publish." : `${pendingCount} ${pendingCount === 1 ? "change" : "changes"} waiting. Publishing writes all of them in one transaction.`}
+                {pendingCount === 0 ? "Nothing waiting. Signed consents and removals collect here until you publish." : `${pendingCount} ${pendingCount === 1 ? "consent" : "consents"} waiting. Publishing writes all of them in one transaction.`}
               </p>
-              <div className="mt-4 flex flex-wrap items-center gap-2">
-                <Button
-                  variant={pendingCount > 0 ? "accent" : "outline"}
-                  disabled={!canPublish || pendingCount === 0 || !data?.resolver || !canWriteAll || sending || receipt.isLoading}
-                  onClick={publish}
-                >
-                  {sending ? "confirm in wallet…" : receipt.isLoading ? "mining…" : pendingCount > 0 ? `publish ${pendingCount} ${pendingCount === 1 ? "change" : "changes"}` : "publish"}
-                </Button>
-                {isConnected && pendingCount > 0 && !canPublish && !authority.isLoading ? (
-                  <span className="t-caption normal-case tracking-normal">connect the owner wallet to publish.</span>
-                ) : null}
+              <div className="mt-4">
+                <PublishButton
+                  count={pendingCount}
+                  what="consent"
+                  canPublish={canPublish}
+                  checking={accountsAuthority.isLoading}
+                  capable={!!data?.supportsData}
+                  incapableReason="this name's resolver cannot store owned accounts."
+                  explorer={explorer}
+                  state={stateFor("accounts")}
+                  onPublish={publishAccounts}
+                />
               </div>
-              {txHash ? (
-                <div className="mt-3 text-[11px]">
-                  {receipt.isSuccess ? <StatusText tone="ok">published</StatusText> : receipt.isLoading ? <StatusText tone="wait">mining</StatusText> : <StatusText tone="dim">sent</StatusText>}{" "}
-                  <a className="link-blue text-ink-dim" href={`${explorer}/tx/${txHash}`} target="_blank" rel="noreferrer">{shortAddr(txHash, 6)}</a>
-                </div>
-              ) : null}
             </div>
           </div>
 
-          {pendingCount > 0 ? (
+          {accountRows.length > 0 ? (
             <div className="border-t border-line">
-              <div className="t-label px-5 py-2 text-ink-dim">waiting to be published</div>
-              <ul className="divide-y divide-line-soft border-t border-line-soft px-5 text-[12px]">
-                {drafts.adds.map((d) => (
-                  <li key={`a:${d.chainId}:${d.account}`} className="flex flex-wrap items-center gap-3 py-2.5">
-                    <StatusMark status="draft" />
-                    <span className="tabular font-semibold">{shortAddr(d.account, 6)}</span>
-                    <span className="text-ink-dim">{chainById(d.chainId)?.label} · valid until {fmtDate(BigInt(d.expiresAt))}</span>
-                    <Button size="sm" variant="ghost" className="ml-auto" onClick={() => drafts.dropDraft(d)}>discard</Button>
-                  </li>
-                ))}
-                {drafts.removals.map((r) => (
-                  <li key={`r:${r.chainId}:${r.account}`} className="flex flex-wrap items-center gap-3 py-2.5">
-                    <StatusMark status="removing" />
-                    <span className="tabular font-semibold">{shortAddr(r.account, 6)}</span>
-                    <span className="text-ink-dim">{chainById(r.chainId)?.label}</span>
-                    <Button size="sm" variant="ghost" className="ml-auto" onClick={() => drafts.unmarkRemoval(r)}>undo</Button>
-                  </li>
-                ))}
-                {Object.entries(drafts.records).map(([id, value]) => {
-                  const def = defFromId(id)
-                  if (!def) return null
-                  const clearing = value === "" || value === "0x"
-                  const label = def.kind === "address" ? `${addressLabel(def.arg as number, recordsChainId).label} address` : def.kind === "text" ? def.label : def.longName ?? def.label
-                  const shown = clearing ? "clear" : decodeValue(def, value)
-                  return (
-                    <li key={`rec:${id}`} className="flex flex-wrap items-center gap-3 py-2.5">
-                      <StatusMark status={clearing ? "removing" : "draft"} />
-                      <span className="font-semibold">{label}</span>
-                      <span className={`min-w-0 flex-1 truncate text-ink-dim ${def.kind === "address" ? "tabular" : ""}`}>{def.kind === "address" && !clearing && shown.length > 20 ? shortAddr(shown, 6) : shown}</span>
-                      <Button size="sm" variant="ghost" className="ml-auto" onClick={() => drafts.setRecord(id, null)}>discard</Button>
-                    </li>
-                  )
-                })}
-                {drafts.links.map((l) => (
-                  <li key={`l:${l.sourceName}`} className="flex flex-wrap items-center gap-3 py-2.5">
-                    <StatusMark status={l.recordId === "0" ? "removing" : "draft"} />
-                    <span className="font-semibold">link</span>
-                    <span className="min-w-0 flex-1 truncate text-ink-dim">{l.scope}</span>
-                    <Button size="sm" variant="ghost" className="ml-auto" onClick={() => drafts.dropLink(l)}>discard</Button>
-                  </li>
-                ))}
-                {drafts.access.map((c) => (
-                  <li key={`g:${c.account}:${c.resource}:${c.revoke}`} className="flex flex-wrap items-center gap-3 py-2.5">
-                    <StatusMark status={c.revoke ? "removing" : "draft"} />
-                    <span className="font-semibold">{c.revoke ? "revoke" : "allow"} {shortAddr(c.account, 6)}</span>
-                    <span className="min-w-0 flex-1 truncate text-ink-dim">{c.scope}</span>
-                    <Button size="sm" variant="ghost" className="ml-auto" onClick={() => drafts.dropAccess(c)}>discard</Button>
-                  </li>
-                ))}
-              </ul>
-              <div className="flex items-center justify-end border-t border-line-soft px-5 py-2">
-                <Button size="sm" variant="ghost" onClick={drafts.clear}>discard all</Button>
-              </div>
+              <PendingRows rows={accountRows} onDiscardAll={() => drafts.clearGroup("accounts")} />
             </div>
           ) : null}
         </Figure>
@@ -560,12 +525,20 @@ export default function RecordPage() {
               onShare={() => setLinkOpen(true)}
               onStage={drafts.addLink}
             />
+            <PublishPanel
+              rows={linkRows}
+              onDiscardAll={() => drafts.clearGroup("links")}
+              count={drafts.linkCount}
+              what="link change"
+              canPublish={canLink}
+              checking={linkAuthority.isLoading}
+              capable={hasLinks}
+              explorer={explorer}
+              state={stateFor("links")}
+              onPublish={publishLinks}
+            />
           </Figure>
-          {drafts.linkCount > 0 ? (
-            <p className="t-caption mt-3 normal-case tracking-normal">
-              {drafts.linkCount} link {drafts.linkCount === 1 ? "change" : "changes"} waiting · <a className="link-blue text-ink" href="#publish">publish above</a>
-            </p>
-          ) : isConnected && !canLink && !linkAuthority.isLoading ? (
+          {isConnected && !canLink && !linkAuthority.isLoading ? (
             <p className="t-caption mt-3 normal-case tracking-normal">linking needs the resolver's link role · connect the owner wallet.</p>
           ) : null}
           <div className="mt-6 border-t border-line">
@@ -601,12 +574,19 @@ export default function RecordPage() {
               onGrant={() => setGrantOpen(true)}
               onRevoke={drafts.addAccess}
             />
+            <PublishPanel
+              rows={accessRows}
+              onDiscardAll={() => drafts.clearGroup("access")}
+              count={drafts.accessCount}
+              what="access change"
+              canPublish={accessAuthority.data?.canPublish ?? false}
+              checking={accessAuthority.isLoading}
+              capable={hasRoles}
+              explorer={explorer}
+              state={stateFor("access")}
+              onPublish={publishAccess}
+            />
           </Figure>
-          {drafts.accessCount > 0 ? (
-            <p className="t-caption mt-3 normal-case tracking-normal">
-              {drafts.accessCount} access {drafts.accessCount === 1 ? "change" : "changes"} waiting · <a className="link-blue text-ink" href="#publish">publish above</a>
-            </p>
-          ) : null}
         </Section>
       ) : null}
 
