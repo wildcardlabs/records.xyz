@@ -1,6 +1,7 @@
 /**
  * TON ADNL addresses. Onchain the content hash stores the raw 32-byte ADNL id (multicodec `adnl`).
- * TON tooling also shows the id as a 55-character base32 string: base32(0x2d ‖ id ‖ crc16-xmodem).
+ * TON tooling also shows the id as a 55-character base32 string: base32(0x2d ‖ id ‖ crc16-xmodem)
+ * with the leading character dropped (it is always "f", since the 0x2d prefix starts the stream).
  */
 const B32 = "abcdefghijklmnopqrstuvwxyz234567"
 
@@ -56,7 +57,7 @@ export function tonAdnlToHex(input: string): string {
   const hex = t.startsWith("0x") ? t.slice(2) : t
   if (/^[0-9a-fA-F]{64}$/.test(hex)) return hex.toLowerCase()
   if (/^[a-zA-Z2-7]{55}$/.test(t)) {
-    const bytes = base32Decode(t)
+    const bytes = base32Decode(`f${t}`)
     if (bytes.length < 35 || bytes[0] !== 0x2d) throw new Error("not a TON ADNL address")
     const id = bytes.slice(1, 33)
     const crc = (bytes[33] << 8) | bytes[34]
@@ -77,5 +78,5 @@ export function hexToTonAdnl(hex: string): string {
   full.set(body)
   full[33] = crc >> 8
   full[34] = crc & 0xff
-  return base32Encode(full)
+  return base32Encode(full).slice(1)
 }
