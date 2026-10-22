@@ -223,3 +223,37 @@ export const ROLE_BITS = {
   text: [1n << 4n],
   addr: [1n << 0n],
 } as const
+
+/** Node-keyed setters for the remaining v1 profile records. */
+export const nodeKeyedMoreAbi = [
+  { type: "function", name: "setContenthash", stateMutability: "nonpayable", inputs: [{ name: "node", type: "bytes32" }, { name: "hash", type: "bytes" }], outputs: [] },
+  { type: "function", name: "setABI", stateMutability: "nonpayable", inputs: [{ name: "node", type: "bytes32" }, { name: "contentType", type: "uint256" }, { name: "data", type: "bytes" }], outputs: [] },
+  { type: "function", name: "setInterface", stateMutability: "nonpayable", inputs: [{ name: "node", type: "bytes32" }, { name: "interfaceID", type: "bytes4" }, { name: "implementer", type: "address" }], outputs: [] },
+] as const
+
+/** Name-keyed setters on the ENSv2 PermissionedResolver. */
+export const nameKeyedMoreAbi = [
+  { type: "function", name: "setContenthash", stateMutability: "nonpayable", inputs: [{ name: "name", type: "bytes" }, { name: "hash", type: "bytes" }], outputs: [] },
+  { type: "function", name: "setABI", stateMutability: "nonpayable", inputs: [{ name: "name", type: "bytes" }, { name: "contentType", type: "uint256" }, { name: "data", type: "bytes" }], outputs: [] },
+  { type: "function", name: "setInterface", stateMutability: "nonpayable", inputs: [{ name: "name", type: "bytes" }, { name: "interfaceId", type: "bytes4" }, { name: "implementer", type: "address" }], outputs: [] },
+] as const
+
+/** Read profiles for the record kinds viem has no helper for. */
+export const profileReadAbi = [
+  { type: "function", name: "contenthash", stateMutability: "view", inputs: [{ name: "node", type: "bytes32" }], outputs: [{ type: "bytes" }] },
+  { type: "function", name: "ABI", stateMutability: "view", inputs: [{ name: "node", type: "bytes32" }, { name: "contentTypes", type: "uint256" }], outputs: [{ type: "uint256" }, { type: "bytes" }] },
+  { type: "function", name: "interfaceImplementer", stateMutability: "view", inputs: [{ name: "node", type: "bytes32" }, { name: "interfaceID", type: "bytes4" }], outputs: [{ type: "address" }] },
+  { type: "function", name: "text", stateMutability: "view", inputs: [{ name: "node", type: "bytes32" }, { name: "key", type: "string" }], outputs: [{ type: "string" }] },
+  { type: "function", name: "addr", stateMutability: "view", inputs: [{ name: "node", type: "bytes32" }, { name: "coinType", type: "uint256" }], outputs: [{ type: "bytes" }] },
+] as const
+
+/** Role bits for every record kind (deployed post-audit-2 values; data also accepts main's 1<<36). */
+export const KIND_ROLE_BITS: Record<"text" | "address" | "contenthash" | "abi" | "interface" | "data" | "name", readonly bigint[]> = {
+  address: [1n << 0n],
+  text: [1n << 4n],
+  contenthash: [1n << 8n],
+  abi: [1n << 12n],
+  interface: [1n << 16n],
+  name: [1n << 20n],
+  data: [1n << 24n, 1n << 36n],
+}

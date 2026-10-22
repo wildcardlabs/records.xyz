@@ -1,5 +1,5 @@
 import { type Address, type PublicClient, isAddressEqual, keccak256, namehash, toBytes, zeroAddress } from "viem"
-import { ENS_REGISTRY, NAME_WRAPPER, ROLE_BITS, nameWrapperAbi, permissionedResolverAbi, registryAbi } from "./abis"
+import { ENS_REGISTRY, KIND_ROLE_BITS, NAME_WRAPPER, nameWrapperAbi, permissionedResolverAbi, registryAbi } from "./abis"
 import type { ResolverCapabilities } from "./capabilities"
 import { fetchBigName, hasBigName } from "./bigname"
 import { CHAINS_KEY } from "@/lib/ensip28"
@@ -43,7 +43,7 @@ export async function getNameOwner(client: PublicClient, name: string): Promise<
 }
 
 export type PublishAuthority = { canPublish: boolean; via: "roles" | "canModifyName" | "owner" | "none" }
-export type PublishNeeds = { data?: boolean; text?: boolean; addr?: boolean; /** admin bitmap required for staged access changes (decimal) */ adminBits?: string }
+export type PublishNeeds = { data?: boolean; text?: boolean; addr?: boolean; contenthash?: boolean; abi?: boolean; interface?: boolean; /** admin bitmap required for staged access changes (decimal) */ adminBits?: string }
 
 /**
  * Whether `account` can write ENSIP-28 data records for `name` on its resolver.
@@ -67,7 +67,8 @@ export async function getPublishAuthority(
         client.readContract({ address: resolver, abi: permissionedResolverAbi, functionName: "hasRootRoles", args: [bit, account] }).catch(() => false)
       const keyed = (resource: bigint, bit: bigint) =>
         client.readContract({ address: resolver, abi: permissionedResolverAbi, functionName: "hasRoles", args: [resource, bit, account] }).catch(() => false)
-      const kinds: (keyof typeof ROLE_BITS)[] = (["data", "text", "addr"] as const).filter((k) => needs[k])
+      const kindMap = { data: "data", text: "text", addr: "address", contenthash: "contenthash", abi: "abi", interface: "interface" } as const
+      const kinds = (Object.keys(kindMap) as (keyof typeof kindMap)[]).filter((k) => needs[k]).map((k) => kindMap[k])
       const adminBits = needs.adminBits ? BigInt(needs.adminBits) : 0n
       if (kinds.length === 0 && adminBits === 0n) return { canPublish: false, via: "roles" }
       if (adminBits !== 0n) {
@@ -77,7 +78,7 @@ export async function getPublishAuthority(
       }
       const perKind = await Promise.all(
         kinds.map(async (kind) => {
-          const bits = ROLE_BITS[kind]
+          const bits = KIND_ROLE_BITS[kind]
           const checks = await Promise.all(
             bits.flatMap((bit) => (kind === "data" ? [root(bit), keyed(BigInt(keccak256(toBytes(CHAINS_KEY))), bit)] : [root(bit)]))
           )

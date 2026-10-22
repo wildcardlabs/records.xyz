@@ -5,7 +5,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { StatusText } from "@/components/wrap"
-import { TEXT_FIELDS, addressFields } from "./ProfileEditor"
+import { featuredAddressDefs } from "@/lib/ens/profile"
+import { TEXT_SPECS } from "@/lib/records"
 import { type AccessChange, type Power, POWER_LABEL, ROOT_RESOURCE, bitmapFor, coinResource, keyResource } from "@/lib/ens/roles"
 
 type Kind = "text" | "address" | "data"
@@ -42,7 +43,7 @@ function GrantDialog({
   const [coinType, setCoinType] = useState(60)
   const [withAdmin, setWithAdmin] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const chains = addressFields(recordsChainId)
+  const chains = featuredAddressDefs(recordsChainId).map((d) => ({ coinType: d.arg as number, label: d.label }))
   const k = KINDS.find((x) => x.kind === kind)!
 
   function stage() {
@@ -108,7 +109,7 @@ function GrantDialog({
             {scope === "one" && kind === "text" ? (
               <div className="flex flex-col gap-2 sm:flex-row">
                 <select className={select} value={textKey} onChange={(e) => setTextKey(e.target.value)}>
-                  {TEXT_FIELDS.map((f) => <option key={f.key} value={f.key}>{f.label} · {f.key}</option>)}
+                  {TEXT_SPECS.map((f) => <option key={f.key} value={f.key}>{f.label} · {f.key}</option>)}
                   <option value="__custom">other key…</option>
                 </select>
                 {textKey === "__custom" ? <Input value={customKey} placeholder="key, e.g. com.linkedin" onChange={(e) => setCustomKey(e.target.value)} /> : null}
