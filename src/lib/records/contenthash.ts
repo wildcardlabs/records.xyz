@@ -1,5 +1,6 @@
 import type { Hex } from "viem"
 import { decode as chDecode, encode as chEncode, getCodec } from "@ensdomains/content-hash"
+import { hexToTonAdnl, tonAdnlToHex } from "./ton"
 
 type ChCodec = Parameters<typeof chEncode>[0]
 
@@ -12,8 +13,10 @@ const SCHEMES: Record<string, ChCodec> = {
   onion3: "onion3",
   sia: "skynet",
   ar: "arweave",
+  adnl: "adnl",
+  ton: "adnl",
 }
-const CODEC_TO_SCHEME: Record<string, string> = Object.fromEntries(Object.entries(SCHEMES).map(([s, c]) => [c, s]))
+const CODEC_TO_SCHEME: Record<string, string> = { ...Object.fromEntries(Object.entries(SCHEMES).map(([s, c]) => [c, s])), adnl: "ton" }
 
 export const CONTENTHASH_SCHEMES = Object.keys(SCHEMES)
 
@@ -24,10 +27,11 @@ export function encodeContenthash(url: string): Hex {
   const m = /^([a-z0-9]+):\/\/(.+)$/i.exec(t)
   if (!m) throw new Error("use a scheme, e.g. ipfs://… or ar://…")
   const codec = SCHEMES[m[1].toLowerCase()]
-  if (!codec) throw new Error(`unsupported scheme ${m[1]}:// (ipfs, ipns, bzz, onion, onion3, sia, ar)`)
+  if (!codec) throw new Error(`unsupported scheme ${m[1]}:// (ipfs, ipns, bzz, onion, onion3, sia, ar, ton)`)
   if (codec === "ipns" && m[2].includes(".")) throw new Error("ipns needs a key id (k51… or Qm…), not a domain name")
+  const value = codec === "adnl" ? tonAdnlToHex(m[2]) : m[2]
   try {
-    return `0x${chEncode(codec, m[2])}` as Hex
+    return `0x${chEncode(codec, value)}` as Hex
   } catch {
     throw new Error(`not a valid ${m[1]} content id`)
   }
@@ -41,7 +45,8 @@ export function decodeContenthash(raw: Hex | string): string {
     const codec = getCodec(hex) as string | undefined
     const value = chDecode(hex)
     const scheme = (codec && CODEC_TO_SCHEME[codec]) || codec || "unknown"
-    return `${scheme}://${value}`
+    // TON sites read as the 55-character address people paste, not the raw id
+    return codec === "adnl" ? `ton://${hexToTonAdnl(String(value))}` : `${scheme}://${value}`
   } catch {
     return raw
   }
