@@ -1,4 +1,5 @@
 import { NavLink, Link } from "react-router-dom"
+import { useConnection } from "wagmi"
 import { Logo } from "@/components/wrap/Logo"
 import { Wrap } from "@/components/wrap/Section"
 
@@ -6,6 +7,7 @@ const links = [{ to: "/", label: "home" }, ...(import.meta.env.DEV ? [{ to: "/de
 
 /** 62px white nav: pixel logo, lowercase links with a blue underline on hover, closed by a dotted rule. */
 function Nav({ right }: { right?: React.ReactNode }) {
+  const { isConnected } = useConnection()
   return (
     <header className="relative z-20 bg-paper">
       <Wrap className="flex h-[62px] items-center gap-6">
@@ -19,6 +21,11 @@ function Nav({ right }: { right?: React.ReactNode }) {
               {l.label}
             </NavLink>
           ))}
+          {isConnected ? (
+            <NavLink to="/names" className="nav-link">
+              your names
+            </NavLink>
+          ) : null}
           <a className="nav-link" href="https://docs.ens.domains/ensip/28/" target="_blank" rel="noreferrer">
             ensip-28 ↗
           </a>

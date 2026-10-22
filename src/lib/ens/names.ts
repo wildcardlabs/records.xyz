@@ -27,7 +27,7 @@ async function fetchIndexedNames(chainId: number, address: Address): Promise<MyN
   if (!base) return []
   const out: MyName[] = []
   let cursor: string | null = null
-  for (let page = 0; page < 5; page++) {
+  for (let page = 0; page < 20; page++) {
     const url = `${base}/addresses/${address.toLowerCase()}/names?relation=owner,manager&page_size=100${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`
     const res = await fetch(url, { headers: { accept: "application/json" } })
     if (res.status === 404) return out

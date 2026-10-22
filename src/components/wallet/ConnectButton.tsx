@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom"
 import { useConnect, useConnection, useDisconnect } from "wagmi"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -32,6 +33,7 @@ function ConnectButton() {
           <DropdownMenuGroup>
             <DropdownMenuLabel className="t-label text-ink-dim">{connector?.name ?? "wallet"}</DropdownMenuLabel>
             <DropdownMenuItem onClick={() => navigator.clipboard?.writeText(address)}>copy address</DropdownMenuItem>
+            <DropdownMenuItem render={<Link to="/names" />}>your names</DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => disconnect()}>disconnect</DropdownMenuItem>
