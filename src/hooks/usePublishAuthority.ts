@@ -16,7 +16,7 @@ export function usePublishAuthority(
   needs: PublishNeeds = { data: true }
 ) {
   return useQuery({
-    queryKey: ["publish-authority", recordsChainId, name, resolver, account, owner ?? null, manager ?? null, caps?.roles, caps?.canModifyName, !!needs.data, !!needs.text, !!needs.addr, !!needs.contenthash, !!needs.abi, !!needs.interface, needs.adminBits ?? ""],
+    queryKey: ["publish-authority", recordsChainId, name, resolver, account, owner ?? null, manager ?? null, caps?.roles, caps?.canModifyName, !!needs.data, !!needs.text, !!needs.addr, !!needs.contenthash, !!needs.abi, !!needs.interface, !!needs.link, needs.adminBits ?? ""],
     queryFn: () => getPublishAuthority(publicClient(recordsChainId), name!, resolver!, caps!, account!, owner ?? null, manager ?? null, needs),
     enabled: !!name && !!resolver && !!caps && !!account,
     staleTime: 60_000,

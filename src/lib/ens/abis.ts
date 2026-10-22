@@ -85,6 +85,7 @@ export const SELECTORS = {
   hasRoles: "d3bf89b1", // hasRoles(uint256,uint256,address)  ENSv2 PermissionedResolver
   hasRootRoles: "781ef8db", // hasRootRoles(uint256,address)
   canModifyName: "41415eab", // canModifyName(bytes32,address)  ENSv2 PublicResolverV2
+  getRecordId: "faf10086", // getRecordId(bytes32)  ENSv2 PermissionedResolver records and links
 } as const
 
 export const permissionedResolverAbi = [
@@ -248,7 +249,7 @@ export const profileReadAbi = [
 ] as const
 
 /** Role bits for every record kind (deployed post-audit-2 values; data also accepts main's 1<<36). */
-export const KIND_ROLE_BITS: Record<"text" | "address" | "contenthash" | "abi" | "interface" | "data" | "name", readonly bigint[]> = {
+export const KIND_ROLE_BITS: Record<"text" | "address" | "contenthash" | "abi" | "interface" | "data" | "name" | "link", readonly bigint[]> = {
   address: [1n << 0n],
   text: [1n << 4n],
   contenthash: [1n << 8n],
@@ -256,4 +257,5 @@ export const KIND_ROLE_BITS: Record<"text" | "address" | "contenthash" | "abi" |
   interface: [1n << 16n],
   name: [1n << 20n],
   data: [1n << 24n, 1n << 36n],
+  link: [1n << 28n],
 }

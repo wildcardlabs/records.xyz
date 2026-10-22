@@ -1,5 +1,7 @@
 import { useState } from "react"
-import { getAddress, isAddress } from "viem"
+import { type Hex, encodeFunctionData, getAddress, isAddress } from "viem"
+import { nameKeyedProfileAbi } from "@/lib/ens/abis"
+import { dnsName } from "@/lib/ens/links"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
@@ -9,11 +11,12 @@ import { featuredAddressDefs } from "@/lib/ens/profile"
 import { TEXT_SPECS } from "@/lib/records"
 import { type AccessChange, type Power, POWER_LABEL, ROOT_RESOURCE, bitmapFor, coinResource, keyResource } from "@/lib/ens/roles"
 
-type Kind = "text" | "address" | "data"
-const KINDS: { kind: Kind; power: Power; label: string; hint: string }[] = [
+type Kind = "text" | "address" | "data" | "link"
+const KINDS: { kind: Kind; power: Power; label: string; hint: string; rootOnly?: boolean }[] = [
   { kind: "text", power: "text", label: "text records", hint: "description, avatar, socials, any text key" },
   { kind: "address", power: "address", label: "payment addresses", hint: "the address people pay, per chain" },
-  { kind: "data", power: "data", label: "owned accounts", hint: "the ENSIP-28 listings and proofs" },
+  { kind: "data", power: "data", label: "owned accounts", hint: "the ENSIP-28 listings and proofs", rootOnly: true },
+  { kind: "link", power: "link", label: "shared records", hint: "which record each name on this resolver reads", rootOnly: true },
 ]
 
 const select = "h-10 border border-line bg-paper px-3 font-mono text-[12.5px] font-medium lowercase text-ink outline-none focus-visible:border-blue"
@@ -51,25 +54,32 @@ function GrantDialog({
     if (!isAddress(account)) return setError("enter a valid wallet address")
     let resource = ROOT_RESOURCE
     let scopeLabel = "all keys"
+    let setter: Hex | undefined
+    const dns = dnsName(name)
     if (scope === "one") {
       if (kind === "text") {
         const key = textKey === "__custom" ? customKey.trim() : textKey
         if (!key) return setError("enter the text key")
         resource = keyResource(key)
         scopeLabel = `text key ${key}`
+        setter = encodeFunctionData({ abi: nameKeyedProfileAbi, functionName: "setText", args: [dns, key, ""] })
       } else if (kind === "address") {
         resource = coinResource(coinType)
         scopeLabel = `${chains.find((c) => c.coinType === coinType)?.label ?? `coin ${coinType}`} address`
+        setter = encodeFunctionData({ abi: nameKeyedProfileAbi, functionName: "setAddress", args: [dns, BigInt(coinType), "0x"] })
       } else {
-        return setError("owned accounts can only be delegated for all keys")
+        return setError(`${k.label} can only be delegated for all keys`)
       }
     }
+    // the resolver derives scoped grants from the setter itself and never adds the admin bit to them
+    const admin = withAdmin && scope === "all"
     onStage({
       account: getAddress(account),
       resource: resource.toString(),
-      roleBitmap: bitmapFor([k.power], withAdmin).toString(),
+      roleBitmap: bitmapFor([k.power], admin).toString(),
       revoke: false,
-      scope: `${POWER_LABEL[k.power]} · ${scopeLabel}${withAdmin ? " · may delegate" : ""}`,
+      scope: `${POWER_LABEL[k.power]} · ${scopeLabel}${admin ? " · may delegate" : ""}`,
+      setter,
     })
     onOpenChange(false)
     setAccount("")
@@ -94,7 +104,7 @@ function GrantDialog({
             <div className="grid gap-1.5">
               {KINDS.map((x) => (
                 <label key={x.kind} className="flex cursor-pointer items-start gap-2 text-[12px]">
-                  <input type="radio" name="kind" className="mt-1 accent-[var(--blue)]" checked={kind === x.kind} onChange={() => { setKind(x.kind); if (x.kind === "data") setScope("all") }} />
+                  <input type="radio" name="kind" className="mt-1 accent-[var(--blue)]" checked={kind === x.kind} onChange={() => { setKind(x.kind); if (x.rootOnly) setScope("all") }} />
                   <span><span className="font-semibold">{x.label}</span> <span className="text-ink-dim">· {x.hint}</span></span>
                 </label>
               ))}
@@ -104,7 +114,7 @@ function GrantDialog({
             <Label>scope</Label>
             <div className="flex flex-wrap gap-4 text-[12px]">
               <label className="flex cursor-pointer items-center gap-2"><input type="radio" name="scope" className="accent-[var(--blue)]" checked={scope === "all"} onChange={() => setScope("all")} /> every key</label>
-              <label className={`flex items-center gap-2 ${kind === "data" ? "opacity-50" : "cursor-pointer"}`}><input type="radio" name="scope" className="accent-[var(--blue)]" disabled={kind === "data"} checked={scope === "one"} onChange={() => setScope("one")} /> one key only</label>
+              <label className={`flex items-center gap-2 ${k.rootOnly ? "opacity-50" : "cursor-pointer"}`}><input type="radio" name="scope" className="accent-[var(--blue)]" disabled={k.rootOnly} checked={scope === "one"} onChange={() => setScope("one")} /> one key only</label>
             </div>
             {scope === "one" && kind === "text" ? (
               <div className="flex flex-col gap-2 sm:flex-row">
@@ -121,10 +131,14 @@ function GrantDialog({
               </select>
             ) : null}
           </div>
-          <label className="flex cursor-pointer items-start gap-2 text-[12px]">
-            <input type="checkbox" className="mt-1 accent-[var(--blue)]" checked={withAdmin} onChange={(e) => setWithAdmin(e.target.checked)} />
-            <span>also let it delegate this permission to others <span className="text-ink-dim">· usually off</span></span>
-          </label>
+          {scope === "all" ? (
+            <label className="flex cursor-pointer items-start gap-2 text-[12px]">
+              <input type="checkbox" className="mt-1 accent-[var(--blue)]" checked={withAdmin} onChange={(e) => setWithAdmin(e.target.checked)} />
+              <span>also let it delegate this permission to others <span className="text-ink-dim">· usually off</span></span>
+            </label>
+          ) : (
+            <p className="t-caption normal-case tracking-normal">a one-key grant cannot be delegated further.</p>
+          )}
           <p className="t-caption normal-case tracking-normal">
             permissions live on the resolver, not the name: they apply to every name this resolver serves for you.
           </p>

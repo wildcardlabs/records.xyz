@@ -96,6 +96,7 @@ export const accessAbi = [
   { type: "function", name: "revokeRoles", stateMutability: "nonpayable", inputs: [{ type: "uint256" }, { type: "uint256" }, { type: "address" }], outputs: [{ type: "bool" }] },
   { type: "function", name: "revokeRootRoles", stateMutability: "nonpayable", inputs: [{ type: "uint256" }, { type: "address" }], outputs: [{ type: "bool" }] },
   { type: "function", name: "roles", stateMutability: "view", inputs: [{ type: "uint256" }, { type: "address" }], outputs: [{ type: "uint256" }] },
+  { type: "function", name: "grantSetterRoles", stateMutability: "nonpayable", inputs: [{ type: "bytes" }, { type: "address" }], outputs: [{ type: "bool" }] },
 ] as const
 
 /** A staged access change. Numbers travel as decimal strings because the drafts store is JSON. */
@@ -108,6 +109,12 @@ export type AccessChange = {
   revoke: boolean
   /** human label for the scope, e.g. "all keys" or "text key avatar" */
   scope: string
+  /**
+   * scoped grants only: the ABI-encoded setter call (`setText(name, key, "")`, …) whose argument
+   * names the resource. The deployed PermissionedResolver disables `grantRoles` and derives
+   * per-key grants from a setter through `grantSetterRoles`; revokes still use `revokeRoles`.
+   */
+  setter?: Hex
 }
 
 export function buildAccessCall(c: AccessChange): Hex {
@@ -116,7 +123,9 @@ export function buildAccessCall(c: AccessChange): Hex {
   if (resource === ROOT_RESOURCE) {
     return encodeFunctionData({ abi: accessAbi, functionName: c.revoke ? "revokeRootRoles" : "grantRootRoles", args: [bits, c.account] })
   }
-  return encodeFunctionData({ abi: accessAbi, functionName: c.revoke ? "revokeRoles" : "grantRoles", args: [resource, bits, c.account] })
+  if (c.revoke) return encodeFunctionData({ abi: accessAbi, functionName: "revokeRoles", args: [resource, bits, c.account] })
+  if (!c.setter) throw new Error("a scoped grant needs its setter call")
+  return encodeFunctionData({ abi: accessAbi, functionName: "grantSetterRoles", args: [c.setter, c.account] })
 }
 
 /** Admin bits a caller must hold (on the resource or on root) to apply this change. */

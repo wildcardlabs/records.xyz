@@ -21,6 +21,9 @@ import { ProfileCard } from "@/components/record/ProfileCard"
 import { RecordEditor } from "@/components/record/RecordEditor"
 import { AccessFigure } from "@/components/record/AccessFigure"
 import { GrantDialog } from "@/components/record/GrantDialog"
+import { SharedFigure, effectiveRecord } from "@/components/record/SharedFigure"
+import { LinkDialog } from "@/components/record/LinkDialog"
+import { useResolverLinks, linksQueryKey } from "@/hooks/useResolverLinks"
 import { useResolverRoles } from "@/hooks/useResolverRoles"
 import { adminBitsFor } from "@/lib/ens/roles"
 import { hasBigName } from "@/lib/ens/bigname"
@@ -73,6 +76,7 @@ export default function RecordPage() {
   const [dialog, setDialog] = useState<{ open: boolean; chainId?: number }>({ open: false })
   const [editingProfile, setEditingProfile] = useState(false)
   const [grantOpen, setGrantOpen] = useState(false)
+  const [linkOpen, setLinkOpen] = useState(false)
 
   const data = record.data
   // which record kinds the staged edits touch, so the permission check asks for exactly those
@@ -88,13 +92,20 @@ export default function RecordPage() {
         contenthash: stagedKinds.has("contenthash"),
         abi: stagedKinds.has("abi"),
         interface: stagedKinds.has("interface"),
+        link: drafts.linkCount > 0,
         adminBits: adminBits ? adminBits.toString() : undefined,
       }
   const authority = usePublishAuthority(name ?? undefined, recordsChainId, data?.resolver, data?.capabilities, address, owner.data?.owner, owner.data?.manager, needs)
   const canPublish = authority.data?.canPublish ?? false
   const profileWritable = !!data?.capabilities?.profileWrite
-  const canWriteAll = (drafts.accountCount === 0 || !!data?.supportsData) && (drafts.profileCount === 0 || profileWritable) && (drafts.accessCount === 0 || !!data?.capabilities?.roles)
+  const hasLinks = !!data?.capabilities?.links
+  const canWriteAll = (drafts.accountCount === 0 || !!data?.supportsData) && (drafts.profileCount === 0 || profileWritable) && (drafts.accessCount === 0 || !!data?.capabilities?.roles) && (drafts.linkCount === 0 || hasLinks)
   const hasRoles = !!data?.capabilities?.roles
+  const links = useResolverLinks(name ?? undefined, recordsChainId, data?.resolver, hasLinks)
+  const linkAuthority = usePublishAuthority(name ?? undefined, recordsChainId, data?.resolver, data?.capabilities, address, owner.data?.owner, owner.data?.manager, { link: true })
+  const canLink = hasLinks && !!linkAuthority.data?.canPublish
+  const defaultRecordId = links.data?.rows.find((r) => r.isDefault)?.recordId ?? "0"
+  const myRecordId = effectiveRecord(links.data?.rows.find((r) => !r.isDefault && r.name === name), defaultRecordId)
   const resolverRoles = useResolverRoles(recordsChainId, data?.resolver, hasRoles)
   // can the connected wallet administer the three record kinds the grant dialog offers?
   const grantAdminNeeds = { adminBits: (adminBitsFor({ account: "0x0000000000000000000000000000000000000000", resource: "0", roleBitmap: ((1n << 0n) | (1n << 4n) | (1n << 24n)).toString(), revoke: false, scope: "" })).toString() }
@@ -154,6 +165,7 @@ export default function RecordPage() {
     if (drafts.accountCount === 0) plan.listings = {}
     plan.records = drafts.records
     plan.access = drafts.access
+    plan.links = drafts.links
     const calls = buildPublishCalls(name, plan, { data: data.capabilities?.writeFlavour ?? "node", profile: data.capabilities?.profileWrite ?? "node" })
     try {
       if (walletChainId !== recordsChainId) await switchChainAsync({ chainId: asChainId(recordsChainId) })
@@ -171,6 +183,7 @@ export default function RecordPage() {
     qc.invalidateQueries({ queryKey: recordQueryKey(name ?? "", recordsChainId) })
     qc.invalidateQueries({ queryKey: ["profile", recordsChainId, name] })
     qc.invalidateQueries({ queryKey: ["resolver-roles", recordsChainId] })
+    qc.invalidateQueries({ queryKey: linksQueryKey(recordsChainId, data?.resolver) })
     toast.success("record published", { description: `${shortAddr(txHash, 8)} · mined` })
   }
 
@@ -482,6 +495,14 @@ export default function RecordPage() {
                     </li>
                   )
                 })}
+                {drafts.links.map((l) => (
+                  <li key={`l:${l.sourceName}`} className="flex flex-wrap items-center gap-3 py-2.5">
+                    <StatusMark status={l.recordId === "0" ? "removing" : "draft"} />
+                    <span className="font-semibold">link</span>
+                    <span className="min-w-0 flex-1 truncate text-ink-dim">{l.scope}</span>
+                    <Button size="sm" variant="ghost" className="ml-auto" onClick={() => drafts.dropLink(l)}>discard</Button>
+                  </li>
+                ))}
                 {drafts.access.map((c) => (
                   <li key={`g:${c.account}:${c.resource}:${c.revoke}`} className="flex flex-wrap items-center gap-3 py-2.5">
                     <StatusMark status={c.revoke ? "removing" : "draft"} />
@@ -515,6 +536,45 @@ export default function RecordPage() {
         </div>
       </Section>
 
+      {/* ---------------------------------------------------------------- shared records */}
+      {hasLinks ? (
+        <Section>
+          <SectionHeader
+            eyebrow="shared records"
+            title="One record, many names"
+            lede={`On ENSv2 every name on this resolver reads a record, and records can be shared. Point a second name at ${name}'s record and both show the same profile, addresses and owned accounts. Set a default record and every name without one falls back to it.`}
+          />
+          <Figure n={4} name={`records · ${data?.resolver ? shortAddr(data.resolver) : ""}`} padded={false} dotted={false}>
+            <SharedFigure
+              name={name}
+              recordsChainId={recordsChainId}
+              rows={links.data?.rows}
+              indexed={links.data?.indexed ?? hasBigName(recordsChainId)}
+              loading={links.isLoading}
+              canLink={canLink}
+              staged={drafts.links}
+              onShare={() => setLinkOpen(true)}
+              onStage={drafts.addLink}
+            />
+          </Figure>
+          {drafts.linkCount > 0 ? (
+            <p className="t-caption mt-3 normal-case tracking-normal">
+              {drafts.linkCount} link {drafts.linkCount === 1 ? "change" : "changes"} waiting · <a className="link-blue text-ink" href="#publish">publish above</a>
+            </p>
+          ) : isConnected && !canLink && !linkAuthority.isLoading ? (
+            <p className="t-caption mt-3 normal-case tracking-normal">linking needs the resolver's link role · connect the owner wallet.</p>
+          ) : null}
+          <div className="mt-6 border-t border-line">
+            <FaqRow q="what happens to the record a name leaves?">
+              Nothing. Records are never deleted; a link only changes which record a name reads. A name that leaves a record shows the default record if one is set, otherwise nothing until its next edit, which starts a fresh record for it.
+            </FaqRow>
+            <FaqRow q="do owned accounts travel with a shared record?">
+              The records do, but each consent was signed for one name. A consent signed for {name} verifies only under {name}, so other names sharing the record show those accounts as invalid until their owners sign again for that name.
+            </FaqRow>
+          </div>
+        </Section>
+      ) : null}
+
       {/* ---------------------------------------------------------------- access */}
       {hasRoles ? (
         <Section>
@@ -523,7 +583,7 @@ export default function RecordPage() {
             title={`Who can edit ${name}`}
             lede="ENSv2 resolvers grant rights per record type and per key. Let a teammate, an agent or a service change one record without handing over the name."
           />
-          <Figure n={4} name={`access · who can edit ${name}`} padded={false} dotted={false}>
+          <Figure n={hasLinks ? 5 : 4} name={`access · who can edit ${name}`} padded={false} dotted={false}>
             <AccessFigure
               name={name}
               recordsChainId={recordsChainId}
@@ -547,6 +607,9 @@ export default function RecordPage() {
       ) : null}
 
       <GrantDialog open={grantOpen} onOpenChange={setGrantOpen} name={name} recordsChainId={recordsChainId} onStage={drafts.addAccess} />
+      {data?.resolver ? (
+        <LinkDialog open={linkOpen} onOpenChange={setLinkOpen} name={name} recordsChainId={recordsChainId} resolver={data.resolver} myRecordId={myRecordId} defaultRecordId={defaultRecordId} onStage={drafts.addLink} />
+      ) : null}
       <AddAccountDialog
         open={dialog.open}
         onOpenChange={(open) => setDialog((d) => ({ ...d, open }))}

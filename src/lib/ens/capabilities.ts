@@ -18,6 +18,8 @@ export type ResolverCapabilities = {
   roles: boolean
   /** ENSv2 PublicResolverV2 `canModifyName` */
   canModifyName: boolean
+  /** ENSv2 PermissionedResolver records and links (`getRecordId`, `linkToRecord`) */
+  links: boolean
   /** the contracts whose code was inspected: the resolver, then each proxy target */
   inspected: Address[]
 }
@@ -92,6 +94,7 @@ export async function resolverCapabilities(client: PublicClient, name: string, r
     multicall: has(SELECTORS.multicall),
     roles: has(SELECTORS.hasRoles),
     canModifyName: has(SELECTORS.canModifyName),
+    links: has(SELECTORS.getRecordId),
     inspected,
   }
 }
