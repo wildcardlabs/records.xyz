@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom"
 import { normalize } from "viem/ens"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { MyNames } from "@/components/wallet/MyNames"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { AccountsTable, type Row } from "@/components/record/AccountsTable"
@@ -96,6 +97,7 @@ export default function Home() {
           <Button type="submit" variant="accent" className="h-10 px-5 tracking-[.02em]">open the record</Button>
         </form>
         {err ? <StatusText tone="err" className="mt-2 block text-[12px]">{err}</StatusText> : null}
+        <MyNames variant="list" />
         <div className="mt-3 text-[12px] text-ink-dim">
           see a live record: <Link className="link-blue text-ink" to="/steve.eth?net=sepolia">steve.eth</Link> on sepolia · or look up <Link className="link-blue text-ink" to="/vitalik.eth">vitalik.eth</Link>
         </div>

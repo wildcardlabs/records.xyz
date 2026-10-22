@@ -11,6 +11,7 @@ import { Figure, Section, SectionHeader, StatRow, StatusText, LivePill, Code, Fa
 import { AccountsTableSkeleton } from "@/components/record/AccountsTable"
 import { StatusMark, statusHelp } from "@/components/record/StatusMark"
 import { ConnectButton } from "@/components/wallet/ConnectButton"
+import { MyNames } from "@/components/wallet/MyNames"
 import { AccountsTable, type Row } from "@/components/record/AccountsTable"
 import { AddAccountDialog } from "@/components/record/AddAccountDialog"
 import { NetworkSelect } from "@/components/record/NetworkSelect"
@@ -242,6 +243,7 @@ export default function RecordPage() {
             <p className="t-lede mt-4 max-w-[60ch]">
               The profile and payment addresses {name} publishes, and below them the accounts it has publicly claimed as its own. Each claimed account signed its own consent, and this page verifies every signature in your browser, straight from chain.
             </p>
+            <MyNames variant="chips" exclude={{ name, chainId: recordsChainId }} />
           </div>
           <div className="flex flex-col items-start gap-2 sm:items-end">
             <NetworkSelect value={recordsChainId} onChange={setRecordsChain} />
