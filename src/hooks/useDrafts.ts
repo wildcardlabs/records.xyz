@@ -83,6 +83,14 @@ export function useDrafts(name: string | undefined, recordsChainId: number) {
   )
   const unmarkRemoval = useCallback((r: Removal) => update((s) => ({ ...s, removals: s.removals.filter((x) => !same(x, r)) })), [update])
   const clear = useCallback(() => update(() => empty), [update])
+  /** drop one group's drafts once its own transaction mined */
+  const clearGroup = useCallback(
+    (group: "accounts" | "records" | "access" | "links") =>
+      update((s) =>
+        group === "accounts" ? { ...s, adds: [], removals: [] } : group === "records" ? { ...s, records: {} } : group === "access" ? { ...s, access: [] } : { ...s, links: [] }
+      ),
+    [update]
+  )
   const setRecord = useCallback(
     (id: string, value: string | null) =>
       update((s) => {
@@ -116,6 +124,7 @@ export function useDrafts(name: string | undefined, recordsChainId: number) {
     addLink,
     dropLink,
     clear,
+    clearGroup,
     accountCount: store.adds.length + store.removals.length,
     profileCount,
     accessCount: store.access.length,
