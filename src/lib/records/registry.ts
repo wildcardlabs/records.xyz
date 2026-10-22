@@ -17,7 +17,7 @@ type TextSpec = { key: string; label: string; section: Section; placeholder?: st
 
 /** Text records the editor knows by name. Anything else is reachable as a custom key. */
 export const TEXT_SPECS: TextSpec[] = [
-  { key: "name", label: "display name", section: "profile", placeholder: "Alice", featured: true },
+  { key: "name", label: "display name", section: "profile", placeholder: "how you want to be called", featured: true },
   { key: "description", label: "description", section: "profile", placeholder: "one line about you", featured: true },
   { key: "avatar", label: "avatar", section: "profile", placeholder: "https://… or eip155:1/erc721:0x…/123", featured: true, validate: validateImageUrl },
   { key: "header", label: "banner", section: "profile", placeholder: "https://… (wide image)", featured: true, validate: validateImageUrl },

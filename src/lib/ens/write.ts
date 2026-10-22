@@ -1,6 +1,7 @@
 import { type Address, type Hex, encodeFunctionData, namehash, toHex } from "viem"
 import { packetToBytes } from "viem/ens"
-import { dataResolverAbi, nameKeyedProfileAbi, nameKeyedResolverAbi, nodeKeyedProfileAbi } from "./abis"
+import { dataResolverAbi, nameKeyedMoreAbi, nameKeyedProfileAbi, nameKeyedResolverAbi, nodeKeyedMoreAbi, nodeKeyedProfileAbi } from "./abis"
+import { defFromId } from "@/lib/records"
 import type { WriteFlavour } from "./capabilities"
 import { CHAINS_KEY, encodeChains, encodeListing, encodeProof, listingKey, proofKey } from "@/lib/ensip28"
 import { type AccessChange, buildAccessCall } from "./roles"
@@ -12,10 +13,8 @@ export type PublishPlan = {
   proofs: { chainId: number; account: Address; expiresAt: bigint; signature: Hex }[]
   /** accounts whose proof record should be cleared */
   removals: { chainId: number; account: Address }[]
-  /** text records to set; an empty string clears the key */
-  texts?: Record<string, string>
-  /** address records by coin type; an empty string clears the record */
-  addrs?: Record<number, Address | "">
+  /** profile records by registry id, in stored form ("" or "0x" clears) */
+  records?: Record<string, string>
   /** ENSv2 resolver role grants and revokes */
   access?: AccessChange[]
 }
@@ -38,18 +37,46 @@ export function buildPublishCalls(name: string, plan: PublishPlan, flavour: Writ
         ? encodeFunctionData({ abi: nameKeyedResolverAbi, functionName: "setData", args: [dns, key, value] })
         : encodeFunctionData({ abi: dataResolverAbi, functionName: "setData", args: [node, key, value] })
     )
-  const setText = (key: string, value: string) =>
-    calls.push(
-      flavours.profile === "name"
-        ? encodeFunctionData({ abi: nameKeyedProfileAbi, functionName: "setText", args: [dns, key, value] })
-        : encodeFunctionData({ abi: nodeKeyedProfileAbi, functionName: "setText", args: [node, key, value] })
-    )
-  const setAddr = (coinType: number, address: Address | "") =>
-    calls.push(
-      flavours.profile === "name"
-        ? encodeFunctionData({ abi: nameKeyedProfileAbi, functionName: "setAddress", args: [dns, BigInt(coinType), address === "" ? "0x" : address] })
-        : encodeFunctionData({ abi: nodeKeyedProfileAbi, functionName: "setAddr", args: [node, BigInt(coinType), address === "" ? "0x" : address] })
-    )
+  const byName = flavours.profile === "name"
+  const setRecord = (id: string, value: string) => {
+    const def = defFromId(id)
+    if (!def) return
+    const bytes = (value && value !== "0x" ? value : "0x") as Hex
+    switch (def.kind) {
+      case "text":
+        calls.push(byName
+          ? encodeFunctionData({ abi: nameKeyedProfileAbi, functionName: "setText", args: [dns, def.arg as string, value] })
+          : encodeFunctionData({ abi: nodeKeyedProfileAbi, functionName: "setText", args: [node, def.arg as string, value] }))
+        break
+      case "address":
+        calls.push(byName
+          ? encodeFunctionData({ abi: nameKeyedProfileAbi, functionName: "setAddress", args: [dns, BigInt(def.arg as number), bytes] })
+          : encodeFunctionData({ abi: nodeKeyedProfileAbi, functionName: "setAddr", args: [node, BigInt(def.arg as number), bytes] }))
+        break
+      case "contenthash":
+        calls.push(byName
+          ? encodeFunctionData({ abi: nameKeyedMoreAbi, functionName: "setContenthash", args: [dns, bytes] })
+          : encodeFunctionData({ abi: nodeKeyedMoreAbi, functionName: "setContenthash", args: [node, bytes] }))
+        break
+      case "abi":
+        calls.push(byName
+          ? encodeFunctionData({ abi: nameKeyedMoreAbi, functionName: "setABI", args: [dns, BigInt(def.arg as number), bytes] })
+          : encodeFunctionData({ abi: nodeKeyedMoreAbi, functionName: "setABI", args: [node, BigInt(def.arg as number), bytes] }))
+        break
+      case "interface": {
+        const impl = (value && value !== "0x" ? value : "0x0000000000000000000000000000000000000000") as Address
+        calls.push(byName
+          ? encodeFunctionData({ abi: nameKeyedMoreAbi, functionName: "setInterface", args: [dns, def.arg as Hex, impl] })
+          : encodeFunctionData({ abi: nodeKeyedMoreAbi, functionName: "setInterface", args: [node, def.arg as Hex, impl] }))
+        break
+      }
+      case "data":
+        set(def.arg as string, bytes)
+        break
+      case "name":
+        break
+    }
+  }
 
   // owned accounts (ENSIP-28), only when the plan touches them
   const touchesData = Object.keys(plan.listings).length > 0 || plan.proofs.length > 0 || plan.removals.length > 0
@@ -61,8 +88,7 @@ export function buildPublishCalls(name: string, plan: PublishPlan, flavour: Writ
     set(CHAINS_KEY, encodeChains(chainIds.filter((c) => plan.listings[c].length > 0)))
   }
   // profile records
-  for (const [key, value] of Object.entries(plan.texts ?? {})) setText(key, value)
-  for (const [ct, address] of Object.entries(plan.addrs ?? {})) setAddr(Number(ct), address)
+  for (const [id, value] of Object.entries(plan.records ?? {})) setRecord(id, value)
   for (const c of plan.access ?? []) calls.push(buildAccessCall(c))
   return calls
 }

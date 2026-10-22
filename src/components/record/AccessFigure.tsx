@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { LivePill } from "@/components/wrap"
-import { TEXT_FIELDS, addressFields } from "./ProfileEditor"
+import { addressLabel } from "@/lib/ens/profile"
+import { TEXT_SPECS, listCoins } from "@/lib/records"
 import type { BigNameRoleRow } from "@/lib/ens/bigname"
 import { type AccessChange, type Power, POWER_LABEL, ROLE, adminOf, coinResource, keyResource, powersFromBigName } from "@/lib/ens/roles"
 import { shortAddr } from "@/lib/format"
@@ -15,9 +16,9 @@ function useResourceLabels(recordsChainId: number, extraKeys: string[]) {
   return useMemo(() => {
     const m = new Map<string, string>()
     m.set("0", "all keys")
-    for (const f of TEXT_FIELDS) m.set(keyResource(f.key).toString(), `key ${f.key}`)
+    for (const f of TEXT_SPECS) m.set(keyResource(f.key).toString(), `key ${f.key}`)
     for (const k of extraKeys) m.set(keyResource(k).toString(), `key ${k}`)
-    for (const c of addressFields(recordsChainId)) m.set(coinResource(c.coinType).toString(), `${c.label} address`)
+    for (const c of listCoins()) m.set(coinResource(c.coinType).toString(), `${addressLabel(c.coinType, recordsChainId).label} address`)
     m.set(keyResource("accounts-chains").toString(), "key accounts-chains")
     return m
   }, [recordsChainId, extraKeys])

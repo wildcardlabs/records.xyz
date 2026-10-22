@@ -16,17 +16,22 @@ export type Draft = {
 export type Removal = { chainId: number; account: Address }
 
 /** profile record changes: text key -> value ("" clears), coin type (as string) -> address ("" clears) */
-type Store = { adds: Draft[]; removals: Removal[]; texts: Record<string, string>; addrs: Record<string, string>; access: AccessChange[] }
+/** records: def id -> stored value ("" or "0x" clears) */
+type Store = { adds: Draft[]; removals: Removal[]; records: Record<string, string>; access: AccessChange[] }
 
-const empty: Store = { adds: [], removals: [], texts: {}, addrs: {}, access: [] }
+const empty: Store = { adds: [], removals: [], records: {}, access: [] }
 const key = (chainId: number, name: string) => `records.xyz:drafts:${chainId}:${name}`
 
 function load(k: string): Store {
   try {
     const raw = localStorage.getItem(k)
     if (!raw) return empty
-    const parsed = JSON.parse(raw) as Partial<Store>
-    return { adds: parsed.adds ?? [], removals: parsed.removals ?? [], texts: parsed.texts ?? {}, addrs: parsed.addrs ?? {}, access: parsed.access ?? [] }
+    const parsed = JSON.parse(raw) as Partial<Store> & { texts?: Record<string, string>; addrs?: Record<string, string> }
+    // older drafts kept texts and addrs separately; fold them into record ids
+    const records: Record<string, string> = { ...parsed.records }
+    for (const [k, v] of Object.entries(parsed.texts ?? {})) records[`text:${k}`] = v
+    for (const [ct, v] of Object.entries(parsed.addrs ?? {})) records[`address:${ct}`] = v
+    return { adds: parsed.adds ?? [], removals: parsed.removals ?? [], records, access: parsed.access ?? [] }
   } catch {
     return empty
   }
@@ -46,7 +51,7 @@ export function useDrafts(name: string | undefined, recordsChainId: number) {
 
   const persist = (next: Store) => {
     try {
-      const n = next.adds.length + next.removals.length + Object.keys(next.texts).length + Object.keys(next.addrs).length + next.access.length
+      const n = next.adds.length + next.removals.length + Object.keys(next.records).length + next.access.length
       if (n === 0) localStorage.removeItem(k)
       else localStorage.setItem(k, JSON.stringify(next))
     } catch {
@@ -77,42 +82,30 @@ export function useDrafts(name: string | undefined, recordsChainId: number) {
   )
   const unmarkRemoval = useCallback((r: Removal) => update((s) => ({ ...s, removals: s.removals.filter((x) => !same(x, r)) })), [update])
   const clear = useCallback(() => update(() => empty), [update])
-  const setText = useCallback(
-    (key: string, value: string | null) =>
+  const setRecord = useCallback(
+    (id: string, value: string | null) =>
       update((s) => {
-        const texts = { ...s.texts }
-        if (value === null) delete texts[key]
-        else texts[key] = value
-        return { ...s, texts }
-      }),
-    [update]
-  )
-  const setAddr = useCallback(
-    (coinType: number, value: string | null) =>
-      update((s) => {
-        const addrs = { ...s.addrs }
-        if (value === null) delete addrs[String(coinType)]
-        else addrs[String(coinType)] = value
-        return { ...s, addrs }
+        const records = { ...s.records }
+        if (value === null) delete records[id]
+        else records[id] = value
+        return { ...s, records }
       }),
     [update]
   )
   const sameAccess = (a: AccessChange, b: AccessChange) => a.account.toLowerCase() === b.account.toLowerCase() && a.resource === b.resource && a.revoke === b.revoke
   const addAccess = useCallback((c: AccessChange) => update((s) => ({ ...s, access: [...s.access.filter((x) => !sameAccess(x, c)), c] })), [update])
   const dropAccess = useCallback((c: AccessChange) => update((s) => ({ ...s, access: s.access.filter((x) => !sameAccess(x, c)) })), [update])
-  const profileCount = Object.keys(store.texts).length + Object.keys(store.addrs).length
+  const profileCount = Object.keys(store.records).length
 
   return {
     adds: store.adds,
     removals: store.removals,
-    texts: store.texts,
-    addrs: store.addrs,
+    records: store.records,
     addDraft,
     dropDraft,
     markRemoval,
     unmarkRemoval,
-    setText,
-    setAddr,
+    setRecord,
     access: store.access,
     addAccess,
     dropAccess,

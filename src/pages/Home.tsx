@@ -35,6 +35,9 @@ const DICEBEAR = "https://api.dicebear.com/10.x"
 const exampleAvatar = `${DICEBEAR}/voxel-art/svg?seed=alice.eth&tags=animation&backgroundColor=eef17c&hairColor=7267ff&shirtColor=2a1eff&jacketColor=0d0a3d&hatColor=0d0a3d&shoesColor=0d0a3d`
 const exampleBanner = `${DICEBEAR}/weave/svg?seed=alice.eth&backgroundColor=f6f5fb&colorAColor=2a1eff&colorBColor=7267ff&colorCColor=b7a4f2&lineColor=0d0a3d`
 const exampleProfile: Profile = {
+  displayName: null,
+  location: null,
+  contenthash: "ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
   avatar: exampleAvatar,
   avatarUrl: exampleAvatar,
   header: exampleBanner,
@@ -46,9 +49,10 @@ const exampleProfile: Profile = {
     { key: "com.github", label: "github", value: "alice", href: "https://github.com/alice" },
   ],
   addresses: [
-    { coinType: 60, label: "ethereum", address: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045" },
-    { coinType: coinTypeFor(8453), label: "base", address: "0xb8c2C29ee19D8307cb7255e1Cd9CbDE883A267d5" },
-    { coinType: coinTypeFor(10), label: "optimism", address: "0x77ab1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f91fe" },
+    { coinType: 60, label: "ethereum", address: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045", evm: true },
+    { coinType: coinTypeFor(8453), label: "base", address: "0xb8c2C29ee19D8307cb7255e1Cd9CbDE883A267d5", evm: true },
+    { coinType: coinTypeFor(10), label: "optimism", address: "0x77ab1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f91fe", evm: true },
+    { coinType: 0, label: "btc", address: "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq", evm: false },
   ],
   source: "chain",
 }

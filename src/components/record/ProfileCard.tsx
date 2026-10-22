@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Copy, ExternalLink } from "lucide-react"
+import { Copy, ExternalLink, Globe, MapPin } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "cn"
 import { Badge } from "@/components/ui/badge"
@@ -32,6 +32,18 @@ function Banner({ src, theme }: { src: string | null; theme: string | null }) {
       {src && !broken ? <img src={src} alt="" className="size-full object-cover" onError={() => setBroken(true)} /> : null}
     </div>
   )
+}
+
+/** ipfs://bafy…abcd */
+function shortHash(h: string) {
+  return h.length <= 30 ? h : `${h.slice(0, 18)}…${h.slice(-8)}`
+}
+
+/** a public gateway for .eth names on mainnet; other names have no well-known one */
+function siteFor(name: string, contenthash: string) {
+  if (!name.endsWith(".eth") || name.split(".").length !== 2) return null
+  if (!/^(ipfs|ipns|bzz|ar):\/\//.test(contenthash)) return null
+  return `https://${name}.limo`
 }
 
 function host(u: string) {
@@ -68,7 +80,8 @@ function ProfileCard({
   /** returns true when the address is a live verified owned account on the chain of this coin type */
   consented?: (coinType: number, address: string) => boolean
 }) {
-  const empty = !loading && profile && !profile.avatar && !profile.description && !profile.url && profile.socials.length === 0 && profile.addresses.length === 0
+  const empty = !loading && profile && !profile.avatar && !profile.displayName && !profile.description && !profile.url && !profile.contenthash && profile.socials.length === 0 && profile.addresses.length === 0
+  const site = profile?.contenthash ? siteFor(name, profile.contenthash) : null
   const hasBanner = !!(profile?.header || (profile?.theme && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(profile.theme)))
   return (
     <div>
@@ -78,7 +91,8 @@ function ProfileCard({
           <div className="relative z-10 flex items-start gap-4">
             {loading ? <div className="size-16 shrink-0 bg-wash" /> : <Avatar src={profile?.avatarUrl ?? null} name={name} ring={hasBanner} />}
             <div className={cn("min-w-0", hasBanner && "pt-6 sm:pt-7")}>
-              <div className="t-fig-title truncate">{name}</div>
+              <div className="t-fig-title truncate">{profile?.displayName || name}</div>
+              {profile?.displayName ? <div className="t-caption truncate normal-case tracking-normal">{name}</div> : null}
               {loading ? (
                 <div className="mt-2 h-3 w-40 bg-wash" />
               ) : profile?.description ? (
@@ -86,11 +100,24 @@ function ProfileCard({
               ) : (
                 <p className="t-fig-body mt-1 text-ink-dim">no description set</p>
               )}
+              {profile?.location ? (
+                <p className="t-caption mt-1 inline-flex items-center gap-1 normal-case tracking-normal"><MapPin className="size-3" />{profile.location}</p>
+              ) : null}
               <div className="mt-2.5 flex flex-wrap gap-1.5">
                 {profile?.url ? (
                   <a className="link-blue" href={profile.url.startsWith("http") ? profile.url : `https://${profile.url}`} target="_blank" rel="noreferrer">
                     <Badge variant="blue">{host(profile.url)}</Badge>
                   </a>
+                ) : null}
+                {profile?.contenthash ? (
+                  <Tooltip>
+                    <TooltipTrigger render={site ? <a className="link-blue" href={site} target="_blank" rel="noreferrer" /> : <span />}>
+                      <Badge variant="outline"><Globe className="size-3" /> {shortHash(profile.contenthash)}</Badge>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs font-mono text-[11px] whitespace-normal break-all">
+                      content hash · {profile.contenthash}{site ? " · opens through eth.limo" : ""}
+                    </TooltipContent>
+                  </Tooltip>
                 ) : null}
                 {profile?.socials.map((s) =>
                   s.href ? (
@@ -133,7 +160,7 @@ function ProfileCard({
                     <TableCell>
                       <span className="inline-flex items-center gap-1.5">
                         <span className="tabular font-semibold text-ink">{shortAddr(a.address, 6)}</span>
-                        {consented?.(a.coinType, a.address) ? <ConsentedMark name={name} /> : null}
+                        {a.evm && consented?.(a.coinType, a.address) ? <ConsentedMark name={name} /> : null}
                         <button type="button" className="link-blue text-ink-dim" aria-label="copy address" onClick={() => { navigator.clipboard?.writeText(a.address); toast("address copied") }}>
                           <Copy className="size-3.5" />
                         </button>

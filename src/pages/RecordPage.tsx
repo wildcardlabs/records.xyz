@@ -18,7 +18,7 @@ import { useRecord, recordQueryKey } from "@/hooks/useRecord"
 import { useNameOwner } from "@/hooks/useNameOwner"
 import { useProfile } from "@/hooks/useProfile"
 import { ProfileCard } from "@/components/record/ProfileCard"
-import { ProfileEditor, TEXT_FIELDS, addressFields } from "@/components/record/ProfileEditor"
+import { RecordEditor } from "@/components/record/RecordEditor"
 import { AccessFigure } from "@/components/record/AccessFigure"
 import { GrantDialog } from "@/components/record/GrantDialog"
 import { useResolverRoles } from "@/hooks/useResolverRoles"
@@ -30,7 +30,8 @@ import { chainById, DEFAULT_RECORDS_CHAIN, RECORDS_CHAINS } from "@/lib/ens/chai
 import { dataResolverAbi } from "@/lib/ens/abis"
 import { buildPublishCalls, type PublishPlan } from "@/lib/ens/write"
 import { isOwned } from "@/lib/ensip28"
-import { chainIdForCoinType } from "@/lib/ens/profile"
+import { addressLabel } from "@/lib/ens/profile"
+import { chainIdForCoinType, decodeValue, defFromId } from "@/lib/records"
 import { asChainId } from "@/lib/wagmi"
 import { daysUntil, fmtDate, sameAddr, shortAddr } from "@/lib/format"
 
@@ -61,8 +62,8 @@ export default function RecordPage() {
 
   const record = useRecord(name ?? undefined, recordsChainId)
   const owner = useNameOwner(name ?? undefined, recordsChainId)
-  const profile = useProfile(name ?? undefined, recordsChainId)
   const drafts = useDrafts(name ?? undefined, recordsChainId)
+  const profile = useProfile(name ?? undefined, recordsChainId, Object.keys(drafts.records))
   const { address, chainId: walletChainId, isConnected } = useConnection()
   const { switchChainAsync } = useSwitchChain()
   const { writeContractAsync, isPending: sending } = useWriteContract()
@@ -74,14 +75,25 @@ export default function RecordPage() {
   const [grantOpen, setGrantOpen] = useState(false)
 
   const data = record.data
-  const textPending = Object.keys(drafts.texts).length > 0
-  const addrPending = Object.keys(drafts.addrs).length > 0
+  // which record kinds the staged edits touch, so the permission check asks for exactly those
+  const stagedKinds = useMemo(() => new Set(Object.keys(drafts.records).map((id) => defFromId(id)?.kind)), [drafts.records])
+  const stagedTextKeys = useMemo(() => Object.keys(drafts.records).filter((id) => id.startsWith("text:")).map((id) => id.slice(5)), [drafts.records])
   const adminBits = drafts.access.reduce((acc, c) => acc | adminBitsFor(c), 0n)
-  const needs = drafts.pending === 0 ? { data: true } : { data: drafts.accountCount > 0, text: textPending, addr: addrPending, adminBits: adminBits ? adminBits.toString() : undefined }
+  const needs = drafts.pending === 0
+    ? { data: true }
+    : {
+        data: drafts.accountCount > 0 || stagedKinds.has("data"),
+        text: stagedKinds.has("text"),
+        addr: stagedKinds.has("address"),
+        contenthash: stagedKinds.has("contenthash"),
+        abi: stagedKinds.has("abi"),
+        interface: stagedKinds.has("interface"),
+        adminBits: adminBits ? adminBits.toString() : undefined,
+      }
   const authority = usePublishAuthority(name ?? undefined, recordsChainId, data?.resolver, data?.capabilities, address, owner.data?.owner, owner.data?.manager, needs)
   const canPublish = authority.data?.canPublish ?? false
   const profileWritable = !!data?.capabilities?.profileWrite
-  const canWriteAll = (drafts.accountCount === 0 || !!data?.supportsData) && (!(textPending || addrPending) || profileWritable) && (drafts.accessCount === 0 || !!data?.capabilities?.roles)
+  const canWriteAll = (drafts.accountCount === 0 || !!data?.supportsData) && (drafts.profileCount === 0 || profileWritable) && (drafts.accessCount === 0 || !!data?.capabilities?.roles)
   const hasRoles = !!data?.capabilities?.roles
   const resolverRoles = useResolverRoles(recordsChainId, data?.resolver, hasRoles)
   // can the connected wallet administer the three record kinds the grant dialog offers?
@@ -140,8 +152,7 @@ export default function RecordPage() {
     }
     plan.proofs = drafts.adds.map((d) => ({ chainId: d.chainId, account: d.account, expiresAt: BigInt(d.expiresAt), signature: d.signature }))
     if (drafts.accountCount === 0) plan.listings = {}
-    plan.texts = drafts.texts
-    plan.addrs = Object.fromEntries(Object.entries(drafts.addrs).map(([ct, a]) => [Number(ct), a as Address | ""]))
+    plan.records = drafts.records
     plan.access = drafts.access
     const calls = buildPublishCalls(name, plan, { data: data.capabilities?.writeFlavour ?? "node", profile: data.capabilities?.profileWrite ?? "node" })
     try {
@@ -257,9 +268,9 @@ export default function RecordPage() {
         {data?.resolver || record.isLoading ? (
           <Figure n={1} name={`profile · ${name}`} className="mt-8" padded={false} dotted={false}>
             {editingProfile ? (
-              <ProfileEditor
+              <RecordEditor
                 recordsChainId={recordsChainId}
-                profile={profile.data}
+                set={profile.set}
                 drafts={drafts}
                 enabled={isConnected && profileWritable}
                 disabledReason={!isConnected ? "connect a wallet to edit." : !profileWritable ? "this name's resolver does not accept record writes from this app." : undefined}
@@ -279,7 +290,7 @@ export default function RecordPage() {
                       + verify an account
                     </Button>
                     <Button size="sm" variant="outline" disabled={!profileWritable} onClick={() => setEditingProfile(true)}>
-                      edit profile
+                      edit records
                     </Button>
                     {drafts.profileCount > 0 ? (
                       <span className="text-[12px] text-ink-muted">
@@ -456,28 +467,27 @@ export default function RecordPage() {
                     <Button size="sm" variant="ghost" className="ml-auto" onClick={() => drafts.unmarkRemoval(r)}>undo</Button>
                   </li>
                 ))}
-                {Object.entries(drafts.texts).map(([key, value]) => (
-                  <li key={`t:${key}`} className="flex flex-wrap items-center gap-3 py-2.5">
-                    <StatusMark status={value === "" ? "removing" : "draft"} />
-                    <span className="font-semibold">{TEXT_FIELDS.find((f) => f.key === key)?.label ?? key}</span>
-                    <span className="min-w-0 flex-1 truncate text-ink-dim">{value === "" ? "clear" : value}</span>
-                    <Button size="sm" variant="ghost" className="ml-auto" onClick={() => drafts.setText(key, null)}>discard</Button>
-                  </li>
-                ))}
+                {Object.entries(drafts.records).map(([id, value]) => {
+                  const def = defFromId(id)
+                  if (!def) return null
+                  const clearing = value === "" || value === "0x"
+                  const label = def.kind === "address" ? `${addressLabel(def.arg as number, recordsChainId).label} address` : def.kind === "text" ? def.label : def.longName ?? def.label
+                  const shown = clearing ? "clear" : decodeValue(def, value)
+                  return (
+                    <li key={`rec:${id}`} className="flex flex-wrap items-center gap-3 py-2.5">
+                      <StatusMark status={clearing ? "removing" : "draft"} />
+                      <span className="font-semibold">{label}</span>
+                      <span className={`min-w-0 flex-1 truncate text-ink-dim ${def.kind === "address" ? "tabular" : ""}`}>{def.kind === "address" && !clearing && shown.length > 20 ? shortAddr(shown, 6) : shown}</span>
+                      <Button size="sm" variant="ghost" className="ml-auto" onClick={() => drafts.setRecord(id, null)}>discard</Button>
+                    </li>
+                  )
+                })}
                 {drafts.access.map((c) => (
                   <li key={`g:${c.account}:${c.resource}:${c.revoke}`} className="flex flex-wrap items-center gap-3 py-2.5">
                     <StatusMark status={c.revoke ? "removing" : "draft"} />
                     <span className="font-semibold">{c.revoke ? "revoke" : "allow"} {shortAddr(c.account, 6)}</span>
                     <span className="min-w-0 flex-1 truncate text-ink-dim">{c.scope}</span>
                     <Button size="sm" variant="ghost" className="ml-auto" onClick={() => drafts.dropAccess(c)}>discard</Button>
-                  </li>
-                ))}
-                {Object.entries(drafts.addrs).map(([ct, value]) => (
-                  <li key={`a:${ct}`} className="flex flex-wrap items-center gap-3 py-2.5">
-                    <StatusMark status={value === "" ? "removing" : "draft"} />
-                    <span className="font-semibold">{addressFields(recordsChainId).find((f) => String(f.coinType) === ct)?.label ?? `coin ${ct}`} address</span>
-                    <span className="tabular text-ink-dim">{value === "" ? "clear" : shortAddr(value, 6)}</span>
-                    <Button size="sm" variant="ghost" className="ml-auto" onClick={() => drafts.setAddr(Number(ct), null)}>discard</Button>
                   </li>
                 ))}
               </ul>
@@ -523,7 +533,7 @@ export default function RecordPage() {
               connected={address}
               canAdmin={canAdmin}
               staged={drafts.access}
-              extraKeys={Object.keys(drafts.texts)}
+              extraKeys={stagedTextKeys}
               onGrant={() => setGrantOpen(true)}
               onRevoke={drafts.addAccess}
             />

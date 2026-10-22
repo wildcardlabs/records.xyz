@@ -1,11 +1,20 @@
-import type { Address, PublicClient } from "viem"
+import type { Address } from "viem"
 import { isAddressEqual, zeroAddress } from "viem"
-import { ACCOUNT_CHAINS } from "./chains"
-import { fetchBigName, hasBigName } from "./bigname"
+import type { RecordSet } from "./recordset"
+import { COIN_TYPE_DEFAULT, COIN_TYPE_ETH, type RecordDef, addressDef, chainIdForCoinType, coinMeta, coinTypeForChain, coinTypeForName, contenthashDef, decodeValue, isEvmCoinType, textDef } from "@/lib/records"
 
 export type Social = { key: string; label: string; value: string; href?: string }
-export type ChainAddress = { coinType: number; label: string; address: Address; explorer?: string }
+export type ChainAddress = {
+  coinType: number
+  label: string
+  /** decoded, display form: checksummed for EVM chains, native encoding for other coins */
+  address: string
+  evm: boolean
+  explorer?: string
+}
 export type Profile = {
+  /** `name` text record, shown above the ENS name when set */
+  displayName: string | null
   avatar: string | null
   /** url to render for the avatar */
   avatarUrl: string | null
@@ -14,7 +23,10 @@ export type Profile = {
   /** `theme` text record: a colour, used behind the banner area when no header is set */
   theme: string | null
   description: string | null
+  location: string | null
   url: string | null
+  /** decoded content hash (ipfs://…, ar://…, ton://…) */
+  contenthash: string | null
   socials: Social[]
   addresses: ChainAddress[]
   /** where the data came from */
@@ -28,31 +40,63 @@ const SOCIAL_KEYS: { key: string; label: string; href: (v: string) => string | u
   { key: "xyz.farcaster", label: "farcaster", href: (v) => `https://warpcast.com/${v.replace(/^@/, "")}` },
   { key: "org.telegram", label: "telegram", href: (v) => `https://t.me/${v.replace(/^@/, "")}` },
   { key: "com.discord", label: "discord", href: () => undefined },
+  { key: "com.linkedin", label: "linkedin", href: (v) => `https://www.linkedin.com/in/${v.replace(/^@/, "")}` },
+  { key: "com.reddit", label: "reddit", href: (v) => `https://www.reddit.com/user/${v.replace(/^(u\/|@)/, "")}` },
   { key: "email", label: "email", href: (v) => `mailto:${v}` },
 ]
 
 /** ENSIP-11 coin type for an EVM chain; mainnet keeps 60. */
-export const coinTypeFor = (chainId: number) => (chainId === 1 ? 60 : (0x80000000 | chainId) >>> 0)
-/** Inverse of coinTypeFor for EVM coin types. */
-export const chainIdForCoinType = (coinType: number) => (coinType === 60 ? 1 : coinType >= 0x80000000 ? coinType - 0x80000000 : null)
+export const coinTypeFor = coinTypeForChain
+export { chainIdForCoinType }
 
 const CHAIN_LABELS: Record<number, { label: string; explorer: string }> = {
   1: { label: "ethereum", explorer: "https://etherscan.io" },
   8453: { label: "base", explorer: "https://basescan.org" },
   10: { label: "optimism", explorer: "https://optimistic.etherscan.io" },
   42161: { label: "arbitrum", explorer: "https://arbiscan.io" },
+  137: { label: "polygon", explorer: "https://polygonscan.com" },
+  59144: { label: "linea", explorer: "https://lineascan.build" },
+  534352: { label: "scroll", explorer: "https://scrollscan.com" },
+  42220: { label: "celo", explorer: "https://celoscan.io" },
   11155111: { label: "sepolia", explorer: "https://sepolia.etherscan.io" },
   84532: { label: "base sepolia", explorer: "https://sepolia.basescan.org" },
   11155420: { label: "op sepolia", explorer: "https://sepolia-optimism.etherscan.io" },
   421614: { label: "arbitrum sepolia", explorer: "https://sepolia.arbiscan.io" },
 }
 
-function labelFor(coinType: number, recordsChainId: number): { label: string; explorer?: string } {
-  // coin type 60 means "the chain the name lives on": sepolia for a sepolia name
-  if (coinType === 60 && recordsChainId === 11155111) return CHAIN_LABELS[11155111]
+const COIN_EXPLORERS: Record<string, string> = {
+  btc: "https://mempool.space",
+  sol: "https://solscan.io",
+}
+
+/**
+ * How to name an address record for people: the chain for EVM coin types (coin 60 is "the chain
+ * the name lives on", so sepolia for a sepolia name), the coin for everything else.
+ */
+export function addressLabel(coinType: number, recordsChainId: number): { label: string; longName: string; explorer?: string } {
+  if (coinType === COIN_TYPE_ETH && recordsChainId === 11155111) return { ...CHAIN_LABELS[11155111], longName: "Sepolia" }
+  if (coinType === COIN_TYPE_DEFAULT) return { label: "default", longName: "default" }
   const chainId = chainIdForCoinType(coinType)
-  if (chainId !== null && CHAIN_LABELS[chainId]) return CHAIN_LABELS[chainId]
-  return { label: chainId !== null ? `chain ${chainId}` : `coin ${coinType}` }
+  if (chainId !== null && CHAIN_LABELS[chainId]) return { ...CHAIN_LABELS[chainId], longName: CHAIN_LABELS[chainId].label }
+  const m = coinMeta(coinType)
+  if (m.evm) return { label: `chain ${chainId}`, longName: `EVM chain ${chainId}` }
+  return { label: m.name, longName: m.longName, explorer: COIN_EXPLORERS[m.name] }
+}
+
+/** The address records offered up front for a records chain: its own chain first, then the usual suspects. */
+export function featuredAddressDefs(recordsChainId: number): RecordDef[] {
+  const coins =
+    recordsChainId === 11155111
+      ? [COIN_TYPE_ETH, COIN_TYPE_DEFAULT, coinTypeForChain(84532), coinTypeForChain(11155420), coinTypeForChain(421614)]
+      : [COIN_TYPE_ETH, COIN_TYPE_DEFAULT, coinTypeForChain(8453), coinTypeForChain(10), coinTypeForChain(42161), ...["btc", "sol"].map(coinTypeForName).filter((c): c is number => c !== undefined)]
+  return coins.map((c) => withLabel(addressDef(c), recordsChainId))
+}
+
+/** An address def relabelled for the records chain it is shown on. */
+export function withLabel(def: RecordDef, recordsChainId: number): RecordDef {
+  if (def.kind !== "address") return def
+  const l = addressLabel(def.arg as number, recordsChainId)
+  return { ...def, label: l.label, longName: l.longName }
 }
 
 const isHttp = (v: string) => /^https?:\/\//i.test(v)
@@ -71,66 +115,41 @@ function socialsFrom(get: (key: string) => string | null | undefined): Social[] 
   })
 }
 
-/** Read the human-facing records of a name: avatar, banner, description, url, socials and per-chain payment addresses. */
-export async function fetchProfile(client: PublicClient, name: string, recordsChainId: number): Promise<Profile> {
-  if (hasBigName(recordsChainId)) {
-    try {
-      const bn = await fetchBigName(recordsChainId, name)
-      if (bn) {
-        const t = (k: string) => bn.texts[k] || null
-        const addresses: ChainAddress[] = Object.entries(bn.addresses)
-          .map(([ct, a]) => ({ coinType: Number(ct), a }))
-          .filter(({ a }) => /^0x[0-9a-fA-F]{40}$/.test(a) && !isAddressEqual(a as Address, zeroAddress))
-          .sort((x, y) => x.coinType - y.coinType)
-          .map(({ coinType, a }) => ({ coinType, address: a as Address, ...labelFor(coinType, recordsChainId) }))
-        return {
-          avatar: t("avatar"),
-          avatarUrl: avatarUrlFor(t("avatar"), name, recordsChainId),
-          header: t("header"),
-          theme: t("theme"),
-          description: t("description"),
-          url: t("url"),
-          socials: socialsFrom(t),
-          addresses,
-          source: "bigname",
-          asOfBlock: bn.asOfBlock,
-        }
-      }
-    } catch {
-      /* indexer unavailable: fall back to chain reads */
-    }
-  }
+const isEmpty = (v: string | undefined) => !v || v === "0x" || v === zeroAddress
 
-  const text = (key: string) => client.getEnsText({ name, key }).catch(() => null)
-  const addr = (coinType: number) => client.getEnsAddress({ name, coinType: BigInt(coinType) }).catch(() => null)
-  const chains = recordsChainId === 11155111 ? ACCOUNT_CHAINS.filter((c) => c.chain.id === 11155111) : ACCOUNT_CHAINS.filter((c) => c.chain.id !== 11155111)
-
-  const [avatar, header, theme, description, url, socialValues, addressValues] = await Promise.all([
-    text("avatar"),
-    text("header"),
-    text("theme"),
-    text("description"),
-    text("url"),
-    Promise.all(SOCIAL_KEYS.map((s) => text(s.key))),
-    Promise.all(chains.map((c) => addr(recordsChainId === 11155111 ? 60 : coinTypeFor(c.chain.id)))),
-  ])
-  const socialMap = Object.fromEntries(SOCIAL_KEYS.map((s, i) => [s.key, socialValues[i]]))
-  const addresses: ChainAddress[] = chains.flatMap((c, i) => {
-    const a = addressValues[i]
-    if (!a || isAddressEqual(a as Address, zeroAddress)) return []
-    const coinType = recordsChainId === 11155111 ? 60 : coinTypeFor(c.chain.id)
-    return [{ coinType, address: a as Address, label: c.label, explorer: c.explorer }]
-  })
-
+/** Build the display Profile from a record set, so the card does not care where values came from. */
+export function profileFromRecordSet(set: RecordSet, name: string, recordsChainId: number): Profile {
+  const text = (k: string) => set.values[textDef(k).id] || null
+  const addresses: ChainAddress[] = Object.entries(set.values)
+    .filter(([id, raw]) => id.startsWith("address:") && !isEmpty(raw))
+    .map(([id, raw]) => ({ coinType: Number(id.slice(8)), raw }))
+    .filter(({ coinType, raw }) => !isEvmCoinType(coinType) || (/^0x[0-9a-fA-F]{40}$/.test(raw) && !isAddressEqual(raw as Address, zeroAddress)))
+    .sort((x, y) => rank(x.coinType) - rank(y.coinType) || x.coinType - y.coinType)
+    .map(({ coinType, raw }) => {
+      const l = addressLabel(coinType, recordsChainId)
+      return { coinType, label: l.label, address: decodeValue(addressDef(coinType), raw), evm: isEvmCoinType(coinType), explorer: l.explorer }
+    })
+  const ch = set.values[contenthashDef.id]
   return {
-    avatar: avatar || null,
-    avatarUrl: avatarUrlFor(avatar || null, name, recordsChainId),
-    header: header || null,
-    theme: theme || null,
-    description: description || null,
-    url: url || null,
-    socials: socialsFrom((k) => socialMap[k]),
+    displayName: text("name"),
+    avatar: text("avatar"),
+    avatarUrl: avatarUrlFor(text("avatar"), name, recordsChainId),
+    header: text("header"),
+    theme: text("theme"),
+    description: text("description"),
+    location: text("location"),
+    url: text("url"),
+    contenthash: ch && ch !== "0x" ? decodeValue(contenthashDef, ch) || null : null,
+    socials: socialsFrom(text),
     addresses,
-    source: "chain",
+    source: set.source,
+    asOfBlock: set.asOfBlock,
   }
+}
+
+/** the name's own chain first, then the default, then other EVM chains, then other coins */
+function rank(coinType: number) {
+  if (coinType === COIN_TYPE_ETH) return 0
+  if (coinType === COIN_TYPE_DEFAULT) return 1
+  return isEvmCoinType(coinType) ? 2 : 3
 }
