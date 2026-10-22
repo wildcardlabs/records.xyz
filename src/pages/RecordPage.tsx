@@ -89,7 +89,7 @@ export default function RecordPage() {
   const adminAuthority = usePublishAuthority(name ?? undefined, recordsChainId, data?.resolver, data?.capabilities, address, owner.data?.owner, owner.data?.manager, grantAdminNeeds)
   const canAdmin = hasRoles && !!adminAuthority.data?.canPublish
 
-  // merge on-chain rows with local drafts and removals
+  // merge onchain rows with local drafts and removals
   const rows: Row[] = useMemo(() => {
     if (!data) return []
     const out: Row[] = []
@@ -296,7 +296,7 @@ export default function RecordPage() {
         ) : null}
         {profile.data?.source === "bigname" ? (
           <p className="t-caption mt-2 normal-case tracking-normal">
-            profile indexed by <a className="link-blue" href="https://bigname.sh" target="_blank" rel="noreferrer">bigname</a> (ENS Labs){profile.data.asOfBlock ? ` · as of block ${profile.data.asOfBlock.toLocaleString()}` : ""} · owned accounts are read and verified on chain
+            profile indexed by <a className="link-blue" href="https://bigname.sh" target="_blank" rel="noreferrer">bigname</a>{profile.data.asOfBlock ? ` · as of block ${profile.data.asOfBlock.toLocaleString()}` : ""} · owned accounts are read and verified onchain
           </p>
         ) : null}
 

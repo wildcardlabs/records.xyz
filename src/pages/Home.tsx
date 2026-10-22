@@ -20,7 +20,7 @@ const steps = [
   {
     num: "02",
     title: "Sign a consent",
-    body: "That wallet signs a short message: \"I belong to alice.eth, until this date.\" Signing is free and nothing goes on chain yet.",
+    body: "That wallet signs a short message: \"I belong to alice.eth, until this date.\" Signing is free and nothing goes onchain yet.",
   },
   {
     num: "03",
@@ -85,7 +85,7 @@ export default function Home() {
           as="h1"
           eyebrow="built on ensip-28 · name owned accounts"
           title="Put your accounts on the record"
-          lede="Prove which wallets belong to your ENS name. Each wallet signs its own consent, and anyone can check it live on chain. No indexer, no trust in us."
+          lede="Prove which wallets belong to your ENS name. Each wallet signs its own consent, and anyone can check it live onchain."
         />
         <form onSubmit={go} className="flex max-w-xl flex-col gap-2 sm:flex-row sm:items-stretch">
           <Input value={q} onChange={(e) => { setQ(e.target.value); setErr(null) }} placeholder="look up any ENS name, like alice.eth" aria-label="ens name" autoFocus />
@@ -183,7 +183,7 @@ export default function Home() {
       </Section>
 
       <Section>
-        <SectionHeader eyebrow="verification" title="What verified means here" lede="Every check runs in your browser against public RPCs. records.xyz never holds the data and cannot fake a result." />
+        <SectionHeader eyebrow="verification" title="What verified means here" lede="Every check runs in your browser against public RPCs." />
         <Figure n={4} name="checks" padded={false} dotted={false}>
           <Table>
             <TableHeader>

@@ -108,7 +108,7 @@ function AddAccountDialog({
         <DialogHeader>
           <DialogTitle className="t-h3 lowercase">Add this wallet to {name}</DialogTitle>
           <DialogDescription className="t-body">
-            Your wallet will ask you to sign a message. It says this wallet belongs to {name} until the date you pick. Signing is free; nothing goes on chain until the owner publishes.
+            Your wallet will ask you to sign a message. It says this wallet belongs to {name} until the date you pick. Signing is free; nothing goes onchain until the owner publishes.
           </DialogDescription>
         </DialogHeader>
 
