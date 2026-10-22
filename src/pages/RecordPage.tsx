@@ -610,7 +610,7 @@ export default function RecordPage() {
 
       <GrantDialog open={grantOpen} onOpenChange={setGrantOpen} name={name} recordsChainId={recordsChainId} onStage={drafts.addAccess} />
       {data?.resolver ? (
-        <LinkDialog open={linkOpen} onOpenChange={setLinkOpen} name={name} recordsChainId={recordsChainId} resolver={data.resolver} myRecordId={myRecordId} defaultRecordId={defaultRecordId} onStage={drafts.addLink} />
+        <LinkDialog open={linkOpen} onOpenChange={setLinkOpen} name={name} recordsChainId={recordsChainId} resolver={data.resolver} myRecordId={myRecordId} defaultRecordId={defaultRecordId} bound={links.data?.rows} onStage={drafts.addLink} />
       ) : null}
       <AddAccountDialog
         open={dialog.open}
