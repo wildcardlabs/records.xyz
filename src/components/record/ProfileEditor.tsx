@@ -24,7 +24,7 @@ export const TEXT_FIELDS: { key: string; label: string; placeholder: string; wid
 export function addressFields(recordsChainId: number): { coinType: number; label: string }[] {
   if (recordsChainId === 11155111) {
     return [
-      { coinType: 60, label: "ethereum" },
+      { coinType: 60, label: "sepolia" },
       { coinType: coinTypeFor(84532), label: "base sepolia" },
       { coinType: coinTypeFor(11155420), label: "op sepolia" },
       { coinType: coinTypeFor(421614), label: "arbitrum sepolia" },

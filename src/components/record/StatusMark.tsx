@@ -59,11 +59,11 @@ function StatusMark({ status, size = "sm", detail, className }: { status: RowSta
     )
   }
   return (
-    <span className={cn("inline-flex items-center border bg-paper font-mono text-[11px] font-semibold lowercase leading-none", toneClass[s.tone], className)}>
+    <span className={cn("inline-flex min-w-[104px] items-center border bg-paper font-mono text-[11px] font-semibold lowercase leading-none", toneClass[s.tone], className)}>
       <span className={cn("flex items-center border-r px-1.5 py-[5px]", toneClass[s.tone])}>
         <Icon className="size-3.5" {...(Icon === VerifiedSeal ? {} : { strokeWidth: 2.75 })} />
       </span>
-      <span className="px-2 py-[5px]">{s.label}</span>
+      <span className="flex-1 px-2 py-[5px]">{s.label}</span>
     </span>
   )
 }
