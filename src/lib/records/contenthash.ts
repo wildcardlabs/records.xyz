@@ -1,8 +1,10 @@
 import type { Hex } from "viem"
 import { decode as chDecode, encode as chEncode, getCodec } from "@ensdomains/content-hash"
 
+type ChCodec = Parameters<typeof chEncode>[0]
+
 /** url scheme ↔ content-hash codec name */
-const SCHEMES: Record<string, string> = {
+const SCHEMES: Record<string, ChCodec> = {
   ipfs: "ipfs",
   ipns: "ipns",
   bzz: "swarm",
@@ -36,9 +38,9 @@ export function decodeContenthash(raw: Hex | string): string {
   if (!raw || raw === "0x") return ""
   const hex = raw.startsWith("0x") ? raw.slice(2) : raw
   try {
-    const codec = getCodec(hex)
+    const codec = getCodec(hex) as string | undefined
     const value = chDecode(hex)
-    const scheme = CODEC_TO_SCHEME[codec] ?? codec
+    const scheme = (codec && CODEC_TO_SCHEME[codec]) || codec || "unknown"
     return `${scheme}://${value}`
   } catch {
     return raw
