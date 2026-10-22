@@ -79,7 +79,7 @@ export const contenthashDef: RecordDef = {
   label: "content",
   longName: "content hash",
   section: "website",
-  placeholder: "ipfs://… · ipns://… · ar://… · bzz://… · onion://…",
+  placeholder: "ipfs://… · ipns://… · ar://… · bzz://… · onion://… · ton://…",
   hint: "what loads at this name in an ENS-aware browser or gateway",
   featured: true,
 }

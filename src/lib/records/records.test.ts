@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { COIN_TYPE_DEFAULT, chainIdForCoinType, coinMeta, coinTypeForChain, coinTypeForName, decodeCoinAddress, encodeCoinAddress, validateCoinAddress } from "./address"
 import { decodeContenthash, encodeContenthash, validateContenthash } from "./contenthash"
+import { hexToTonAdnl, tonAdnlToHex } from "./ton"
 import { addressDef, decodeValue, defFromId, encodeValue, featuredDefs, searchDefs, textDef, validateValue } from "./registry"
 
 describe("coin types", () => {
@@ -56,6 +57,20 @@ describe("content hash", () => {
       const back = decodeContenthash(raw)
       expect(back.split("://")[0]).toBe(url.split("://")[0])
     }
+  })
+  it("handles TON sites (adnl) in hex and in the 55-character form", () => {
+    const hex = "516618cf6cbe9004f6883e742c9a2e3ca0b3cb6a1e3ad3e1b0ee73c7c2a60ae5"
+    const ton = hexToTonAdnl(hex)
+    expect(ton).toHaveLength(55)
+    expect(tonAdnlToHex(ton)).toBe(hex)
+    expect(tonAdnlToHex(`0x${hex}`)).toBe(hex)
+    const raw = encodeContenthash(`ton://${ton}`)
+    expect(raw).toBe(encodeContenthash(`adnl://${hex}`))
+    expect(raw.startsWith("0x90b2da05")).toBe(true)
+    expect(decodeContenthash(raw)).toBe(`ton://${ton}`)
+    const corrupted = ton.slice(0, -1) + (ton.endsWith("a") ? "b" : "a")
+    expect(() => tonAdnlToHex(corrupted)).toThrow(/checksum|ADNL/)
+    expect(validateContenthash("ton://not-an-address")).toMatch(/adnl needs/)
   })
   it("explains bad input", () => {
     expect(validateContenthash("example.com")).toMatch(/scheme/)
