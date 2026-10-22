@@ -119,7 +119,7 @@ function LinkDialog({
             ) : address && mine.isLoading ? (
               <span className="t-caption normal-case tracking-normal">looking up your names…</span>
             ) : address && (mine.data?.names.length ?? 0) > 1 ? (
-              <span className="t-caption normal-case tracking-normal">none of your other names has records on this resolver yet. type one and it is checked when you stage.</span>
+              <span className="t-caption normal-case tracking-normal">none of your other names uses this resolver. type any name and it is checked when you stage.</span>
             ) : null}
           </div>
           <div className="grid gap-2">
