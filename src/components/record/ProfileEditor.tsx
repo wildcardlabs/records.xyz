@@ -45,7 +45,7 @@ type DraftsApi = {
   setAddr: (coinType: number, value: string | null) => void
 }
 
-/** Current on-chain text values keyed by record key, derived from the profile read. */
+/** Current onchain text values keyed by record key, derived from the profile read. */
 export function currentTexts(profile: Profile | undefined): Record<string, string> {
   if (!profile) return {}
   const out: Record<string, string> = {}

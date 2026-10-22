@@ -21,7 +21,7 @@ type Tone = "ok" | "wait" | "err" | "dim" | "blue"
 type IconComponent = LucideIcon | typeof VerifiedSeal
 
 const spec: Record<RowStatus, { icon: IconComponent; tone: Tone; label: string; short: string }> = {
-  verified: { icon: VerifiedSeal, tone: "ok", label: "verified", short: "consent checked on chain" },
+  verified: { icon: VerifiedSeal, tone: "ok", label: "verified", short: "consent checked onchain" },
   expiring: { icon: Clock3, tone: "wait", label: "verified · expiring", short: "renew before it lapses" },
   expired: { icon: X, tone: "err", label: "expired", short: "consent lapsed" },
   invalid: { icon: X, tone: "err", label: "invalid", short: "signature does not verify" },
