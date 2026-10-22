@@ -66,7 +66,7 @@ function AccessFigure({
         <Button size="sm" variant={canAdmin ? "accent" : "outline"} disabled={!canAdmin} onClick={onGrant}>+ allow a wallet</Button>
       </div>
       {!indexed ? (
-        <p className="t-fig-body p-4 text-ink-dim sm:p-5">listing who holds roles needs an indexer; none covers this network yet. grants and revokes still work.</p>
+        <p className="t-fig-body p-4 text-ink-dim sm:p-5">listing who holds roles is not available on this network yet. grants and revokes still work.</p>
       ) : loading ? (
         <div className="space-y-2 p-4"><div className="h-3 w-56 bg-wash" /><div className="h-3 w-40 bg-wash" /></div>
       ) : list.length === 0 ? (
