@@ -1,4 +1,6 @@
 import { useState } from "react"
+import { useQuery } from "@tanstack/react-query"
+import { useConnection } from "wagmi"
 import { type Address, isAddressEqual, namehash } from "viem"
 import { normalize } from "viem/ens"
 import { Button } from "@/components/ui/button"
@@ -9,6 +11,7 @@ import { StatusText } from "@/components/wrap"
 import { publicClient } from "@/lib/ens/clients"
 import { type LinkChange, linkAbi } from "@/lib/ens/links"
 import { findResolver } from "@/lib/ens/resolve"
+import { useMyNames } from "@/hooks/useMyNames"
 
 /**
  * Stage a record link between this name and another name on the same ENSv2 resolver.
@@ -38,6 +41,21 @@ function LinkDialog({
 }) {
   const [other, setOther] = useState("")
   const [direction, setDirection] = useState<"theirs-to-mine" | "mine-to-theirs">("theirs-to-mine")
+  const { address } = useConnection()
+  const mine = useMyNames(address)
+  // which of the wallet's names on this chain already use this resolver: those are the ones that can share
+  const candidates = (mine.data?.names ?? []).filter((n) => n.chainId === recordsChainId && n.name !== name).map((n) => n.name)
+  const onResolver = useQuery({
+    queryKey: ["names-on-resolver", recordsChainId, resolver, candidates.join(",")],
+    queryFn: async () => {
+      const client = publicClient(recordsChainId)
+      const found = await Promise.all(candidates.map((n) => findResolver(client, n).catch(() => null)))
+      return candidates.filter((_, i) => found[i] && isAddressEqual(found[i]!, resolver))
+    },
+    enabled: open && candidates.length > 0,
+    staleTime: 60_000,
+  })
+  const picks = onResolver.data ?? []
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -89,6 +107,20 @@ function LinkDialog({
         <div className="grid gap-4 py-2">
           <div className="grid gap-2">
             <Label htmlFor="link-name">the other name</Label>
+            {picks.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5 text-[11px]">
+                <span className="text-ink-dim">yours on this resolver:</span>
+                {picks.map((n) => (
+                  <button key={n} type="button" className={`border px-2 py-0.5 ${other === n ? "border-blue text-blue" : "border-line text-ink-muted hover:border-blue hover:text-blue"}`} onClick={() => setOther(n)}>
+                    {n}
+                  </button>
+                ))}
+              </div>
+            ) : address && (mine.isLoading || onResolver.isLoading) ? (
+              <span className="t-caption normal-case tracking-normal">looking up your names…</span>
+            ) : address && candidates.length > 0 ? (
+              <span className="t-caption normal-case tracking-normal">none of your other names use this resolver yet.</span>
+            ) : null}
             <Input id="link-name" value={other} placeholder="alice.eth" onChange={(e) => setOther(e.target.value)} />
           </div>
           <div className="grid gap-2">
