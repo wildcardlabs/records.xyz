@@ -47,7 +47,9 @@ const CHAIN_LABELS: Record<number, { label: string; explorer: string }> = {
   421614: { label: "arbitrum sepolia", explorer: "https://sepolia.arbiscan.io" },
 }
 
-function labelFor(coinType: number): { label: string; explorer?: string } {
+function labelFor(coinType: number, recordsChainId: number): { label: string; explorer?: string } {
+  // coin type 60 means "the chain the name lives on": sepolia for a sepolia name
+  if (coinType === 60 && recordsChainId === 11155111) return CHAIN_LABELS[11155111]
   const chainId = chainIdForCoinType(coinType)
   if (chainId !== null && CHAIN_LABELS[chainId]) return CHAIN_LABELS[chainId]
   return { label: chainId !== null ? `chain ${chainId}` : `coin ${coinType}` }
@@ -80,7 +82,7 @@ export async function fetchProfile(client: PublicClient, name: string, recordsCh
           .map(([ct, a]) => ({ coinType: Number(ct), a }))
           .filter(({ a }) => /^0x[0-9a-fA-F]{40}$/.test(a) && !isAddressEqual(a as Address, zeroAddress))
           .sort((x, y) => x.coinType - y.coinType)
-          .map(({ coinType, a }) => ({ coinType, address: a as Address, ...labelFor(coinType) }))
+          .map(({ coinType, a }) => ({ coinType, address: a as Address, ...labelFor(coinType, recordsChainId) }))
         return {
           avatar: t("avatar"),
           avatarUrl: avatarUrlFor(t("avatar"), name, recordsChainId),
