@@ -1,5 +1,4 @@
-import { useState } from "react"
-import { useQuery } from "@tanstack/react-query"
+import { useMemo, useState } from "react"
 import { useConnection } from "wagmi"
 import { type Address, isAddressEqual, namehash } from "viem"
 import { normalize } from "viem/ens"
@@ -9,7 +8,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { StatusText } from "@/components/wrap"
 import { publicClient } from "@/lib/ens/clients"
-import { type LinkChange, linkAbi } from "@/lib/ens/links"
+import { type LinkChange, type ResolverLink, linkAbi } from "@/lib/ens/links"
+import { matchNames } from "@/components/wallet/MyNames"
 import { findResolver } from "@/lib/ens/resolve"
 import { useMyNames } from "@/hooks/useMyNames"
 
@@ -28,6 +28,8 @@ function LinkDialog({
   myRecordId,
   /** the default record's id ("0" when none) */
   defaultRecordId,
+  /** every name bound to this resolver, from the links figure */
+  bound,
   onStage,
 }: {
   open: boolean
@@ -37,25 +39,21 @@ function LinkDialog({
   resolver: Address
   myRecordId: string
   defaultRecordId: string
+  bound: ResolverLink[] | undefined
   onStage: (c: LinkChange) => void
 }) {
   const [other, setOther] = useState("")
   const [direction, setDirection] = useState<"theirs-to-mine" | "mine-to-theirs">("theirs-to-mine")
   const { address } = useConnection()
   const mine = useMyNames(address)
-  // which of the wallet's names on this chain already use this resolver: those are the ones that can share
-  const candidates = (mine.data?.names ?? []).filter((n) => n.chainId === recordsChainId && n.name !== name).map((n) => n.name)
-  const onResolver = useQuery({
-    queryKey: ["names-on-resolver", recordsChainId, resolver, candidates.join(",")],
-    queryFn: async () => {
-      const client = publicClient(recordsChainId)
-      const found = await Promise.all(candidates.map((n) => findResolver(client, n).catch(() => null)))
-      return candidates.filter((_, i) => found[i] && isAddressEqual(found[i]!, resolver))
-    },
-    enabled: open && candidates.length > 0,
-    staleTime: 60_000,
-  })
-  const picks = onResolver.data ?? []
+  // your names that this resolver already serves: the indexer lists every bound name, so no lookups are needed.
+  // names you own that were never written to are not bound yet; they go through the typed field instead.
+  const picks = useMemo(() => {
+    const boundNames = new Set((bound ?? []).filter((r) => !r.isDefault).map((r) => r.name))
+    return (mine.data?.names ?? []).filter((n) => n.chainId === recordsChainId && n.name !== name && boundNames.has(n.name))
+  }, [mine.data, bound, recordsChainId, name])
+  const matches = useMemo(() => matchNames(picks, other), [picks, other])
+  const manyPicks = picks.length > 8
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -107,21 +105,22 @@ function LinkDialog({
         <div className="grid gap-4 py-2">
           <div className="grid gap-2">
             <Label htmlFor="link-name">the other name</Label>
+            <Input id="link-name" value={other} placeholder={manyPicks ? `type to filter your ${picks.length} names here, or any name` : "alice.eth"} onChange={(e) => setOther(e.target.value)} />
             {picks.length > 0 ? (
-              <div className="flex flex-wrap gap-1.5 text-[11px]">
-                <span className="text-ink-dim">yours on this resolver:</span>
-                {picks.map((n) => (
-                  <button key={n} type="button" className={`border px-2 py-0.5 ${other === n ? "border-blue text-blue" : "border-line text-ink-muted hover:border-blue hover:text-blue"}`} onClick={() => setOther(n)}>
-                    {n}
+              <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+                <span className="text-ink-dim">yours on this resolver{manyPicks ? ` (${matches.length} of ${picks.length})` : ""}:</span>
+                {(manyPicks ? matches : picks).map((n) => (
+                  <button key={n.name} type="button" className={`border px-2 py-0.5 ${other === n.name ? "border-blue text-blue" : "border-line text-ink-muted hover:border-blue hover:text-blue"}`} onClick={() => setOther(n.name)}>
+                    {n.name}
                   </button>
                 ))}
+                {manyPicks && matches.length === 0 ? <span className="text-ink-dim">nothing matches</span> : null}
               </div>
-            ) : address && (mine.isLoading || onResolver.isLoading) ? (
+            ) : address && mine.isLoading ? (
               <span className="t-caption normal-case tracking-normal">looking up your names…</span>
-            ) : address && candidates.length > 0 ? (
-              <span className="t-caption normal-case tracking-normal">none of your other names use this resolver yet.</span>
+            ) : address && (mine.data?.names.length ?? 0) > 1 ? (
+              <span className="t-caption normal-case tracking-normal">none of your other names has records on this resolver yet. type one and it is checked when you stage.</span>
             ) : null}
-            <Input id="link-name" value={other} placeholder="alice.eth" onChange={(e) => setOther(e.target.value)} />
           </div>
           <div className="grid gap-2">
             <Label>which records survive</Label>
