@@ -59,6 +59,31 @@ export async function fetchResolverLinks(chainId: number, resolver: Address): Pr
   return out
 }
 
+type RawBound = { data?: { bound_names?: { data?: { name?: string; namehash?: string }[]; page?: { has_more?: boolean; next_cursor?: string | null } } } }
+
+/**
+ * `GET /v1/resolvers/{chain}/{resolver}`: every name whose registry entry points at this resolver,
+ * including names that have never been written to and so have no record yet. null without an indexer.
+ */
+export async function fetchBoundNames(chainId: number, resolver: Address): Promise<{ name: string; node: Hex }[] | null> {
+  const base = BIGNAME_BASE[chainId]
+  if (!base) return null
+  const out: { name: string; node: Hex }[] = []
+  let cursor: string | null = null
+  for (let page = 0; page < 20; page++) {
+    const url = `${base}/resolvers/${chainId}/${resolver.toLowerCase()}?page_size=200${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`
+    const res = await fetch(url, { headers: { accept: "application/json" } })
+    if (res.status === 404) return out
+    if (!res.ok) throw new Error(`bigname ${res.status}`)
+    const raw = (await res.json()) as RawBound
+    const bound = raw.data?.bound_names
+    for (const r of bound?.data ?? []) if (r.name && r.namehash && !r.name.includes("[")) out.push({ name: r.name, node: r.namehash as Hex })
+    if (!bound?.page?.has_more || !bound.page.next_cursor) break
+    cursor = bound.page.next_cursor
+  }
+  return out
+}
+
 /** Record ids straight from the resolver for a few names (this name and the root), when no indexer covers the chain. */
 export async function readLinks(client: PublicClient, resolver: Address, names: string[]): Promise<ResolverLink[]> {
   const wanted = [...new Set([ROOT_NAME, ...names])]

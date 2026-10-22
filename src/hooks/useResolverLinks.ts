@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query"
 import type { Address } from "viem"
 import { hasBigName } from "@/lib/ens/bigname"
 import { publicClient } from "@/lib/ens/clients"
-import { fetchResolverLinks, readLinks } from "@/lib/ens/links"
+import { fetchBoundNames, fetchResolverLinks, readLinks } from "@/lib/ens/links"
 
 export const linksQueryKey = (recordsChainId: number, resolver: Address | null | undefined) => ["resolver-links", recordsChainId, resolver] as const
 
@@ -17,11 +17,14 @@ export function useResolverLinks(name: string | undefined, recordsChainId: numbe
       const client = publicClient(recordsChainId)
       if (hasBigName(recordsChainId)) {
         try {
-          const rows = await fetchResolverLinks(recordsChainId, resolver!)
+          const [rows, bound] = await Promise.all([fetchResolverLinks(recordsChainId, resolver!), fetchBoundNames(recordsChainId, resolver!).catch(() => null)])
           if (rows) {
-            // the indexer lists names once a setter or link touched them; make sure this name and the root appear
+            const has = (node: string) => rows.some((x) => x.node.toLowerCase() === node.toLowerCase())
+            // the links list only knows names a setter or link touched; names merely pointed at this resolver have no record yet
+            for (const b of bound ?? []) if (!has(b.node)) rows.push({ name: b.name, node: b.node, recordId: "0", isDefault: false })
+            // and make sure this name and the root appear even if the indexer lags
             const own = await readLinks(client, resolver!, [name!])
-            for (const r of own) if (!rows.some((x) => x.node.toLowerCase() === r.node.toLowerCase())) rows.push(r)
+            for (const r of own) if (!has(r.node)) rows.push(r)
             return { rows, indexed: true }
           }
         } catch {

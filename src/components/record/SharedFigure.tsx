@@ -79,7 +79,7 @@ function SharedFigure({
               const isMe = r.name === name
               const shared = eff !== "0" && sharers(eff) > 1
               const pending = stagedFor(r.name)
-              const reads = eff === "0" ? "nothing yet" : r.recordId === "0" ? "the default record" : shared ? `a record shared by ${sharers(eff)} names` : "its own record"
+              const reads = eff === "0" ? "nothing yet · no record of its own" : r.recordId === "0" ? "the default record" : shared ? `a record shared by ${sharers(eff)} names` : "its own record"
               return (
                 <TableRow key={r.node} className={pending ? "opacity-60" : undefined}>
                   <TableCell>
