@@ -30,10 +30,14 @@ const steps = [
 ]
 
 const at = (iso: string) => BigInt(Math.floor(Date.parse(iso) / 1000))
+// example art from DiceBear (https://www.dicebear.com), coloured with the site palette
+const DICEBEAR = "https://api.dicebear.com/10.x"
+const exampleAvatar = `${DICEBEAR}/voxel-art/svg?seed=alice.eth&tags=animation&backgroundColor=eef17c&hairColor=7267ff&shirtColor=2a1eff&jacketColor=0d0a3d&hatColor=0d0a3d&shoesColor=0d0a3d`
+const exampleBanner = `${DICEBEAR}/weave/svg?seed=alice.eth&backgroundColor=f6f5fb&colorAColor=2a1eff&colorBColor=7267ff&colorCColor=b7a4f2&lineColor=0d0a3d`
 const exampleProfile: Profile = {
-  avatar: null,
-  avatarUrl: null,
-  header: null,
+  avatar: exampleAvatar,
+  avatarUrl: exampleAvatar,
+  header: exampleBanner,
   theme: "#0d0a3d",
   description: "designer · building on ethereum",
   url: "https://alice.xyz",
