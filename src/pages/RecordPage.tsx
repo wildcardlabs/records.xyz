@@ -35,7 +35,7 @@ import { dataResolverAbi } from "@/lib/ens/abis"
 import { buildPublishCalls, type PublishPlan } from "@/lib/ens/write"
 import { isOwned } from "@/lib/ensip28"
 import { addressLabel } from "@/lib/ens/profile"
-import { chainIdForCoinType, decodeValue, defFromId } from "@/lib/records"
+import { COIN_TYPE_DEFAULT, chainIdForCoinType, decodeValue, defFromId } from "@/lib/records"
 import { asChainId } from "@/lib/wagmi"
 import { daysUntil, fmtDate, sameAddr, shortAddr } from "@/lib/format"
 
@@ -144,6 +144,8 @@ export default function RecordPage() {
   // payment address ↔ owned account match, bound to the chain the consent names
   const consentedKeys = useMemo(() => new Set(verified.map((a) => `${a.chainId}:${a.account.toLowerCase()}`)), [verified])
   const consented = (coinType: number, addr: string) => {
+    // the default address stands for every EVM chain: a consent on any chain marks it
+    if (coinType === COIN_TYPE_DEFAULT) return verified.some((a) => a.account.toLowerCase() === addr.toLowerCase())
     const chainId = coinType === 60 ? (recordsChainId === 11155111 ? 11155111 : 1) : chainIdForCoinType(coinType)
     return chainId !== null && consentedKeys.has(`${chainId}:${addr.toLowerCase()}`)
   }

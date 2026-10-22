@@ -155,7 +155,12 @@ function ProfileCard({
                 {profile.addresses.map((a) => (
                   <TableRow key={a.coinType}>
                     <TableCell>
-                      <span className="inline-flex items-center gap-1.5"><span className="dot text-blue-2" />{a.label}</span>
+                      <span className="inline-flex items-center gap-1.5"><span className={cn("dot", a.isDefault ? "text-blue" : "text-blue-2")} />{a.label}</span>
+                      {a.isDefault ? (
+                        <span className="t-caption block normal-case tracking-normal">
+                          default{profile.fallbackChains.length > 0 ? ` · used for ${profile.fallbackChains.join(", ")}` : ""}
+                        </span>
+                      ) : null}
                     </TableCell>
                     <TableCell>
                       <span className="inline-flex items-center gap-1.5">

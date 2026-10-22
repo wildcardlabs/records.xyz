@@ -7,6 +7,8 @@ export type Social = { key: string; label: string; value: string; href?: string 
 export type ChainAddress = {
   coinType: number
   label: string
+  /** the ENSIP-19 default: what every EVM chain without its own address resolves to */
+  isDefault: boolean
   /** decoded, display form: checksummed for EVM chains, native encoding for other coins */
   address: string
   evm: boolean
@@ -29,6 +31,8 @@ export type Profile = {
   contenthash: string | null
   socials: Social[]
   addresses: ChainAddress[]
+  /** featured EVM chains that have no address of their own and so resolve to the default (empty when no default is set) */
+  fallbackChains: string[]
   /** where the data came from */
   source: "chain" | "bigname"
   asOfBlock?: number | null
@@ -75,7 +79,7 @@ const COIN_EXPLORERS: Record<string, string> = {
  */
 export function addressLabel(coinType: number, recordsChainId: number): { label: string; longName: string; explorer?: string } {
   if (coinType === COIN_TYPE_ETH && recordsChainId === 11155111) return { ...CHAIN_LABELS[11155111], longName: "Sepolia" }
-  if (coinType === COIN_TYPE_DEFAULT) return { label: "default", longName: "default" }
+  if (coinType === COIN_TYPE_DEFAULT) return { label: "any evm chain", longName: "default address" }
   const chainId = chainIdForCoinType(coinType)
   if (chainId !== null && CHAIN_LABELS[chainId]) return { ...CHAIN_LABELS[chainId], longName: CHAIN_LABELS[chainId].label }
   const m = coinMeta(coinType)
@@ -87,8 +91,8 @@ export function addressLabel(coinType: number, recordsChainId: number): { label:
 export function featuredAddressDefs(recordsChainId: number): RecordDef[] {
   const coins =
     recordsChainId === 11155111
-      ? [COIN_TYPE_ETH, COIN_TYPE_DEFAULT, coinTypeForChain(84532), coinTypeForChain(11155420), coinTypeForChain(421614)]
-      : [COIN_TYPE_ETH, COIN_TYPE_DEFAULT, coinTypeForChain(8453), coinTypeForChain(10), coinTypeForChain(42161), ...["btc", "sol"].map(coinTypeForName).filter((c): c is number => c !== undefined)]
+      ? [COIN_TYPE_DEFAULT, COIN_TYPE_ETH, coinTypeForChain(84532), coinTypeForChain(11155420), coinTypeForChain(421614)]
+      : [COIN_TYPE_DEFAULT, COIN_TYPE_ETH, coinTypeForChain(8453), coinTypeForChain(10), coinTypeForChain(42161), ...["btc", "sol"].map(coinTypeForName).filter((c): c is number => c !== undefined)]
   return coins.map((c) => withLabel(addressDef(c), recordsChainId))
 }
 
@@ -127,8 +131,14 @@ export function profileFromRecordSet(set: RecordSet, name: string, recordsChainI
     .sort((x, y) => rank(x.coinType) - rank(y.coinType) || x.coinType - y.coinType)
     .map(({ coinType, raw }) => {
       const l = addressLabel(coinType, recordsChainId)
-      return { coinType, label: l.label, address: decodeValue(addressDef(coinType), raw), evm: isEvmCoinType(coinType), explorer: l.explorer }
+      return { coinType, label: l.label, isDefault: coinType === COIN_TYPE_DEFAULT, address: decodeValue(addressDef(coinType), raw), evm: isEvmCoinType(coinType), explorer: l.explorer }
     })
+  const hasDefault = addresses.some((a) => a.isDefault)
+  const fallbackChains = hasDefault
+    ? featuredAddressDefs(recordsChainId)
+        .filter((d) => d.arg !== COIN_TYPE_DEFAULT && d.arg !== COIN_TYPE_ETH && isEvmCoinType(d.arg as number) && !addresses.some((a) => a.coinType === d.arg))
+        .map((d) => d.label)
+    : []
   const ch = set.values[contenthashDef.id]
   return {
     displayName: text("name"),
@@ -142,14 +152,15 @@ export function profileFromRecordSet(set: RecordSet, name: string, recordsChainI
     contenthash: ch && ch !== "0x" ? decodeValue(contenthashDef, ch) || null : null,
     socials: socialsFrom(text),
     addresses,
+    fallbackChains,
     source: set.source,
     asOfBlock: set.asOfBlock,
   }
 }
 
-/** the name's own chain first, then the default, then other EVM chains, then other coins */
+/** the default first (it covers every EVM chain), then the name's own chain, then other EVM chains, then other coins */
 function rank(coinType: number) {
-  if (coinType === COIN_TYPE_ETH) return 0
-  if (coinType === COIN_TYPE_DEFAULT) return 1
+  if (coinType === COIN_TYPE_DEFAULT) return 0
+  if (coinType === COIN_TYPE_ETH) return 1
   return isEvmCoinType(coinType) ? 2 : 3
 }

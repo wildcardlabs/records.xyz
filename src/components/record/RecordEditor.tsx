@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label"
 import { StatusText } from "@/components/wrap"
 import type { RecordSet } from "@/lib/ens/recordset"
 import { featuredAddressDefs, withLabel } from "@/lib/ens/profile"
-import { SECTIONS, TEXT_SPECS, type RecordDef, type Section, abiDef, contenthashDef, decodeValue, defFromId, encodeValue, listCoins, searchDefs, textDef, validateValue } from "@/lib/records"
+import { COIN_TYPE_DEFAULT, SECTIONS, TEXT_SPECS, type RecordDef, type Section, abiDef, addressDef, contenthashDef, decodeValue, defFromId, encodeValue, isEvmCoinType, listCoins, searchDefs, textDef, validateValue } from "@/lib/records"
 
 type DraftsApi = {
   /** staged values by record id, in stored form */
@@ -161,6 +161,10 @@ function RecordEditor({
 
   const staged = Object.keys(drafts.records).length
   const coinCount = listCoins().length
+  // the default address covers every EVM chain without one; show it as the placeholder of those fields
+  const defaultAddr = values[addressDef(COIN_TYPE_DEFAULT).id]?.trim() ?? ""
+  const placeholderFor = (def: RecordDef) =>
+    def.kind === "address" && def.arg !== COIN_TYPE_DEFAULT && isEvmCoinType(def.arg as number) && defaultAddr ? `same as default · ${defaultAddr}` : def.placeholder
 
   return (
     <div>
@@ -215,7 +219,7 @@ function RecordEditor({
       <div className="p-4 sm:p-5">
         <p className="t-caption mb-3 normal-case tracking-normal">
           {EDIT_SECTIONS.find((s) => s.id === section)?.hint}
-          {section === "addresses" ? ` · leave a field blank to clear it. search above for any of ${coinCount} coins.` : section === "advanced" ? " · search above to add a custom text key." : " · leave a field blank to clear it."}
+          {section === "addresses" ? ` · set the default once and every EVM chain without its own address uses it. leave a field blank to clear it. search above for any of ${coinCount} coins.` : section === "advanced" ? " · search above to add a custom text key." : " · leave a field blank to clear it."}
         </p>
         <div className="grid gap-3 sm:grid-cols-2">
           {defs.map((def) => {
@@ -240,7 +244,7 @@ function RecordEditor({
                     else inputs.current.delete(id)
                   }}
                   value={values[id] ?? ""}
-                  placeholder={def.placeholder}
+                  placeholder={placeholderFor(def)}
                   disabled={!enabled}
                   aria-invalid={!!err}
                   className={def.kind === "address" ? "tabular" : undefined}
