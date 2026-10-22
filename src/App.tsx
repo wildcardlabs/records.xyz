@@ -4,6 +4,7 @@ import { ConnectButton } from "@/components/wallet/ConnectButton"
 import Home from "@/pages/Home"
 import DesignSystem from "@/pages/DesignSystem"
 import RecordPage from "@/pages/RecordPage"
+import NamesPage from "@/pages/NamesPage"
 import NotFound from "@/pages/NotFound"
 
 export default function App() {
@@ -13,6 +14,7 @@ export default function App() {
         <Route element={<Shell navRight={<ConnectButton />} />}>
           <Route index element={<Home />} />
           {import.meta.env.DEV ? <Route path="design" element={<DesignSystem />} /> : null}
+          <Route path="names" element={<NamesPage />} />
           <Route path=":name" element={<RecordPage />} />
           <Route path="*" element={<NotFound />} />
         </Route>
