@@ -105,7 +105,7 @@ export default function Home() {
           <span className="text-ink-muted">look up any ENS name, and edit profile records and payment addresses on any name you own.</span>
           <br />
           <StatusText tone="wait">needs ENSv2:</StatusText>{" "}
-          <span className="text-ink-muted">owned accounts and per-key access, because they rely on the new resolver. Live on Sepolia now, on mainnet once ENSv2 is activated.</span>
+          <span className="text-ink-muted">owned accounts, shared records and per-key access, because they rely on the new resolver. Live on Sepolia now, on mainnet once ENSv2 is activated.</span>
         </div>
 
         <Figure n={1} name="example · a record page" className="mt-10" padded={false} dotted={false}>
@@ -170,9 +170,9 @@ export default function Home() {
         <Figure n={3} name="what a record page holds" padded={false} dotted={false}>
           <div className="grid divide-y divide-line lg:grid-cols-3 lg:divide-x lg:divide-y-0">
             {[
-              { num: "01", title: "Profile and payment addresses", body: "Avatar, banner, bio, links, and the address to pay on each chain. Read for any name; edit on any name you own." },
+              { num: "01", title: "Profile and payment addresses", body: "Avatar, banner, bio, links, the address to pay on any chain or coin, and the content hash. Read for any name; edit on any name you own." },
               { num: "02", title: "Owned accounts, with the seal", body: "Every wallet the name claims, each verified from the wallet's own signature. A payment address whose wallet also consented gets the olive seal." },
-              { num: "03", title: "Access by key", body: "On ENSv2, let a teammate, an agent or a service change one record, such as the avatar or one chain's address, without handing over the name." },
+              { num: "03", title: "Shared records and access", body: "On ENSv2, point several names at one record so they share a profile, set a default for the rest, and let a teammate or an agent change one record without handing over the name." },
             ].map((c) => (
               <div key={c.num} className="p-5">
                 <div className="flex items-baseline gap-3">
@@ -216,7 +216,7 @@ export default function Home() {
       <Section>
         <Eyebrow>faq</Eyebrow>
         <div className="mt-3 border-t border-line">
-          <FaqRow q="what do i need to get started?">Any ENS name, to look it up or to edit its profile and payment addresses. Owned accounts and per-key access need an ENSv2 name, because they rely on the new resolver: Sepolia today, mainnet once ENSv2 is activated. Open your name's record page and it tells you what is available.</FaqRow>
+          <FaqRow q="what do i need to get started?">Any ENS name, to look it up or to edit its profile and payment addresses. Owned accounts, shared records and per-key access need an ENSv2 name, because they rely on the new resolver: Sepolia today, mainnet once ENSv2 is activated. Open your name's record page and it tells you what is available.</FaqRow>
           <FaqRow q="does it cost anything?">Signing a consent is free. Publishing is one normal transaction from the wallet that owns the name, so you pay gas once for everything you changed: wallets, profile records, addresses and access grants together.</FaqRow>
           <FaqRow q="what does the seal next to a payment address mean?">That the wallet behind that address also signed an owned-account consent for the name, on that same chain, and the consent is still valid. The address record alone is the owner's claim; the seal means the receiving wallet agreed too.</FaqRow>
           <FaqRow q="where are my signatures kept before i publish?">In your browser only. Sign with each wallet, then switch to the owner wallet in the same browser to publish. Nothing is uploaded to us. Signing from another person's device is not supported yet.</FaqRow>

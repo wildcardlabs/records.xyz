@@ -5,6 +5,7 @@ import { defFromId } from "@/lib/records"
 import type { WriteFlavour } from "./capabilities"
 import { CHAINS_KEY, encodeChains, encodeListing, encodeProof, listingKey, proofKey } from "@/lib/ensip28"
 import { type AccessChange, buildAccessCall } from "./roles"
+import { type LinkChange, buildLinkCall } from "./links"
 
 export type PublishPlan = {
   /** final listings per chain after drafts and removals are applied */
@@ -17,6 +18,8 @@ export type PublishPlan = {
   records?: Record<string, string>
   /** ENSv2 resolver role grants and revokes */
   access?: AccessChange[]
+  /** ENSv2 record links: which record a name reads */
+  links?: LinkChange[]
 }
 
 export type PublishFlavours = { data: WriteFlavour; profile: WriteFlavour }
@@ -90,6 +93,8 @@ export function buildPublishCalls(name: string, plan: PublishPlan, flavour: Writ
   // profile records
   for (const [id, value] of Object.entries(plan.records ?? {})) setRecord(id, value)
   for (const c of plan.access ?? []) calls.push(buildAccessCall(c))
+  // links last: a setter on a freshly detached name would otherwise mint it a new record first
+  for (const l of plan.links ?? []) calls.push(buildLinkCall(l))
   return calls
 }
 

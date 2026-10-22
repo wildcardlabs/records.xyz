@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react"
 import type { Address, Hex } from "viem"
 import type { AccountKind } from "./useRecord"
 import type { AccessChange } from "@/lib/ens/roles"
+import { type LinkChange, sameLink } from "@/lib/ens/links"
 
 export type Draft = {
   chainId: number
@@ -17,9 +18,9 @@ export type Removal = { chainId: number; account: Address }
 
 /** profile record changes: text key -> value ("" clears), coin type (as string) -> address ("" clears) */
 /** records: def id -> stored value ("" or "0x" clears) */
-type Store = { adds: Draft[]; removals: Removal[]; records: Record<string, string>; access: AccessChange[] }
+type Store = { adds: Draft[]; removals: Removal[]; records: Record<string, string>; access: AccessChange[]; links: LinkChange[] }
 
-const empty: Store = { adds: [], removals: [], records: {}, access: [] }
+const empty: Store = { adds: [], removals: [], records: {}, access: [], links: [] }
 const key = (chainId: number, name: string) => `records.xyz:drafts:${chainId}:${name}`
 
 function load(k: string): Store {
@@ -31,7 +32,7 @@ function load(k: string): Store {
     const records: Record<string, string> = { ...parsed.records }
     for (const [k, v] of Object.entries(parsed.texts ?? {})) records[`text:${k}`] = v
     for (const [ct, v] of Object.entries(parsed.addrs ?? {})) records[`address:${ct}`] = v
-    return { adds: parsed.adds ?? [], removals: parsed.removals ?? [], records, access: parsed.access ?? [] }
+    return { adds: parsed.adds ?? [], removals: parsed.removals ?? [], records, access: parsed.access ?? [], links: parsed.links ?? [] }
   } catch {
     return empty
   }
@@ -51,7 +52,7 @@ export function useDrafts(name: string | undefined, recordsChainId: number) {
 
   const persist = (next: Store) => {
     try {
-      const n = next.adds.length + next.removals.length + Object.keys(next.records).length + next.access.length
+      const n = next.adds.length + next.removals.length + Object.keys(next.records).length + next.access.length + next.links.length
       if (n === 0) localStorage.removeItem(k)
       else localStorage.setItem(k, JSON.stringify(next))
     } catch {
@@ -95,6 +96,8 @@ export function useDrafts(name: string | undefined, recordsChainId: number) {
   const sameAccess = (a: AccessChange, b: AccessChange) => a.account.toLowerCase() === b.account.toLowerCase() && a.resource === b.resource && a.revoke === b.revoke
   const addAccess = useCallback((c: AccessChange) => update((s) => ({ ...s, access: [...s.access.filter((x) => !sameAccess(x, c)), c] })), [update])
   const dropAccess = useCallback((c: AccessChange) => update((s) => ({ ...s, access: s.access.filter((x) => !sameAccess(x, c)) })), [update])
+  const addLink = useCallback((l: LinkChange) => update((s) => ({ ...s, links: [...s.links.filter((x) => !sameLink(x, l)), l] })), [update])
+  const dropLink = useCallback((l: LinkChange) => update((s) => ({ ...s, links: s.links.filter((x) => !sameLink(x, l)) })), [update])
   const profileCount = Object.keys(store.records).length
 
   return {
@@ -109,10 +112,14 @@ export function useDrafts(name: string | undefined, recordsChainId: number) {
     access: store.access,
     addAccess,
     dropAccess,
+    links: store.links,
+    addLink,
+    dropLink,
     clear,
     accountCount: store.adds.length + store.removals.length,
     profileCount,
     accessCount: store.access.length,
-    pending: store.adds.length + store.removals.length + profileCount + store.access.length,
+    linkCount: store.links.length,
+    pending: store.adds.length + store.removals.length + profileCount + store.access.length + store.links.length,
   }
 }
