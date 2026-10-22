@@ -11,6 +11,7 @@ import { AccountsTable, type Row } from "@/components/record/AccountsTable"
 import { ProfileCard } from "@/components/record/ProfileCard"
 import { VerifiedSeal } from "@/components/record/StatusMark"
 import { type Profile, coinTypeFor } from "@/lib/ens/profile"
+import { COIN_TYPE_DEFAULT } from "@/lib/records"
 import { Figure, FigSplit, Section, SectionHeader, Eyebrow, StatRow, StatusText, Code, k, s, c, n, p, FaqRow } from "@/components/wrap"
 
 const steps = [
@@ -51,11 +52,12 @@ const exampleProfile: Profile = {
     { key: "com.github", label: "github", value: "alice", href: "https://github.com/alice" },
   ],
   addresses: [
-    { coinType: 60, label: "ethereum", address: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045", evm: true },
-    { coinType: coinTypeFor(8453), label: "base", address: "0xb8c2C29ee19D8307cb7255e1Cd9CbDE883A267d5", evm: true },
-    { coinType: coinTypeFor(10), label: "optimism", address: "0x77ab1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f91fe", evm: true },
-    { coinType: 0, label: "btc", address: "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq", evm: false },
+    { coinType: COIN_TYPE_DEFAULT, label: "any evm chain", isDefault: true, address: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045", evm: true },
+    { coinType: coinTypeFor(8453), label: "base", isDefault: false, address: "0xb8c2C29ee19D8307cb7255e1Cd9CbDE883A267d5", evm: true },
+    { coinType: coinTypeFor(10), label: "optimism", isDefault: false, address: "0x77ab1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f91fe", evm: true },
+    { coinType: 0, label: "btc", isDefault: false, address: "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq", evm: false },
   ],
+  fallbackChains: ["arbitrum"],
   source: "chain",
 }
 const example: Row[] = [
@@ -127,7 +129,7 @@ export default function Home() {
             name="alice.eth"
             profile={exampleProfile}
             loading={false}
-            consented={(coinType, address) => example.some((r) => r.status === "verified" && r.account.toLowerCase() === address.toLowerCase() && (coinType === 60 ? r.chainId === 1 : coinTypeFor(r.chainId) === coinType))}
+            consented={(coinType, address) => example.some((r) => r.status === "verified" && r.account.toLowerCase() === address.toLowerCase() && (coinType === COIN_TYPE_DEFAULT || (coinType === 60 ? r.chainId === 1 : coinTypeFor(r.chainId) === coinType)))}
           />
           <div className="flex items-center gap-2 border-y border-line px-4 py-2 t-caption normal-case tracking-normal">
             <VerifiedSeal className="size-3.5 text-ok" /> the seal marks a payment address whose wallet also signed a consent below. the rest of the page is the owned-accounts ledger.
