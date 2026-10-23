@@ -25,6 +25,7 @@ import { GrantDialog } from "@/components/record/GrantDialog"
 import { SharedFigure, effectiveRecord } from "@/components/record/SharedFigure"
 import { LinkDialog } from "@/components/record/LinkDialog"
 import { PrimaryDialog } from "@/components/record/PrimaryDialog"
+import { HistoryFigure } from "@/components/record/HistoryFigure"
 import { usePrimaryNamesFor } from "@/hooks/usePrimaryNames"
 import { targetForCoin } from "@/lib/ens/primary"
 import { useResolverLinks, linksQueryKey } from "@/hooks/useResolverLinks"
@@ -402,6 +403,13 @@ export default function RecordPage() {
         />
 
         <div className="mt-6 border-t border-line">
+          {hasBigName(recordsChainId) ? (
+            <FaqRow q="history: every change to this name">
+              <Figure name={`history · ${name}`} padded={false} dotted={false} className="mt-1">
+                <HistoryFigure name={name} recordsChainId={recordsChainId} explorer={explorer} enabled />
+              </Figure>
+            </FaqRow>
+          ) : null}
           <FaqRow q="what do the statuses mean?">
             <ul className="space-y-2">
               {statusHelp.map((h) => (
