@@ -1,4 +1,4 @@
-import { type PublicClient, createPublicClient, fallback, http } from "viem"
+import { type Chain, type PublicClient, createPublicClient, fallback, http } from "viem"
 import { ACCOUNT_CHAINS } from "./chains"
 
 const cache = new Map<number, PublicClient>()
@@ -10,6 +10,9 @@ const DEFAULT_RPCS: Record<number, string[]> = {
   10: ["https://mainnet.optimism.io", "https://optimism-rpc.publicnode.com"],
   42161: ["https://arb1.arbitrum.io/rpc", "https://arbitrum-one-rpc.publicnode.com"],
   11155111: ["https://ethereum-sepolia-rpc.publicnode.com", "https://sepolia.drpc.org", "https://1rpc.io/sepolia"],
+  84532: ["https://sepolia.base.org", "https://base-sepolia-rpc.publicnode.com"],
+  11155420: ["https://sepolia.optimism.io", "https://optimism-sepolia-rpc.publicnode.com"],
+  421614: ["https://sepolia-rollup.arbitrum.io/rpc", "https://arbitrum-sepolia-rpc.publicnode.com"],
 }
 
 /** Per-chain RPC list: VITE_RPC_URL_<chainId> override first, then our defaults, then the chain's own public RPC. */
@@ -21,17 +24,22 @@ function rpcUrls(chainId: number, chainDefault?: string): string[] {
   return list
 }
 
-export function publicClient(chainId: number): PublicClient {
-  const hit = cache.get(chainId)
+/** A client for any viem chain, cached by id. Used for chains outside ACCOUNT_CHAINS, such as testnet L2 reverse registrars. */
+export function publicClientFor(chain: Chain): PublicClient {
+  const hit = cache.get(chain.id)
   if (hit) return hit
-  const meta = ACCOUNT_CHAINS.find((c) => c.chain.id === chainId)
-  if (!meta) throw new Error(`unsupported chain ${chainId}`)
-  const urls = rpcUrls(chainId, meta.chain.rpcUrls.default.http[0])
+  const urls = rpcUrls(chain.id, chain.rpcUrls.default.http[0])
   const client = createPublicClient({
-    chain: meta.chain,
+    chain,
     transport: fallback(urls.map((u) => http(u, { batch: true, retryCount: 1, timeout: 12_000 })), { rank: false }),
     batch: { multicall: true },
   }) as PublicClient
-  cache.set(chainId, client)
+  cache.set(chain.id, client)
   return client
+}
+
+export function publicClient(chainId: number): PublicClient {
+  const meta = ACCOUNT_CHAINS.find((c) => c.chain.id === chainId)
+  if (!meta) throw new Error(`unsupported chain ${chainId}`)
+  return publicClientFor(meta.chain)
 }

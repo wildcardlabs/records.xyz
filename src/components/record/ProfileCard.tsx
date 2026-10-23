@@ -68,17 +68,33 @@ function ConsentedMark({ name }: { name: string }) {
   )
 }
 
+function PrimaryMark({ name, chain }: { name: string; chain: string }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger render={<span />}>
+        <Badge variant="outline">primary</Badge>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-xs font-mono text-[11px] lowercase whitespace-normal">
+        this address names {name} as its primary name on {chain} · the link runs both ways
+      </TooltipContent>
+    </Tooltip>
+  )
+}
+
 function ProfileCard({
   name,
   profile,
   loading,
   consented,
+  primary,
 }: {
   name: string
   profile: Profile | undefined
   loading: boolean
   /** returns true when the address is a live verified owned account on the chain of this coin type */
   consented?: (coinType: number, address: string) => boolean
+  /** returns the chain label when the address's primary name on that coin type's chain is this name */
+  primary?: (coinType: number, address: string) => string | null
 }) {
   const empty = !loading && profile && !profile.avatar && !profile.displayName && !profile.description && !profile.url && !profile.contenthash && profile.socials.length === 0 && profile.addresses.length === 0
   const site = profile?.contenthash ? siteFor(name, profile.contenthash) : null
@@ -166,6 +182,7 @@ function ProfileCard({
                       <span className="inline-flex items-center gap-1.5">
                         <span className="tabular font-semibold text-ink">{shortAddr(a.address, 6)}</span>
                         {a.evm && consented?.(a.coinType, a.address) ? <ConsentedMark name={name} /> : null}
+                        {a.evm && primary?.(a.coinType, a.address) ? <PrimaryMark name={name} chain={primary(a.coinType, a.address)!} /> : null}
                         <button type="button" className="link-blue text-ink-dim" aria-label="copy address" onClick={() => { navigator.clipboard?.writeText(a.address); toast("address copied") }}>
                           <Copy className="size-3.5" />
                         </button>

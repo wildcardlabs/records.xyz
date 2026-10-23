@@ -24,6 +24,9 @@ import { AccessFigure } from "@/components/record/AccessFigure"
 import { GrantDialog } from "@/components/record/GrantDialog"
 import { SharedFigure, effectiveRecord } from "@/components/record/SharedFigure"
 import { LinkDialog } from "@/components/record/LinkDialog"
+import { PrimaryDialog } from "@/components/record/PrimaryDialog"
+import { usePrimaryNamesFor } from "@/hooks/usePrimaryNames"
+import { targetForCoin } from "@/lib/ens/primary"
 import { useResolverLinks, linksQueryKey } from "@/hooks/useResolverLinks"
 import { useResolverRoles } from "@/hooks/useResolverRoles"
 import { adminBitsFor } from "@/lib/ens/roles"
@@ -74,6 +77,7 @@ export default function RecordPage() {
   const [editingProfile, setEditingProfile] = useState(false)
   const [grantOpen, setGrantOpen] = useState(false)
   const [linkOpen, setLinkOpen] = useState(false)
+  const [primaryOpen, setPrimaryOpen] = useState(false)
 
   const data = record.data
   const auth = (needs: Parameters<typeof usePublishAuthority>[7]) =>
@@ -150,6 +154,17 @@ export default function RecordPage() {
     if (coinType === COIN_TYPE_DEFAULT) return verified.some((a) => a.account.toLowerCase() === addr.toLowerCase())
     const chainId = coinType === 60 ? (recordsChainId === 11155111 ? 11155111 : 1) : chainIdForCoinType(coinType)
     return chainId !== null && consentedKeys.has(`${chainId}:${addr.toLowerCase()}`)
+  }
+  // does each payment address point back at this name as its primary, per chain?
+  const cardAddresses = useMemo(() => [...new Set((profile.data?.addresses ?? []).filter((a) => a.evm).map((a) => a.address.toLowerCase() as Address))], [profile.data])
+  const primaryQueries = usePrimaryNamesFor(cardAddresses, recordsChainId)
+  const primaryFor = (coinType: number, addr: string): string | null => {
+    const i = cardAddresses.indexOf(addr.toLowerCase() as Address)
+    const rows = i >= 0 ? primaryQueries[i]?.data : undefined
+    const target = targetForCoin(coinType, recordsChainId)
+    if (!rows || !target) return null
+    const row = rows.find((r) => r.target.kind === target.kind && r.target.chain.id === target.chain.id)
+    return row && row.name === name ? target.label : null
   }
   const nextExpiry = verified.map((a) => a.check.expiresAt!).sort((a, b) => (a < b ? -1 : 1))[0]
   const chainCount = new Set(onChain.map((a) => a.chainId)).size
@@ -308,7 +323,7 @@ export default function RecordPage() {
               />
             ) : (
               <>
-                <ProfileCard name={name} profile={profile.data} loading={profile.isLoading || record.isLoading} consented={consented} />
+                <ProfileCard name={name} profile={profile.data} loading={profile.isLoading || record.isLoading} consented={consented} primary={primaryFor} />
                 {isConnected && !record.isLoading ? (
                   <div className="flex flex-wrap items-center gap-3 border-t border-line px-4 py-2.5 sm:px-5">
                     <Button
@@ -321,6 +336,9 @@ export default function RecordPage() {
                     </Button>
                     <Button size="sm" variant="outline" disabled={!profileWritable} onClick={() => setEditingProfile(true)}>
                       edit records
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => setPrimaryOpen(true)}>
+                      set as my primary name
                     </Button>
                     {!profileWritable ? (
                       <span className="t-caption normal-case tracking-normal">this name's resolver does not accept record writes from this app.</span>
@@ -591,6 +609,7 @@ export default function RecordPage() {
       ) : null}
 
       <GrantDialog open={grantOpen} onOpenChange={setGrantOpen} name={name} recordsChainId={recordsChainId} onStage={drafts.addAccess} />
+      <PrimaryDialog open={primaryOpen} onOpenChange={setPrimaryOpen} name={name} recordsChainId={recordsChainId} />
       {data?.resolver ? (
         <LinkDialog open={linkOpen} onOpenChange={setLinkOpen} name={name} recordsChainId={recordsChainId} resolver={data.resolver} myRecordId={myRecordId} defaultRecordId={defaultRecordId} bound={links.data?.rows} onStage={drafts.addLink} />
       ) : null}
