@@ -31,7 +31,6 @@ const SHOWN: Power[] = ["text", "address", "data", "contenthash", "name", "link"
  * revokes here and grants through the dialog. Roles are per resolver, not per name.
  */
 function AccessFigure({
-  name,
   recordsChainId,
   rows,
   loading,
@@ -43,7 +42,6 @@ function AccessFigure({
   onGrant,
   onRevoke,
 }: {
-  name: string
   recordsChainId: number
   rows: BigNameRoleRow[] | null | undefined
   loading: boolean
@@ -62,12 +60,12 @@ function AccessFigure({
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-2 sm:px-5">
         <span className="t-caption normal-case tracking-normal">
-          permissions live on the resolver and apply to every name it serves for you, not only {name}.
+          {loading ? "reading…" : `${list.length} ${list.length === 1 ? "wallet" : "wallets"} with rights on this resolver`}
         </span>
         <Button size="sm" variant={canAdmin ? "accent" : "outline"} disabled={!canAdmin} onClick={onGrant}>+ allow a wallet</Button>
       </div>
       {!indexed ? (
-        <p className="t-fig-body p-4 text-ink-dim sm:p-5">listing who holds roles is not available on this network yet. grants and revokes still work.</p>
+        <p className="t-fig-body p-4 text-ink-dim sm:p-5">no indexer on this network · grants and revokes still work.</p>
       ) : loading ? (
         <div className="space-y-2 p-4"><div className="h-3 w-56 bg-wash" /><div className="h-3 w-40 bg-wash" /></div>
       ) : list.length === 0 ? (

@@ -16,7 +16,7 @@ const KINDS: { kind: Kind; power: Power; label: string; hint: string; rootOnly?:
   { kind: "text", power: "text", label: "text records", hint: "description, avatar, socials, any text key" },
   { kind: "address", power: "address", label: "payment addresses", hint: "the address people pay, per chain" },
   { kind: "data", power: "data", label: "owned accounts", hint: "the ENSIP-28 listings and proofs", rootOnly: true },
-  { kind: "link", power: "link", label: "shared records", hint: "which record each name on this resolver reads", rootOnly: true },
+  { kind: "link", power: "link", label: "shared profile", hint: "which profile each name uses", rootOnly: true },
 ]
 
 const select = "h-10 border border-line bg-paper px-3 font-mono text-[12.5px] font-medium lowercase text-ink outline-none focus-visible:border-blue"
@@ -91,7 +91,7 @@ function GrantDialog({
         <DialogHeader>
           <DialogTitle className="t-h3 lowercase">Let another wallet edit {name}</DialogTitle>
           <DialogDescription className="t-body">
-            Give one wallet permission to change a specific kind of record, without handing over the name. The owner publishes the grant and can revoke it later.
+            One wallet, one kind of record, no handover. Revoke it any time.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-2">
@@ -140,7 +140,7 @@ function GrantDialog({
             <p className="t-caption normal-case tracking-normal">a one-key grant cannot be delegated further.</p>
           )}
           <p className="t-caption normal-case tracking-normal">
-            permissions live on the resolver, not the name: they apply to every name this resolver serves for you.
+            applies to every name this resolver serves for you, not only {name}.
           </p>
           {error ? <StatusText tone="err" className="text-[12px]">{error}</StatusText> : null}
         </div>

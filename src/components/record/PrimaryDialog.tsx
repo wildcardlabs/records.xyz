@@ -57,7 +57,7 @@ function PrimaryDialog({ open, onOpenChange, name, recordsChainId }: { open: boo
         <DialogHeader>
           <DialogTitle className="t-h3 lowercase">Make {name} your primary name</DialogTitle>
           <DialogDescription className="t-body">
-            A primary name is what apps show for your wallet {address ? shortAddr(address as Address, 4) : ""}. Set it once for every EVM chain, or per chain. Each row is one transaction, sent on that chain.
+            What apps show for {address ? shortAddr(address as Address, 4) : "your wallet"}. One transaction per row, on that chain.
           </DialogDescription>
         </DialogHeader>
         {rows.isLoading ? (
@@ -82,7 +82,7 @@ function PrimaryDialog({ open, onOpenChange, name, recordsChainId }: { open: boo
                   <TableRow key={`${r.target.kind}:${r.target.chain.id}`}>
                     <TableCell data-label="chain">
                       <span className="inline-flex items-center gap-1.5"><span className={`dot ${r.target.kind === "default" ? "text-blue" : "text-blue-2"}`} />{r.target.label}</span>
-                      {r.target.kind === "default" ? <span className="t-caption block normal-case tracking-normal">default · chains without their own fall back to it</span> : null}
+                      {r.target.kind === "default" ? <span className="t-caption block normal-case tracking-normal">the default · beaten by a chain's own entry</span> : null}
                     </TableCell>
                     <TableCell data-label="primary name now">
                       {r.name ? (
@@ -112,9 +112,6 @@ function PrimaryDialog({ open, onOpenChange, name, recordsChainId }: { open: boo
             </TableBody>
           </Table>
         )}
-        <p className="t-caption normal-case tracking-normal">
-          a chain's own entry beats the default. the name must resolve back to your wallet on that chain, or apps will not show it.
-        </p>
       </DialogContent>
     </Dialog>
   )
