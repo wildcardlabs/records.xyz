@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Figure, LivePill, Section, SectionHeader, StatRow, StatusText } from "@/components/wrap"
+import { Figure, LivePill, Pager, Section, SectionHeader, StatRow, StatusText, usePager } from "@/components/wrap"
 import { ConnectButton } from "@/components/wallet/ConnectButton"
 import { pathFor } from "@/components/wallet/MyNames"
 import { useMyNames } from "@/hooks/useMyNames"
@@ -25,6 +25,7 @@ export default function NamesPage() {
     const needle = q.trim().toLowerCase()
     return names.filter((n) => (chain === "all" || n.chainId === chain) && (!needle || n.name.includes(needle)))
   }, [names, q, chain])
+  const pager = usePager(shown)
   const v2 = names.filter((n) => n.authority === "ens_v2").length
   const indexed = (mine.data?.indexedChains.length ?? 0) > 0
 
@@ -58,7 +59,7 @@ export default function NamesPage() {
                   </button>
                 ))}
               </div>
-              <span className="t-caption normal-case tracking-normal sm:ml-auto">{mine.isLoading ? "looking up…" : `${shown.length} of ${names.length}`}</span>
+              <span className="t-caption normal-case tracking-normal sm:ml-auto">{mine.isLoading ? "looking up…" : shown.length === names.length ? `${names.length} ${names.length === 1 ? "name" : "names"}` : `${shown.length} of ${names.length}`}</span>
             </div>
             {mine.isLoading ? (
               <div className="space-y-2 p-4"><div className="h-3 w-56 bg-wash" /><div className="h-3 w-40 bg-wash" /><div className="h-3 w-48 bg-wash" /></div>
@@ -80,7 +81,7 @@ export default function NamesPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {shown.map((n) => (
+                  {pager.slice.map((n) => (
                     <TableRow key={`${n.chainId}:${n.name}`}>
                       <TableCell>
                         <span className="inline-flex items-center gap-2">
@@ -103,6 +104,7 @@ export default function NamesPage() {
                 </TableBody>
               </Table>
             )}
+            {!mine.isLoading && shown.length > 0 ? <Pager page={pager.page} pages={pager.pages} from={pager.from} to={pager.to} total={pager.total} onPage={pager.setPage} /> : null}
           </Figure>
           <p className="t-caption mt-3 normal-case tracking-normal">
             sepolia names come from <a className="link-blue" href="https://bigname.sh" target="_blank" rel="noreferrer">bigname</a>; on mainnet only the wallet's primary name is known until an indexer covers it.

@@ -1,8 +1,10 @@
+import { useMemo, useState } from "react"
 import { Link } from "react-router-dom"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { LivePill } from "@/components/wrap"
+import { LivePill, PAGE_SIZE, Pager, usePager } from "@/components/wrap"
 import { type LinkChange, ROOT_NAME, type ResolverLink } from "@/lib/ens/links"
 
 /** What a name actually reads: its own record, else the default record, else nothing. */
@@ -48,10 +50,15 @@ function SharedFigure({
   const stagedFor = (source: string) => staged.find((s) => s.sourceName === source)
   const net = recordsChainId === 11155111 ? "?net=sepolia" : ""
 
-  const sorted = [...names].sort((a, b) => {
+  const [q, setQ] = useState("")
+  const sorted = useMemo(() => {
+    const needle = q.trim().toLowerCase()
     const rank = (r: ResolverLink) => (r.name === name ? 0 : effectiveRecord(r, defaultId) === myId ? 1 : 2)
-    return rank(a) - rank(b) || a.name.localeCompare(b.name)
-  })
+    return names.filter((r) => !needle || r.name.includes(needle)).sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [names, q, name, defaultId, myId])
+  const pager = usePager(sorted)
+  const many = names.length > PAGE_SIZE
 
   return (
     <div>
@@ -59,7 +66,10 @@ function SharedFigure({
         <span className="t-caption normal-case tracking-normal">
           {loading ? "reading records…" : `${names.length} ${names.length === 1 ? "name" : "names"} on this resolver · ${recordCount} ${recordCount === 1 ? "record" : "records"}${indexed ? "" : " · only this name is listed without an indexer"}`}
         </span>
-        <Button size="sm" variant={canLink ? "accent" : "outline"} disabled={!canLink || loading} onClick={onShare}>+ share with another name</Button>
+        <div className="flex flex-wrap items-center gap-2">
+          {many ? <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="filter names" aria-label="filter names on this resolver" className="h-8 w-44 text-[12px]" /> : null}
+          <Button size="sm" variant={canLink ? "accent" : "outline"} disabled={!canLink || loading} onClick={onShare}>+ share with another name</Button>
+        </div>
       </div>
       {loading ? (
         <div className="space-y-2 p-4"><div className="h-3 w-56 bg-wash" /><div className="h-3 w-40 bg-wash" /></div>
@@ -74,7 +84,33 @@ function SharedFigure({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {sorted.map((r) => {
+            {/* the default record: what every name without a record of its own reads */}
+            <TableRow className={stagedFor(ROOT_NAME) ? "opacity-60" : undefined}>
+              <TableCell>
+                <span className="inline-flex items-center gap-2">
+                  <span className="font-semibold text-ink">default record</span>
+                  <span className="t-caption normal-case tracking-normal">any name without one</span>
+                </span>
+              </TableCell>
+              <TableCell>{defaultId === "0" ? "nothing set" : `record #${defaultId}`}</TableCell>
+              <TableCell>{defaultId === "0" ? <span className="text-ink-dim">—</span> : <Badge variant={defaultId === myId ? "blue" : "outline"}>#{defaultId}</Badge>}</TableCell>
+              {canLink ? (
+                <TableCell className="text-right whitespace-normal">
+                  {stagedFor(ROOT_NAME) ? (
+                    <span className="text-[11px] text-blue">change staged</span>
+                  ) : myId !== "0" && defaultId !== myId ? (
+                    <Button size="sm" variant="outline" onClick={() => onStage({ sourceName: ROOT_NAME, recordId: myId, scope: `default record · names without their own use ${name}'s records (#${myId})` })}>
+                      use {name}'s records
+                    </Button>
+                  ) : defaultId !== "0" && defaultId === myId ? (
+                    <Button size="sm" variant="ghost" onClick={() => onStage({ sourceName: ROOT_NAME, recordId: "0", scope: "default record · cleared" })}>
+                      clear
+                    </Button>
+                  ) : null}
+                </TableCell>
+              ) : null}
+            </TableRow>
+            {pager.slice.map((r) => {
               const eff = effectiveRecord(r, defaultId)
               const isMe = r.name === name
               const shared = eff !== "0" && sharers(eff) > 1
@@ -116,35 +152,13 @@ function SharedFigure({
                 </TableRow>
               )
             })}
-            {/* the default record: what every name without a record of its own reads */}
-            <TableRow className={stagedFor(ROOT_NAME) ? "opacity-60" : undefined}>
-              <TableCell>
-                <span className="inline-flex items-center gap-2">
-                  <span className="font-semibold text-ink">default record</span>
-                  <span className="t-caption normal-case tracking-normal">any name without one</span>
-                </span>
-              </TableCell>
-              <TableCell>{defaultId === "0" ? "nothing set" : `record #${defaultId}`}</TableCell>
-              <TableCell>{defaultId === "0" ? <span className="text-ink-dim">—</span> : <Badge variant={defaultId === myId ? "blue" : "outline"}>#{defaultId}</Badge>}</TableCell>
-              {canLink ? (
-                <TableCell className="text-right whitespace-normal">
-                  {stagedFor(ROOT_NAME) ? (
-                    <span className="text-[11px] text-blue">change staged</span>
-                  ) : myId !== "0" && defaultId !== myId ? (
-                    <Button size="sm" variant="outline" onClick={() => onStage({ sourceName: ROOT_NAME, recordId: myId, scope: `default record · names without their own use ${name}'s records (#${myId})` })}>
-                      use {name}'s records
-                    </Button>
-                  ) : defaultId !== "0" && defaultId === myId ? (
-                    <Button size="sm" variant="ghost" onClick={() => onStage({ sourceName: ROOT_NAME, recordId: "0", scope: "default record · cleared" })}>
-                      clear
-                    </Button>
-                  ) : null}
-                </TableCell>
-              ) : null}
-            </TableRow>
+            {sorted.length === 0 && q.trim() ? (
+              <TableRow><TableCell colSpan={canLink ? 4 : 3} className="text-ink-dim">nothing matches "{q.trim()}"</TableCell></TableRow>
+            ) : null}
           </TableBody>
         </Table>
       )}
+      {!loading ? <Pager page={pager.page} pages={pager.pages} from={pager.from} to={pager.to} total={pager.total} onPage={pager.setPage} /> : null}
     </div>
   )
 }
