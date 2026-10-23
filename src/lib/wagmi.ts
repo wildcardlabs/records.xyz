@@ -1,5 +1,5 @@
 import { createConfig, http } from "wagmi"
-import { arbitrum, base, mainnet, optimism, sepolia } from "wagmi/chains"
+import { arbitrum, arbitrumSepolia, base, baseSepolia, mainnet, optimism, optimismSepolia, sepolia } from "wagmi/chains"
 import { injected, walletConnect } from "wagmi/connectors"
 
 const env = import.meta.env as Record<string, string | undefined>
@@ -7,7 +7,7 @@ const env = import.meta.env as Record<string, string | undefined>
 const projectId = env.VITE_WALLETCONNECT_PROJECT_ID?.trim()
 const rpc = (id: number) => http(env[`VITE_RPC_URL_${id}`])
 export const wagmiConfig = createConfig({
-  chains: [mainnet, base, optimism, arbitrum, sepolia],
+  chains: [mainnet, base, optimism, arbitrum, sepolia, baseSepolia, optimismSepolia, arbitrumSepolia],
   // browser wallets via EIP-6963 discovery (wagmi default) plus WalletConnect when a project id is set
   connectors: [
     injected(),
@@ -27,6 +27,9 @@ export const wagmiConfig = createConfig({
     [optimism.id]: rpc(optimism.id),
     [arbitrum.id]: rpc(arbitrum.id),
     [sepolia.id]: rpc(sepolia.id),
+    [baseSepolia.id]: rpc(baseSepolia.id),
+    [optimismSepolia.id]: rpc(optimismSepolia.id),
+    [arbitrumSepolia.id]: rpc(arbitrumSepolia.id),
   },
 })
 
