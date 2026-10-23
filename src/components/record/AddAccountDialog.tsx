@@ -108,7 +108,7 @@ function AddAccountDialog({
         <DialogHeader>
           <DialogTitle className="t-h3 lowercase">Add this wallet to {name}</DialogTitle>
           <DialogDescription className="t-body">
-            Your wallet will ask you to sign a message. It says this wallet belongs to {name} until the date you pick. Signing is free; nothing goes onchain until the owner publishes.
+            Sign a message saying this wallet belongs to {name} until the date you pick. Free; nothing goes onchain until the owner publishes.
           </DialogDescription>
         </DialogHeader>
 
@@ -146,11 +146,9 @@ function AddAccountDialog({
                 <option key={p.label} value={i}>{p.label} · until {fmtDate(nowSeconds() + p.secs)}</option>
               ))}
             </select>
-            <span className="t-caption normal-case tracking-normal">a consent cannot be cancelled once signed, only left to expire. pick the shortest window that works; you can renew later.</span>
+            <span className="t-caption normal-case tracking-normal">a consent cannot be cancelled, only left to expire · pick the shortest window that works</span>
           </div>
-          <div className="t-caption normal-case tracking-normal">
-            your wallet may ask to switch to {recordsChain?.label} before signing. that is expected: the message is tied to the network the name lives on.
-          </div>
+          <div className="t-caption normal-case tracking-normal">your wallet may ask to switch to {recordsChain?.label} first · the message is tied to the name's network</div>
           {error ? <StatusText tone="err" className="text-[12px]">{error}</StatusText> : null}
         </div>
 

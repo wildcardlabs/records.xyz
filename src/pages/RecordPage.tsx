@@ -7,7 +7,7 @@ import { useConnection } from "wagmi"
 import type { Address, Hex } from "viem"
 import { normalize } from "viem/ens"
 import { Button } from "@/components/ui/button"
-import { Figure, Section, SectionHeader, StatRow, StatusText, LivePill, Code, FaqRow, k, s, c, p } from "@/components/wrap"
+import { Eyebrow, Figure, Section, SectionHeader, StatRow, StatusText, Code, FaqRow, k, s, c, p } from "@/components/wrap"
 import { AccountsTableSkeleton } from "@/components/record/AccountsTable"
 import { StatusMark, statusHelp } from "@/components/record/StatusMark"
 import { ConnectButton } from "@/components/wallet/ConnectButton"
@@ -37,7 +37,7 @@ import { useDrafts } from "@/hooks/useDrafts"
 import { chainById, DEFAULT_RECORDS_CHAIN, RECORDS_CHAINS } from "@/lib/ens/chains"
 import type { PublishPlan } from "@/lib/ens/write"
 import { type PublishGroup, usePublisher } from "@/hooks/usePublisher"
-import { type PendingRow, PendingRows, PublishButton, PublishPanel, type PublishState } from "@/components/record/PublishPanel"
+import { type PendingRow, PublishPanel, type PublishState } from "@/components/record/PublishPanel"
 import { isOwned } from "@/lib/ensip28"
 import { addressLabel } from "@/lib/ens/profile"
 import { COIN_TYPE_DEFAULT, chainIdForCoinType, decodeValue, defFromId } from "@/lib/records"
@@ -79,6 +79,7 @@ export default function RecordPage() {
   const [grantOpen, setGrantOpen] = useState(false)
   const [linkOpen, setLinkOpen] = useState(false)
   const [primaryOpen, setPrimaryOpen] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
 
   const data = record.data
   const auth = (needs: Parameters<typeof usePublishAuthority>[7]) =>
@@ -235,13 +236,16 @@ export default function RecordPage() {
   const summaryStatus = loading ? null : total === 0 ? null : verified.length === total ? "verified" : verified.length > 0 ? "expiring" : "expired"
   const checkedAt = data ? new Date(data.fetchedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : null
   const pendingCount = drafts.accountCount
+  const canAddAccount = !!data?.supportsData
+  const openAdd = (chainId?: number) => setDialog({ open: true, chainId })
+  const ensApp = recordsChainId === 11155111 ? "https://sepolia.app.ens.domains/" : "https://app.ens.domains/"
 
   return (
     <>
-      {/* ---------------------------------------------------------------- header */}
+      {/* ---------------------------------------------------------------- the record */}
       <Section>
         <div className="flex flex-wrap items-start justify-between gap-6">
-          <div>
+          <div className="min-w-0">
             <div className="t-eyebrow"># record · {recordsChain.label}</div>
             <h1 className="t-display mt-2 break-all text-ink">{name}</h1>
             <div className="mt-5 flex flex-wrap items-center gap-3">
@@ -253,16 +257,16 @@ export default function RecordPage() {
                   status={summaryStatus}
                   detail={
                     verified.length === total
-                      ? `${total} ${total === 1 ? "account" : "accounts"} across ${chainCount} ${chainCount === 1 ? "chain" : "chains"} · every consent checks out`
-                      : `${verified.length} of ${total} accounts verified · ${total - verified.length} ${total - verified.length === 1 ? "needs" : "need"} attention`
+                      ? `${total} ${total === 1 ? "account" : "accounts"} across ${chainCount} ${chainCount === 1 ? "chain" : "chains"}`
+                      : `${verified.length} of ${total} accounts verified`
                   }
                 />
               ) : record.isError ? (
-                <StatusMark size="lg" status="unverified" detail={`could not reach ${recordsChain.label} just now · try re-check`} />
+                <StatusMark size="lg" status="unverified" detail={`could not reach ${recordsChain.label}`} />
               ) : data?.resolver ? (
                 <StatusMark size="lg" status="unverified" detail="no accounts on the record yet" />
               ) : (
-                <StatusMark size="lg" status="invalid" detail={`no resolver for this name on ${recordsChain.label}`} />
+                <StatusMark size="lg" status="invalid" detail={`no resolver on ${recordsChain.label}`} />
               )}
               {checkedAt ? (
                 <button type="button" onClick={() => record.refetch()} className="link-blue inline-flex items-center gap-1.5 text-[11px] text-ink-dim">
@@ -271,9 +275,6 @@ export default function RecordPage() {
                 </button>
               ) : null}
             </div>
-            <p className="t-lede mt-4 max-w-[60ch]">
-              The profile and payment addresses {name} publishes, and below them the accounts it has publicly claimed as its own. Each claimed account signed its own consent, and this page verifies every signature in your browser, straight from chain.
-            </p>
             <MyNameChips exclude={{ name, chainId: recordsChainId }} />
           </div>
           <div className="flex flex-col items-start gap-2 sm:items-end">
@@ -285,32 +286,23 @@ export default function RecordPage() {
         </div>
 
         {data && data.resolver && !data.supportsData ? (
-          <div className="mt-6 border border-line bg-paper px-4 py-3 text-[12px]">
-            <StatusText tone="wait">this name's resolver cannot {data.capabilities?.readsData ? "write" : "store"} data records.</StatusText>{" "}
-            <span className="text-ink-muted">
-              owned accounts are ENSIP-24 data records. the resolver at{" "}
-              <a className="link-blue" href={`${explorer}/address/${data.resolver}`} target="_blank" rel="noreferrer">{shortAddr(data.resolver)}</a>{" "}
-              {data.capabilities?.readsData ? "answers data reads but exposes no setData, so nothing can be published through it." : "does not answer data(bytes32,string)."}{" "}
-              ENSv2 resolvers support them: {recordsChainId === 11155111 ? (
-                <>upgrade or re-register the name in the <a className="link-blue" href="https://sepolia.app.ens.domains/" target="_blank" rel="noreferrer">Sepolia ENS App</a>.</>
-              ) : (
-                <>upgrade the name to ENSv2 in the <a className="link-blue" href="https://app.ens.domains/" target="_blank" rel="noreferrer">ENS App</a> once ENSv2 is activated on mainnet.</>
-              )}
-            </span>
-          </div>
+          <p className="mt-5 text-[12px]">
+            <StatusText tone="wait">this resolver cannot store owned accounts.</StatusText>{" "}
+            <span className="text-ink-muted">upgrade the name to ENSv2 in the <a className="link-blue text-ink" href={ensApp} target="_blank" rel="noreferrer">ENS app</a>{recordsChainId === 11155111 ? "" : " once ENSv2 reaches mainnet"}.</span>
+          </p>
         ) : null}
         {data?.chains.some((c) => c.malformed) ? (
-          <div className="mt-4 text-[12px]"><StatusText tone="err">one or more listing records are malformed and were ignored.</StatusText></div>
+          <p className="mt-4 text-[12px]"><StatusText tone="err">a malformed listing record was ignored.</StatusText></p>
         ) : null}
         {record.isError ? (
-          <div className="mt-6 border border-line bg-paper px-4 py-3 text-[12px]">
+          <p className="mt-5 text-[12px]">
             <StatusText tone="err">could not read this name's records.</StatusText>{" "}
-            <span className="text-ink-muted">the {recordsChain.label} RPC did not answer. nothing is wrong with the name; </span>
+            <span className="text-ink-muted">the {recordsChain.label} RPC did not answer. </span>
             <button type="button" className="link-blue text-ink" onClick={() => record.refetch()}>try again</button>
-            <span className="text-ink-muted">. ({(record.error as Error).message.split("\n")[0].slice(0, 120)})</span>
-          </div>
+          </p>
         ) : null}
 
+        {/* fig 1 · profile */}
         {data?.resolver || record.isLoading ? (
           <Figure n={1} name={`profile · ${name}`} className="mt-8" padded={false} dotted={false}>
             {editingProfile ? (
@@ -319,7 +311,7 @@ export default function RecordPage() {
                 set={profile.set}
                 drafts={drafts}
                 enabled={isConnected && profileWritable}
-                disabledReason={!isConnected ? "connect a wallet to edit." : !profileWritable ? "this name's resolver does not accept record writes from this app." : undefined}
+                disabledReason={!isConnected ? "connect a wallet to edit." : !profileWritable ? "this resolver does not accept writes from this app." : undefined}
                 onDone={() => setEditingProfile(false)}
               />
             ) : (
@@ -327,34 +319,24 @@ export default function RecordPage() {
                 <ProfileCard name={name} profile={profile.data} loading={profile.isLoading || record.isLoading} consented={consented} primary={primaryFor} />
                 {isConnected && !record.isLoading ? (
                   <div className="flex flex-wrap items-center gap-3 border-t border-line px-4 py-2.5 sm:px-5">
-                    <Button
-                      size="sm"
-                      variant="accent"
-                      disabled={!data?.supportsData && !data?.resolver}
-                      onClick={() => (data?.supportsData ? setDialog({ open: true }) : document.getElementById("publish")?.scrollIntoView({ behavior: "smooth", block: "start" }))}
-                    >
-                      + verify an account
-                    </Button>
                     <Button size="sm" variant="outline" disabled={!profileWritable} onClick={() => setEditingProfile(true)}>
-                      edit records
+                      edit profile
                     </Button>
                     <Button size="sm" variant="outline" onClick={() => setPrimaryOpen(true)}>
                       set as my primary name
                     </Button>
-                    {!profileWritable ? (
-                      <span className="t-caption normal-case tracking-normal">this name's resolver does not accept record writes from this app.</span>
-                    ) : null}
+                    {!profileWritable ? <span className="t-caption normal-case tracking-normal">this resolver does not accept writes from this app.</span> : null}
                   </div>
                 ) : null}
                 <PublishPanel
                   rows={recordRows}
                   onDiscardAll={() => drafts.clearGroup("records")}
                   count={drafts.profileCount}
-                  what="record change"
+                  what="profile change"
                   canPublish={recordsAuthority.data?.canPublish ?? false}
                   checking={recordsAuthority.isLoading}
                   capable={profileWritable}
-                  incapableReason="this name's resolver does not accept record writes from this app."
+                  incapableReason="this resolver does not accept writes from this app."
                   explorer={explorer}
                   state={stateFor("records")}
                   onPublish={publishRecords}
@@ -365,20 +347,21 @@ export default function RecordPage() {
         ) : null}
         {profile.data?.source === "bigname" ? (
           <p className="t-caption mt-2 normal-case tracking-normal">
-            profile indexed by <a className="link-blue" href="https://bigname.sh" target="_blank" rel="noreferrer">bigname</a>{profile.data.asOfBlock ? ` · as of block ${profile.data.asOfBlock.toLocaleString()}` : ""} · owned accounts are read and verified onchain
+            indexed by <a className="link-blue" href="https://bigname.sh" target="_blank" rel="noreferrer">bigname</a>{profile.data.asOfBlock ? ` · block ${profile.data.asOfBlock.toLocaleString()}` : ""}
           </p>
         ) : null}
 
-        <Figure n={2} name={`owned accounts · ${name}`} className="mt-6" padded={false} dotted={false}>
+        {/* fig 2 · owned accounts */}
+        <Figure n={2} name={`owned accounts · ${name}`} className="mt-6" padded={false} dotted={false} id="accounts">
           {loading ? (
             <AccountsTableSkeleton />
           ) : record.isError ? (
             <div className="t-fig-body px-5 py-10 text-center text-ink-dim">waiting for the network…</div>
           ) : rows.length === 0 ? (
             <div className="px-5 py-10 text-center">
-              <div className="t-fig-title">Nothing on the record yet</div>
-              <p className="t-fig-body mx-auto mt-2 max-w-[48ch]">
-                {canEdit ? "add the wallet you are connected with below, then publish from the owner wallet." : "if this is your name, connect a wallet below to add your first account."}
+              <div className="t-fig-title">No accounts on the record yet</div>
+              <p className="t-fig-body mx-auto mt-2 max-w-[44ch]">
+                {canEdit ? "add the wallet you are connected with. the owner publishes." : "if this is your name, connect a wallet to add one."}
               </p>
             </div>
           ) : (
@@ -387,9 +370,39 @@ export default function RecordPage() {
               canEdit={canEdit}
               onRemove={(r) => drafts.markRemoval({ chainId: r.chainId, account: r.account })}
               onUndo={(r) => (r.pending === "add" ? drafts.dropDraft({ chainId: r.chainId, account: r.account }) : drafts.unmarkRemoval({ chainId: r.chainId, account: r.account }))}
-              onRenew={(r) => setDialog({ open: true, chainId: r.chainId })}
+              onRenew={(r) => openAdd(r.chainId)}
             />
           )}
+          {!record.isLoading && data?.resolver ? (
+            <div className="flex flex-wrap items-center gap-3 border-t border-line px-4 py-2.5 sm:px-5">
+              {isConnected ? (
+                <>
+                  <Button size="sm" variant="accent" disabled={!canAddAccount} onClick={() => openAdd()}>+ add an account</Button>
+                  <span className="t-caption normal-case tracking-normal">
+                    {canAddAccount ? `signs from the connected wallet, ${shortAddr(address!, 4)} · switch wallets to add another` : "this resolver cannot store owned accounts."}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <ConnectButton />
+                  <span className="t-caption normal-case tracking-normal">connect the wallet you want to add</span>
+                </>
+              )}
+            </div>
+          ) : null}
+          <PublishPanel
+            rows={accountRows}
+            onDiscardAll={() => drafts.clearGroup("accounts")}
+            count={pendingCount}
+            what="consent"
+            canPublish={canPublish}
+            checking={accountsAuthority.isLoading}
+            capable={canAddAccount}
+            incapableReason="this resolver cannot store owned accounts."
+            explorer={explorer}
+            state={stateFor("accounts")}
+            onPublish={publishAccounts}
+          />
         </Figure>
 
         <StatRow
@@ -402,144 +415,26 @@ export default function RecordPage() {
           ]}
         />
 
-        <div className="mt-6 border-t border-line">
-          {hasBigName(recordsChainId) ? (
-            <FaqRow q="history: every change to this name">
-              <Figure name={`history · ${name}`} padded={false} dotted={false} className="mt-1">
-                <HistoryFigure name={name} recordsChainId={recordsChainId} explorer={explorer} enabled />
-              </Figure>
-            </FaqRow>
-          ) : null}
-          <FaqRow q="what do the statuses mean?">
-            <ul className="space-y-2">
-              {statusHelp.map((h) => (
-                <li key={h.status} className="flex flex-wrap items-center gap-3">
-                  <StatusMark status={h.status} />
-                  <span>{h.text}</span>
-                </li>
-              ))}
-            </ul>
-          </FaqRow>
-          <FaqRow q="can i send funds to these accounts?">
-            No. An owned account is an identity claim, not a payment address. The standard says clients must not show the name in place of the address and should not send funds to owned accounts. Use the name's address records to pay it.
-          </FaqRow>
-          {data?.capabilities && data.supportsData ? (
-            <FaqRow q="where is this stored?">
-              On the name's own resolver,{" "}
-              <a className="link-blue" href={`${explorer}/address/${data.resolver}`} target="_blank" rel="noreferrer">{shortAddr(data.resolver!)}</a>{" "}
-              ({data.capabilities.writeFlavour === "name" ? "an ENSv2 permissioned resolver" : data.capabilities.canModifyName ? "the ENSv2 public resolver" : "a v1-style resolver"}), as ENSIP-24 data records, read through the Universal Resolver.
-              {" "}Data support was {data.capabilities.erc165Data ? "advertised via ERC-165" : "detected by probing the resolver"}.
-            </FaqRow>
-          ) : null}
-        </div>
+        {/* fig 3 · history, collapsed until asked for */}
+        {hasBigName(recordsChainId) ? (
+          <Figure n={3} name={`history · ${name}`} className="mt-6" padded={false} dotted={false}>
+            {historyOpen ? (
+              <HistoryFigure name={name} recordsChainId={recordsChainId} explorer={explorer} enabled />
+            ) : (
+              <div className="flex flex-wrap items-center gap-3 px-4 py-2.5 sm:px-5">
+                <Button size="sm" variant="outline" onClick={() => setHistoryOpen(true)}>show every change</Button>
+                <span className="t-caption normal-case tracking-normal">records, accounts, links and permissions, newest first</span>
+              </div>
+            )}
+          </Figure>
+        ) : null}
       </Section>
 
-      {/* ---------------------------------------------------------------- manage */}
-      <Section>
-        <SectionHeader
-          eyebrow="manage"
-          title="Put an account on the record"
-          lede="Three steps. Each account signs its own consent; the name owner publishes all of them in one transaction."
-        />
-        <Figure n={3} name="publish" padded={false} dotted={false} id="publish">
-          <div className="grid divide-y divide-line lg:grid-cols-3 lg:divide-x lg:divide-y-0">
-            {/* step 1 */}
-            <div className="p-5">
-              <div className="flex items-baseline gap-3">
-                <span className="text-[11px] text-blue">01</span>
-                <span className="t-fig-title">Connect</span>
-              </div>
-              <p className="t-fig-body mt-2">Connect the wallet you want to list. To publish, connect the wallet that owns {name}.</p>
-              <div className="mt-4">
-                {!isConnected ? (
-                  <ConnectButton />
-                ) : (
-                  <div className="flex flex-wrap items-center gap-2 text-[12px]">
-                    <span className="dot text-ok" />
-                    <span className="tabular font-semibold">{shortAddr(address!, 6)}</span>
-                    {accountsAuthority.isLoading ? (
-                      <span className="text-ink-dim">· checking permissions…</span>
-                    ) : canPublish ? (
-                      <LivePill pulse={false}>{accountsAuthority.data?.via === "owner" ? "owner" : "can publish"}</LivePill>
-                    ) : (
-                      <span className="text-ink-dim">· can sign, cannot publish</span>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-            {/* step 2 */}
-            <div className="p-5">
-              <div className="flex items-baseline gap-3">
-                <span className="text-[11px] text-blue">02</span>
-                <span className="t-fig-title">Sign a consent</span>
-              </div>
-              <p className="t-fig-body mt-2">The connected wallet signs a message saying it belongs to {name}. Switch wallets and repeat for each account.</p>
-              <div className="mt-4">
-                <Button variant={isConnected && pendingCount === 0 ? "accent" : "outline"} disabled={!isConnected || !data?.supportsData} onClick={() => setDialog({ open: true })}>
-                  + add connected wallet
-                </Button>
-                {isConnected && !data?.supportsData ? <div className="t-caption mt-2 normal-case tracking-normal">this name's resolver cannot store records yet.</div> : null}
-              </div>
-            </div>
-            {/* step 3 */}
-            <div className="p-5">
-              <div className="flex items-baseline gap-3">
-                <span className="text-[11px] text-blue">03</span>
-                <span className="t-fig-title">Publish</span>
-              </div>
-              <p className="t-fig-body mt-2">
-                {pendingCount === 0 ? "Nothing waiting. Signed consents and removals collect here until you publish." : `${pendingCount} ${pendingCount === 1 ? "consent" : "consents"} waiting. Publishing writes all of them in one transaction.`}
-              </p>
-              <div className="mt-4">
-                <PublishButton
-                  count={pendingCount}
-                  what="consent"
-                  canPublish={canPublish}
-                  checking={accountsAuthority.isLoading}
-                  capable={!!data?.supportsData}
-                  incapableReason="this name's resolver cannot store owned accounts."
-                  explorer={explorer}
-                  state={stateFor("accounts")}
-                  onPublish={publishAccounts}
-                />
-              </div>
-            </div>
-          </div>
-
-          {accountRows.length > 0 ? (
-            <div className="border-t border-line">
-              <PendingRows rows={accountRows} onDiscardAll={() => drafts.clearGroup("accounts")} />
-            </div>
-          ) : null}
-        </Figure>
-
-        <div className="mt-6 border-t border-line">
-          <FaqRow q="technical details: what gets written">
-            <Figure name="records on the resolver" padded={false} className="mt-1">
-              <Code lines={[
-                [c(`# resolver ${data?.resolver ? shortAddr(data.resolver) : "0x…"} · ${recordsChain.label}`)],
-                [k("accounts-chains"), p(": "), s(`[${Array.from(new Set([...onChain.map((a) => a.chainId), ...drafts.adds.map((d) => d.chainId)])).join(", ") || "…"}]`)],
-                ...rows.filter((r) => r.pending !== "remove").slice(0, 4).map((r) => [k(`accounts[${r.chainId}]`), p(" ∋ "), s(shortAddr(r.account, 6))]),
-                ...rows.filter((r) => r.pending !== "remove").slice(0, 2).map((r) => [k(`accounts[${r.chainId}][${shortAddr(r.account, 3)}]`), p(": "), s(`(${r.expiresAt ?? "expiresAt"}, sig)`)]),
-              ]} />
-            </Figure>
-            <p className="t-caption mt-2 normal-case tracking-normal">
-              verification: ERC-1271 for contracts, ecrecover for wallets, expiry at most two years. written with one <code>multicall</code> of {data?.capabilities?.writeFlavour === "name" ? "setData(name, key, value)" : "setData(node, key, value)"}.
-            </p>
-          </FaqRow>
-        </div>
-      </Section>
-
-      {/* ---------------------------------------------------------------- shared records */}
+      {/* ---------------------------------------------------------------- shared profile (ENSv2) */}
       {hasLinks ? (
         <Section>
-          <SectionHeader
-            eyebrow="shared records"
-            title="One record, many names"
-            lede={`On ENSv2 every name on this resolver reads a record, and records can be shared. Point a second name at ${name}'s record and both show the same profile, addresses and owned accounts. Set a default record and every name without one falls back to it.`}
-          />
-          <Figure n={4} name={`records · ${data?.resolver ? shortAddr(data.resolver) : ""}`} padded={false} dotted={false}>
+          <SectionHeader eyebrow="ensv2" title="Shared profile" />
+          <Figure n={4} name={`shared profile · ${data?.resolver ? shortAddr(data.resolver) : ""}`} padded={false} dotted={false}>
             <SharedFigure
               name={name}
               recordsChainId={recordsChainId}
@@ -555,7 +450,7 @@ export default function RecordPage() {
               rows={linkRows}
               onDiscardAll={() => drafts.clearGroup("links")}
               count={drafts.linkCount}
-              what="link change"
+              what="link"
               canPublish={canLink}
               checking={linkAuthority.isLoading}
               capable={hasLinks}
@@ -564,31 +459,15 @@ export default function RecordPage() {
               onPublish={publishLinks}
             />
           </Figure>
-          {isConnected && !canLink && !linkAuthority.isLoading ? (
-            <p className="t-caption mt-3 normal-case tracking-normal">linking needs the resolver's link role · connect the owner wallet.</p>
-          ) : null}
-          <div className="mt-6 border-t border-line">
-            <FaqRow q="what happens to the record a name leaves?">
-              Nothing. Records are never deleted; a link only changes which record a name reads. A name that leaves a record shows the default record if one is set, otherwise nothing until its next edit, which starts a fresh record for it.
-            </FaqRow>
-            <FaqRow q="do owned accounts travel with a shared record?">
-              The records do, but each consent was signed for one name. A consent signed for {name} verifies only under {name}, so other names sharing the record show those accounts as invalid until their owners sign again for that name.
-            </FaqRow>
-          </div>
         </Section>
       ) : null}
 
-      {/* ---------------------------------------------------------------- access */}
+      {/* ---------------------------------------------------------------- access (ENSv2) */}
       {hasRoles ? (
         <Section>
-          <SectionHeader
-            eyebrow="access"
-            title={`Who can edit ${name}`}
-            lede="ENSv2 resolvers grant rights per record type and per key. Let a teammate, an agent or a service change one record without handing over the name."
-          />
-          <Figure n={hasLinks ? 5 : 4} name={`access · who can edit ${name}`} padded={false} dotted={false}>
+          <SectionHeader eyebrow="ensv2" title={`Who can edit ${name}`} />
+          <Figure n={hasLinks ? 5 : 4} name={`access · ${name}`} padded={false} dotted={false}>
             <AccessFigure
-              name={name}
               recordsChainId={recordsChainId}
               rows={resolverRoles.data}
               loading={resolverRoles.isLoading}
@@ -615,6 +494,56 @@ export default function RecordPage() {
           </Figure>
         </Section>
       ) : null}
+
+      {/* ---------------------------------------------------------------- details: everything that is explanation */}
+      <Section>
+        <Eyebrow>details</Eyebrow>
+        <div className="mt-3 border-t border-line">
+          <FaqRow q="what do the statuses mean?">
+            <ul className="space-y-2">
+              {statusHelp.map((h) => (
+                <li key={h.status} className="flex flex-wrap items-center gap-3">
+                  <StatusMark status={h.status} />
+                  <span>{h.text}</span>
+                </li>
+              ))}
+            </ul>
+          </FaqRow>
+          <FaqRow q="can i send funds to an owned account?">
+            No. It is an identity claim, not a payment address. Pay the name's address records instead.
+          </FaqRow>
+          {data?.capabilities && data.supportsData ? (
+            <FaqRow q="where is this stored?">
+              On the name's own resolver,{" "}
+              <a className="link-blue" href={`${explorer}/address/${data.resolver}`} target="_blank" rel="noreferrer">{shortAddr(data.resolver!)}</a>
+              {" "}({data.capabilities.writeFlavour === "name" ? "an ENSv2 permissioned resolver" : data.capabilities.canModifyName ? "the ENSv2 public resolver" : "a v1-style resolver"}), as ENSIP-24 data records.
+            </FaqRow>
+          ) : null}
+          <FaqRow q="what gets written">
+            <Figure name="records on the resolver" padded={false} className="mt-1">
+              <Code lines={[
+                [c(`# resolver ${data?.resolver ? shortAddr(data.resolver) : "0x…"} · ${recordsChain.label}`)],
+                [k("accounts-chains"), p(": "), s(`[${Array.from(new Set([...onChain.map((a) => a.chainId), ...drafts.adds.map((d) => d.chainId)])).join(", ") || "…"}]`)],
+                ...rows.filter((r) => r.pending !== "remove").slice(0, 4).map((r) => [k(`accounts[${r.chainId}]`), p(" ∋ "), s(shortAddr(r.account, 6))]),
+                ...rows.filter((r) => r.pending !== "remove").slice(0, 2).map((r) => [k(`accounts[${r.chainId}][${shortAddr(r.account, 3)}]`), p(": "), s(`(${r.expiresAt ?? "expiresAt"}, sig)`)]),
+              ]} />
+            </Figure>
+            <p className="t-caption mt-2 normal-case tracking-normal">
+              one <code>multicall</code> of {data?.capabilities?.writeFlavour === "name" ? "setData(name, key, value)" : "setData(node, key, value)"} · verified with ERC-1271 for contracts, ecrecover for wallets · expiry at most two years
+            </p>
+          </FaqRow>
+          {hasLinks ? (
+            <>
+              <FaqRow q="what happens to the profile a name leaves?">
+                Nothing. It stays on the resolver; the name just stops reading it and shows the default profile, or nothing until its next edit.
+              </FaqRow>
+              <FaqRow q="do owned accounts travel with a shared profile?">
+                The records do, but each consent names one ENS name. Under another name they show as invalid until their wallets sign again for it.
+              </FaqRow>
+            </>
+          ) : null}
+        </div>
+      </Section>
 
       <GrantDialog open={grantOpen} onOpenChange={setGrantOpen} name={name} recordsChainId={recordsChainId} onStage={drafts.addAccess} />
       <PrimaryDialog open={primaryOpen} onOpenChange={setPrimaryOpen} name={name} recordsChainId={recordsChainId} />

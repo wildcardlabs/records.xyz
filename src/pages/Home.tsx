@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useConnection } from "wagmi"
 import { useMyNames } from "@/hooks/useMyNames"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { AccountsTable, type Row } from "@/components/record/AccountsTable"
 import { ProfileCard } from "@/components/record/ProfileCard"
@@ -18,17 +17,17 @@ const steps = [
   {
     num: "01",
     title: "Add a wallet",
-    body: "Any wallet or smart account you control, on any chain: a normal wallet, a Safe, a delegated wallet, a token-bound account.",
+    body: "Any wallet or smart account you control, on any chain.",
   },
   {
     num: "02",
     title: "Sign a consent",
-    body: "That wallet signs a short message: \"I belong to alice.eth, until this date.\" Signing is free and nothing goes onchain yet.",
+    body: "It signs one line: \"I belong to alice.eth, until this date.\" Free, and nothing goes onchain yet.",
   },
   {
     num: "03",
     title: "Publish",
-    body: "The wallet that owns the name writes every consent to the name in one transaction. From then on anyone can verify it.",
+    body: "The owner writes every consent in one transaction. From then on anyone can verify it.",
   },
 ]
 
@@ -112,17 +111,10 @@ export default function Home() {
           see a live record: <Link className="link-blue text-ink" to="/steve.eth?net=sepolia">steve.eth</Link> on sepolia · or look up <Link className="link-blue text-ink" to="/vitalik.eth">vitalik.eth</Link>
         </div>
 
-        <div className="mt-6 max-w-2xl border border-line bg-paper px-4 py-3 text-[12px]">
-          <StatusText tone="ok">works today:</StatusText>{" "}
-          <span className="text-ink-muted">look up any ENS name, and edit profile records and payment addresses on any name you own.</span>
-          <br />
-          <StatusText tone="wait">needs ENSv2:</StatusText>{" "}
-          <span className="text-ink-muted">owned accounts, shared records and per-key access, because they rely on the new resolver. Live on Sepolia now, on mainnet once ENSv2 is activated.</span>
-        </div>
 
         <Figure n={1} name="example · a record page" className="mt-10" padded={false} dotted={false}>
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-2.5">
-            <span className="t-caption normal-case tracking-normal">a made-up alice.eth: profile, payment addresses, and five wallets she has claimed as hers</span>
+            <span className="t-caption inline-flex items-center gap-2 normal-case tracking-normal"><VerifiedSeal className="size-3.5 text-ok" /> a made-up alice.eth · the seal marks a payment address whose wallet also consented below</span>
             <Badge variant="dim">example</Badge>
           </div>
           <ProfileCard
@@ -131,9 +123,7 @@ export default function Home() {
             loading={false}
             consented={(coinType, address) => example.some((r) => r.status === "verified" && r.account.toLowerCase() === address.toLowerCase() && (coinType === COIN_TYPE_DEFAULT || (coinType === 60 ? r.chainId === 1 : coinTypeFor(r.chainId) === coinType)))}
           />
-          <div className="flex items-center gap-2 border-y border-line px-4 py-2 t-caption normal-case tracking-normal">
-            <VerifiedSeal className="size-3.5 text-ok" /> the seal marks a payment address whose wallet also signed a consent below. the rest of the page is the owned-accounts ledger.
-          </div>
+          <div className="border-t border-line" />
           <AccountsTable rows={example} canEdit={false} />
           <StatRow className="border-t border-line" stats={[
             { label: "on the record", value: "5" },
@@ -145,7 +135,7 @@ export default function Home() {
       </Section>
 
       <Section>
-        <SectionHeader eyebrow="how it works" title="Three steps, one transaction" lede="Your ENS name already resolves to one address per chain for payments. This adds the rest of your wallets, each with a signed consent that proves it agreed." />
+        <SectionHeader eyebrow="how it works" title="Three steps, one transaction" lede="Your name already resolves to one address per chain. This adds the rest of your wallets, each with a signed consent." />
         <Figure n={2} name="how it works" padded={false} dotted={false}>
           <FigSplit>
             <div className="divide-y divide-line">
@@ -160,7 +150,7 @@ export default function Home() {
               ))}
             </div>
             <div className="fig-body">
-              <div className="t-caption px-4 pt-3 normal-case tracking-normal">under the hood: what ends up stored on the name</div>
+              <div className="t-caption px-4 pt-3 normal-case tracking-normal">what ends up stored on the name</div>
               <Code lines={[
                 [c("# data records on alice.eth")],
                 [k("accounts[8453]"), p(":          "), s("abi.encode(0xb8c2…, 0xd8da…)")],
@@ -178,13 +168,13 @@ export default function Home() {
       </Section>
 
       <Section>
-        <SectionHeader eyebrow="one page" title="One page for the whole name" lede="A record page is the name's public profile, its payment addresses, and the wallets it has proven are its own. Owners manage all three here, each published from where it is edited." />
+        <SectionHeader eyebrow="one page" title="One page for the whole name" lede="Profile, payment addresses and owned accounts, each published from where it is edited." />
         <Figure n={3} name="what a record page holds" padded={false} dotted={false}>
           <div className="grid divide-y divide-line lg:grid-cols-3 lg:divide-x lg:divide-y-0">
             {[
-              { num: "01", title: "Profile and payment addresses", body: "Avatar, banner, bio, links, the address to pay on any chain or coin, and the content hash. Read for any name; edit on any name you own." },
-              { num: "02", title: "Owned accounts, with the seal", body: "Every wallet the name claims, each verified from the wallet's own signature. A payment address whose wallet also consented gets the olive seal." },
-              { num: "03", title: "Shared records and access", body: "On ENSv2, point several names at one record so they share a profile, set a default for the rest, and let a teammate or an agent change one record without handing over the name." },
+              { num: "01", title: "Profile and payment addresses", body: "Avatar, bio, links, an address for any chain or coin, the content hash. Edit on any name you own." },
+              { num: "02", title: "Owned accounts", body: "Every wallet the name claims, verified from the wallet's own signature. Needs ENSv2: sepolia today, mainnet when it ships." },
+              { num: "03", title: "Shared profile and access", body: "On ENSv2, several names can use one profile, and a teammate or an agent can edit one record without owning the name." },
             ].map((c) => (
               <div key={c.num} className="p-5">
                 <div className="flex items-baseline gap-3">
@@ -199,42 +189,15 @@ export default function Home() {
       </Section>
 
       <Section>
-        <SectionHeader eyebrow="verification" title="What verified means here" lede="Every check runs in your browser against public RPCs." />
-        <Figure n={4} name="checks" padded={false} dotted={false}>
-          <Table>
-            <TableHeader>
-              <TableRow><TableHead>#</TableHead><TableHead>check</TableHead><TableHead>if it fails</TableHead></TableRow>
-            </TableHeader>
-            <TableBody>
-              {[
-                ["1", "the name's list of accounts is well formed", "the list is ignored"],
-                ["2", "a signed consent exists for the account", "unverified"],
-                ["3", "the consent has not expired and is dated at most two years out", "expired / invalid"],
-                ["4", "the signature is not empty", "invalid"],
-                ["5", "smart accounts: the account itself confirms the signature (ERC-1271)", "invalid"],
-                ["6", "wallets: the signature recovers to exactly this address (ecrecover)", "invalid"],
-              ].map((r) => (
-                <TableRow key={r[0]}>
-                  <TableCell className="text-blue">{r[0]}</TableCell>
-                  <TableCell className="whitespace-normal">{r[1]}</TableCell>
-                  <TableCell><StatusText tone={r[2] === "unverified" ? "dim" : "err"}>{r[2]}</StatusText></TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Figure>
-      </Section>
-
-      <Section>
         <Eyebrow>faq</Eyebrow>
         <div className="mt-3 border-t border-line">
-          <FaqRow q="what do i need to get started?">Any ENS name, to look it up or to edit its profile and payment addresses. Owned accounts, shared records and per-key access need an ENSv2 name, because they rely on the new resolver: Sepolia today, mainnet once ENSv2 is activated. Open your name's record page and it tells you what is available.</FaqRow>
-          <FaqRow q="does it cost anything?">Signing a consent is free. Publishing is one normal transaction from the wallet that owns the name, so you pay gas once for everything you changed: wallets, profile records, addresses and access grants together.</FaqRow>
-          <FaqRow q="what does the seal next to a payment address mean?">That the wallet behind that address also signed an owned-account consent for the name, on that same chain, and the consent is still valid. The address record alone is the owner's claim; the seal means the receiving wallet agreed too.</FaqRow>
-          <FaqRow q="where are my signatures kept before i publish?">In your browser only. Sign with each wallet, then switch to the owner wallet in the same browser to publish. Nothing is uploaded to us. Signing from another person's device is not supported yet.</FaqRow>
-          <FaqRow q="can i send money to an account listed here?">No. A listing says a wallet belongs to the name. It is not a payment address, and apps must never show the name in place of the address. Use the name's normal address records to pay it.</FaqRow>
-          <FaqRow q="how do i remove a wallet?">The owner can remove it from the list at any time. The signed consent itself cannot be cancelled, which is why every consent has an expiry of at most two years. Pick a short window and let it lapse.</FaqRow>
-          <FaqRow q="is this an official ENS standard?">It follows ENSIP-28, a draft standard from the ENS Labs protocol team. Drafts can change; records.xyz tracks it and keeps the format in one place so updates are quick.</FaqRow>
+          <FaqRow q="what do i need to get started?">Any ENS name. Owned accounts, shared profiles and per-key access need an ENSv2 name: sepolia today, mainnet when ENSv2 ships.</FaqRow>
+          <FaqRow q="does it cost anything?">Signing is free. Publishing is one normal transaction from the owner wallet.</FaqRow>
+          <FaqRow q="how is a consent verified?">In your browser, from chain: the consent must be unexpired and dated at most two years out, and the signature must recover to the wallet (ecrecover) or be confirmed by the account itself (ERC-1271).</FaqRow>
+          <FaqRow q="where are my signatures kept before i publish?">In your browser only. Sign with each wallet, then publish from the owner wallet in the same browser.</FaqRow>
+          <FaqRow q="can i send money to an owned account?">No. It is an identity claim, not a payment address. Pay the name's address records.</FaqRow>
+          <FaqRow q="how do i remove a wallet?">The owner removes it from the list. The consent itself cannot be cancelled, only left to expire, so pick short windows.</FaqRow>
+          <FaqRow q="is this an official ENS standard?">It follows ENSIP-28, a draft from the ENS Labs protocol team. Drafts change; records.xyz tracks it.</FaqRow>
         </div>
       </Section>
     </>

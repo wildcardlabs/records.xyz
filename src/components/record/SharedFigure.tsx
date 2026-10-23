@@ -64,7 +64,7 @@ function SharedFigure({
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-2 sm:px-5">
         <span className="t-caption normal-case tracking-normal">
-          {loading ? "reading records…" : `${names.length} ${names.length === 1 ? "name" : "names"} on this resolver · ${recordCount} ${recordCount === 1 ? "record" : "records"}${indexed ? "" : " · only this name is listed without an indexer"}`}
+          {loading ? "reading…" : `${names.length} ${names.length === 1 ? "name" : "names"} · ${recordCount} ${recordCount === 1 ? "profile" : "profiles"}${indexed ? "" : " · no indexer here"}`}
         </span>
         <div className="flex flex-wrap items-center gap-2">
           {many ? <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="filter names" aria-label="filter names on this resolver" className="h-8 w-44 text-[12px]" /> : null}
@@ -78,8 +78,8 @@ function SharedFigure({
           <TableHeader>
             <TableRow>
               <TableHead>name</TableHead>
-              <TableHead>reads</TableHead>
-              <TableHead>record</TableHead>
+              <TableHead>uses</TableHead>
+              <TableHead>profile</TableHead>
               {canLink ? <TableHead className="text-right"></TableHead> : null}
             </TableRow>
           </TableHeader>
@@ -88,22 +88,22 @@ function SharedFigure({
             <TableRow className={stagedFor(ROOT_NAME) ? "opacity-60" : undefined}>
               <TableCell data-label="name">
                 <span className="inline-flex items-center gap-2">
-                  <span className="font-semibold text-ink">default record</span>
-                  <span className="t-caption normal-case tracking-normal">any name without one</span>
+                  <span className="font-semibold text-ink">default</span>
+                  <span className="t-caption normal-case tracking-normal">names without a profile of their own</span>
                 </span>
               </TableCell>
-              <TableCell data-label="reads">{defaultId === "0" ? "nothing set" : `record #${defaultId}`}</TableCell>
-              <TableCell data-label="record">{defaultId === "0" ? <span className="text-ink-dim">—</span> : <Badge variant={defaultId === myId ? "blue" : "outline"}>#{defaultId}</Badge>}</TableCell>
+              <TableCell data-label="uses">{defaultId === "0" ? "nothing set" : `profile #${defaultId}`}</TableCell>
+              <TableCell data-label="profile">{defaultId === "0" ? <span className="text-ink-dim">—</span> : <Badge variant={defaultId === myId ? "blue" : "outline"}>#{defaultId}</Badge>}</TableCell>
               {canLink ? (
                 <TableCell className="text-right whitespace-normal">
                   {stagedFor(ROOT_NAME) ? (
                     <span className="text-[11px] text-blue">change staged</span>
                   ) : myId !== "0" && defaultId !== myId ? (
-                    <Button size="sm" variant="outline" onClick={() => onStage({ sourceName: ROOT_NAME, recordId: myId, scope: `default record · names without their own use ${name}'s records (#${myId})` })}>
-                      use {name}'s records
+                    <Button size="sm" variant="outline" onClick={() => onStage({ sourceName: ROOT_NAME, recordId: myId, scope: `default · names without a profile use ${name}'s (#${myId})` })}>
+                      use {name}'s profile
                     </Button>
                   ) : defaultId !== "0" && defaultId === myId ? (
-                    <Button size="sm" variant="ghost" onClick={() => onStage({ sourceName: ROOT_NAME, recordId: "0", scope: "default record · cleared" })}>
+                    <Button size="sm" variant="ghost" onClick={() => onStage({ sourceName: ROOT_NAME, recordId: "0", scope: "default · cleared" })}>
                       clear
                     </Button>
                   ) : null}
@@ -115,7 +115,7 @@ function SharedFigure({
               const isMe = r.name === name
               const shared = eff !== "0" && sharers(eff) > 1
               const pending = stagedFor(r.name)
-              const reads = eff === "0" ? "nothing yet · no record of its own" : r.recordId === "0" ? "the default record" : shared ? `a record shared by ${sharers(eff)} names` : "its own record"
+              const reads = eff === "0" ? "nothing yet" : r.recordId === "0" ? "the default profile" : shared ? `a profile shared by ${sharers(eff)} names` : "its own profile"
               return (
                 <TableRow key={r.node} className={pending ? "opacity-60" : undefined}>
                   <TableCell data-label="name">
@@ -124,8 +124,8 @@ function SharedFigure({
                       {isMe ? <LivePill pulse={false}>this name</LivePill> : null}
                     </span>
                   </TableCell>
-                  <TableCell data-label="reads">{reads}</TableCell>
-                  <TableCell data-label="record">
+                  <TableCell data-label="uses">{reads}</TableCell>
+                  <TableCell data-label="profile">
                     {eff === "0" ? <span className="text-ink-dim">—</span> : <Badge variant={eff === myId ? "blue" : "outline"}>#{eff}</Badge>}
                   </TableCell>
                   {canLink ? (
@@ -134,16 +134,16 @@ function SharedFigure({
                         <span className="text-[11px] text-blue">change staged</span>
                       ) : isMe ? (
                         r.recordId !== "0" && shared ? (
-                          <Button size="sm" variant="ghost" onClick={() => onStage({ sourceName: name, recordId: "0", scope: defaultId !== "0" && defaultId !== r.recordId ? `${name} leaves record #${r.recordId} · uses the default record` : `${name} leaves record #${r.recordId} · starts blank` })}>
+                          <Button size="sm" variant="ghost" onClick={() => onStage({ sourceName: name, recordId: "0", scope: defaultId !== "0" && defaultId !== r.recordId ? `${name} leaves profile #${r.recordId} · uses the default` : `${name} leaves profile #${r.recordId} · starts blank` })}>
                             leave
                           </Button>
                         ) : null
                       ) : eff !== myId && myId !== "0" ? (
-                        <Button size="sm" variant="outline" onClick={() => onStage({ sourceName: r.name, recordId: myId, scope: `${r.name} uses ${name}'s records (#${myId})` })}>
-                          use {name}'s records
+                        <Button size="sm" variant="outline" onClick={() => onStage({ sourceName: r.name, recordId: myId, scope: `${r.name} uses ${name}'s profile (#${myId})` })}>
+                          use {name}'s profile
                         </Button>
                       ) : eff === myId && r.recordId !== "0" ? (
-                        <Button size="sm" variant="ghost" onClick={() => onStage({ sourceName: r.name, recordId: "0", scope: defaultId !== "0" && defaultId !== r.recordId ? `${r.name} stops sharing · uses the default record` : `${r.name} stops sharing · starts blank` })}>
+                        <Button size="sm" variant="ghost" onClick={() => onStage({ sourceName: r.name, recordId: "0", scope: defaultId !== "0" && defaultId !== r.recordId ? `${r.name} stops sharing · uses the default` : `${r.name} stops sharing · starts blank` })}>
                           detach
                         </Button>
                       ) : null}

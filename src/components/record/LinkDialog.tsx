@@ -76,13 +76,13 @@ function LinkDialog({
       const theirOwn = (await client.readContract({ address: resolver, abi: linkAbi, functionName: "getRecordId", args: [namehash(target)] })).toString()
       const theirs = theirOwn !== "0" ? theirOwn : defaultRecordId
       if (direction === "theirs-to-mine") {
-        if (myRecordId === "0") return setError(`${name} has no records yet. edit a record and publish first.`)
-        if (theirs === myRecordId) return setError(`${target} already uses ${name}'s records.`)
-        onStage({ sourceName: target, recordId: myRecordId, scope: `${target} uses ${name}'s records (#${myRecordId})` })
+        if (myRecordId === "0") return setError(`${name} has no profile yet. edit and publish one first.`)
+        if (theirs === myRecordId) return setError(`${target} already uses ${name}'s profile.`)
+        onStage({ sourceName: target, recordId: myRecordId, scope: `${target} uses ${name}'s profile (#${myRecordId})` })
       } else {
-        if (theirs === "0") return setError(`${target} has no records yet.`)
-        if (theirs === myRecordId) return setError(`${name} already uses ${target}'s records.`)
-        onStage({ sourceName: name, recordId: theirs, scope: `${name} uses ${target}'s records (#${theirs})` })
+        if (theirs === "0") return setError(`${target} has no profile yet.`)
+        if (theirs === myRecordId) return setError(`${name} already uses ${target}'s profile.`)
+        onStage({ sourceName: name, recordId: theirs, scope: `${name} uses ${target}'s profile (#${theirs})` })
       }
       onOpenChange(false)
       setOther("")
@@ -97,9 +97,9 @@ function LinkDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="font-mono">
         <DialogHeader>
-          <DialogTitle className="t-h3 lowercase">Share records with another name</DialogTitle>
+          <DialogTitle className="t-h3 lowercase">Share this profile with another name</DialogTitle>
           <DialogDescription className="t-body">
-            Two names on this resolver can read and write one record. Edit the profile under either name and both change. Owned accounts, payment addresses and every other record are shared too.
+            Both names read and write one profile: edit it under either and both change.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-2">
@@ -119,7 +119,7 @@ function LinkDialog({
             ) : address && mine.isLoading ? (
               <span className="t-caption normal-case tracking-normal">looking up your names…</span>
             ) : address && (mine.data?.names.length ?? 0) > 1 ? (
-              <span className="t-caption normal-case tracking-normal">none of your other names uses this resolver. type any name and it is checked when you stage.</span>
+              <span className="t-caption normal-case tracking-normal">none of your other names uses this resolver · type any name</span>
             ) : null}
           </div>
           <div className="grid gap-2">
@@ -127,17 +127,14 @@ function LinkDialog({
             <div className="grid gap-1.5 text-[12px]">
               <label className="flex cursor-pointer items-start gap-2">
                 <input type="radio" name="direction" className="mt-1 accent-[var(--blue)]" checked={direction === "theirs-to-mine"} onChange={() => setDirection("theirs-to-mine")} />
-                <span><span className="font-semibold">{name}'s</span> <span className="text-ink-dim">· the other name starts using what {name} has today</span></span>
+                <span><span className="font-semibold">{name}'s</span> <span className="text-ink-dim">· the other name starts using {name}'s profile</span></span>
               </label>
               <label className="flex cursor-pointer items-start gap-2">
                 <input type="radio" name="direction" className="mt-1 accent-[var(--blue)]" checked={direction === "mine-to-theirs"} onChange={() => setDirection("mine-to-theirs")} />
-                <span><span className="font-semibold">the other name's</span> <span className="text-ink-dim">· {name} starts using what the other name has today</span></span>
+                <span><span className="font-semibold">the other name's</span> <span className="text-ink-dim">· {name} starts using the other name's profile</span></span>
               </label>
             </div>
           </div>
-          <p className="t-caption normal-case tracking-normal">
-            the record left behind is not deleted; it is just no longer read by that name. owned accounts stay valid only if the consents were signed for the name that uses them.
-          </p>
           {error ? <StatusText tone="err" className="text-[12px]">{error}</StatusText> : null}
         </div>
         <DialogFooter>
