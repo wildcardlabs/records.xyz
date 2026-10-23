@@ -65,7 +65,7 @@ function PrimaryDialog({ open, onOpenChange, name, recordsChainId }: { open: boo
         ) : rows.isError ? (
           <div className="py-2 text-[12px]"><StatusText tone="err">could not read primary names.</StatusText> <button type="button" className="link-blue text-ink" onClick={() => rows.refetch()}>try again</button></div>
         ) : (
-          <Table>
+          <Table stack>
             <TableHeader>
               <TableRow>
                 <TableHead>chain</TableHead>
@@ -80,11 +80,11 @@ function PrimaryDialog({ open, onOpenChange, name, recordsChainId }: { open: boo
                 const inFlight = tx && tx.target.chain.id === r.target.chain.id && tx.target.kind === r.target.kind
                 return (
                   <TableRow key={`${r.target.kind}:${r.target.chain.id}`}>
-                    <TableCell>
+                    <TableCell data-label="chain">
                       <span className="inline-flex items-center gap-1.5"><span className={`dot ${r.target.kind === "default" ? "text-blue" : "text-blue-2"}`} />{r.target.label}</span>
                       {r.target.kind === "default" ? <span className="t-caption block normal-case tracking-normal">default · chains without their own fall back to it</span> : null}
                     </TableCell>
-                    <TableCell>
+                    <TableCell data-label="primary name now">
                       {r.name ? (
                         <span className="inline-flex items-center gap-2">
                           <span className={r.name === name ? "font-semibold text-ink" : undefined}>{r.name}</span>

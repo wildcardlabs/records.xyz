@@ -253,6 +253,30 @@
     .sec { padding-block: var(--space-7); }
   }
 
+  /* ---- stacked tables on phones: one card per row, cell label above value ---- */
+  @media (max-width: 639px) {
+    .table-stack thead { display: none; }
+    .table-stack,
+    .table-stack tbody,
+    .table-stack tr,
+    .table-stack td { display: block; width: 100%; }
+    .table-stack tr { padding: 10px 16px 12px; border-bottom: 1px solid var(--line-soft); }
+    .table-stack tbody tr:last-child { border-bottom: 0; }
+    .table-stack td { padding: 3px 0; white-space: normal; overflow-wrap: anywhere; text-align: left; }
+    .table-stack td * { white-space: normal; }
+    .table-stack td[data-label]::before {
+      content: attr(data-label);
+      display: block;
+      margin-bottom: 2px;
+      font-size: 10px;
+      font-weight: 400;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--color-ink-dim);
+    }
+    .table-stack td:not([data-label]):not(:empty) { padding-top: 8px; }
+  }
+
   /* ---- typography ---- */
   .t-display {
     font: 500 56px/1.05 var(--font-mono-stack);

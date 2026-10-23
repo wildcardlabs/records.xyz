@@ -73,7 +73,7 @@ function AccessFigure({
       ) : list.length === 0 ? (
         <p className="t-fig-body p-4 text-ink-dim sm:p-5">no roles found on this resolver.</p>
       ) : (
-        <Table>
+        <Table stack>
           <TableHeader>
             <TableRow>
               <TableHead>wallet</TableHead>
@@ -93,14 +93,14 @@ function AccessFigure({
               for (const p of admin) bits |= adminOf(ROLE[p])
               return (
                 <TableRow key={`${r.address}:${r.resource}`} className={pendingRevoke ? "opacity-60" : undefined}>
-                  <TableCell>
+                  <TableCell data-label="wallet">
                     <span className="inline-flex items-center gap-2">
                       <span className="tabular font-semibold text-ink">{shortAddr(r.address, 6)}</span>
                       {isYou ? <LivePill pulse={false}>you</LivePill> : null}
                     </span>
                   </TableCell>
-                  <TableCell>{scopeLabel}</TableCell>
-                  <TableCell className="whitespace-normal">
+                  <TableCell data-label="scope">{scopeLabel}</TableCell>
+                  <TableCell data-label="may change" className="whitespace-normal">
                     <span className="flex flex-wrap gap-1">
                       {SHOWN.filter((p) => powers.includes(p)).map((p) => (
                         <Tooltip key={p}>

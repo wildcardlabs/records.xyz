@@ -2,12 +2,16 @@ import * as React from "react"
 import { cn } from "cn"
 
 /** Run-list tables: dim uppercase headings, soft 7% hairlines between rows, 11.5px mono. */
-function Table({ className, ...props }: React.ComponentProps<"table">) {
+/**
+ * `stack` turns the table into one card per row on phones: headings hide and each cell shows its
+ * `data-label` above its value. Without it the table keeps its columns and scrolls sideways.
+ */
+function Table({ className, stack = false, ...props }: React.ComponentProps<"table"> & { stack?: boolean }) {
   return (
-    <div data-slot="table-container" className="relative w-full overflow-x-auto">
+    <div data-slot="table-container" className={cn("relative w-full", stack ? "max-sm:overflow-visible sm:overflow-x-auto" : "overflow-x-auto")}>
       <table
         data-slot="table"
-        className={cn("w-full caption-bottom border-collapse font-mono text-[12px] font-medium tabular-nums", className)}
+        className={cn("w-full caption-bottom border-collapse font-mono text-[12px] font-medium tabular-nums", stack && "table-stack", className)}
         {...props}
       />
     </div>

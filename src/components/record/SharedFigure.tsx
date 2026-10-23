@@ -74,7 +74,7 @@ function SharedFigure({
       {loading ? (
         <div className="space-y-2 p-4"><div className="h-3 w-56 bg-wash" /><div className="h-3 w-40 bg-wash" /></div>
       ) : (
-        <Table>
+        <Table stack>
           <TableHeader>
             <TableRow>
               <TableHead>name</TableHead>
@@ -86,14 +86,14 @@ function SharedFigure({
           <TableBody>
             {/* the default record: what every name without a record of its own reads */}
             <TableRow className={stagedFor(ROOT_NAME) ? "opacity-60" : undefined}>
-              <TableCell>
+              <TableCell data-label="name">
                 <span className="inline-flex items-center gap-2">
                   <span className="font-semibold text-ink">default record</span>
                   <span className="t-caption normal-case tracking-normal">any name without one</span>
                 </span>
               </TableCell>
-              <TableCell>{defaultId === "0" ? "nothing set" : `record #${defaultId}`}</TableCell>
-              <TableCell>{defaultId === "0" ? <span className="text-ink-dim">—</span> : <Badge variant={defaultId === myId ? "blue" : "outline"}>#{defaultId}</Badge>}</TableCell>
+              <TableCell data-label="reads">{defaultId === "0" ? "nothing set" : `record #${defaultId}`}</TableCell>
+              <TableCell data-label="record">{defaultId === "0" ? <span className="text-ink-dim">—</span> : <Badge variant={defaultId === myId ? "blue" : "outline"}>#{defaultId}</Badge>}</TableCell>
               {canLink ? (
                 <TableCell className="text-right whitespace-normal">
                   {stagedFor(ROOT_NAME) ? (
@@ -118,14 +118,14 @@ function SharedFigure({
               const reads = eff === "0" ? "nothing yet · no record of its own" : r.recordId === "0" ? "the default record" : shared ? `a record shared by ${sharers(eff)} names` : "its own record"
               return (
                 <TableRow key={r.node} className={pending ? "opacity-60" : undefined}>
-                  <TableCell>
+                  <TableCell data-label="name">
                     <span className="inline-flex items-center gap-2">
                       {isMe ? <span className="font-semibold text-ink">{r.name}</span> : <Link className="link-blue font-semibold text-ink" to={`/${r.name}${net}`}>{r.name}</Link>}
                       {isMe ? <LivePill pulse={false}>this name</LivePill> : null}
                     </span>
                   </TableCell>
-                  <TableCell>{reads}</TableCell>
-                  <TableCell>
+                  <TableCell data-label="reads">{reads}</TableCell>
+                  <TableCell data-label="record">
                     {eff === "0" ? <span className="text-ink-dim">—</span> : <Badge variant={eff === myId ? "blue" : "outline"}>#{eff}</Badge>}
                   </TableCell>
                   {canLink ? (
