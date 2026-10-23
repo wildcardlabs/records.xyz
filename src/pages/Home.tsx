@@ -168,12 +168,12 @@ export default function Home() {
       </Section>
 
       <Section>
-        <SectionHeader eyebrow="one page" title="One page for the whole name" lede="Profile, payment addresses and owned accounts, each published from where it is edited." />
+        <SectionHeader eyebrow="one page" title="One page for the whole name" lede="Profile, payment addresses and the wallets on the record, each published from where it is edited." />
         <Figure n={3} name="what a record page holds" padded={false} dotted={false}>
           <div className="grid divide-y divide-line lg:grid-cols-3 lg:divide-x lg:divide-y-0">
             {[
               { num: "01", title: "Profile and payment addresses", body: "Avatar, bio, links, an address for any chain or coin, the content hash. Edit on any name you own." },
-              { num: "02", title: "Owned accounts", body: "Every wallet the name claims, verified from the wallet's own signature. Needs ENSv2: sepolia today, mainnet when it ships." },
+              { num: "02", title: "Wallets on the record", body: "Every wallet that has signed to say it belongs to the name, verified from that signature. Needs ENSv2: sepolia today, mainnet when it ships." },
               { num: "03", title: "Shared profile and access", body: "On ENSv2, several names can use one profile, and a teammate or an agent can edit one record without owning the name." },
             ].map((c) => (
               <div key={c.num} className="p-5">
@@ -191,11 +191,11 @@ export default function Home() {
       <Section>
         <Eyebrow>faq</Eyebrow>
         <div className="mt-3 border-t border-line">
-          <FaqRow q="what do i need to get started?">Any ENS name. Owned accounts, shared profiles and per-key access need an ENSv2 name: sepolia today, mainnet when ENSv2 ships.</FaqRow>
+          <FaqRow q="what do i need to get started?">Any ENS name. Wallets on the record, shared profiles and per-key access need an ENSv2 name: sepolia today, mainnet when ENSv2 ships.</FaqRow>
           <FaqRow q="does it cost anything?">Signing is free. Publishing is one normal transaction from the owner wallet.</FaqRow>
           <FaqRow q="how is a consent verified?">In your browser, from chain: the consent must be unexpired and dated at most two years out, and the signature must recover to the wallet (ecrecover) or be confirmed by the account itself (ERC-1271).</FaqRow>
           <FaqRow q="where are my signatures kept before i publish?">In your browser only. Sign with each wallet, then publish from the owner wallet in the same browser.</FaqRow>
-          <FaqRow q="can i send money to an owned account?">No. It is an identity claim, not a payment address. Pay the name's address records.</FaqRow>
+          <FaqRow q="can i send money to a wallet on the record?">No. It is an identity claim, not a payment address. Pay the name's address records.</FaqRow>
           <FaqRow q="how do i remove a wallet?">The owner removes it from the list. The consent itself cannot be cancelled, only left to expire, so pick short windows.</FaqRow>
           <FaqRow q="is this an official ENS standard?">It follows ENSIP-28, a draft from the ENS Labs protocol team. Drafts change; records.xyz tracks it.</FaqRow>
         </div>

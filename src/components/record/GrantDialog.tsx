@@ -15,7 +15,7 @@ type Kind = "text" | "address" | "data" | "link"
 const KINDS: { kind: Kind; power: Power; label: string; hint: string; rootOnly?: boolean }[] = [
   { kind: "text", power: "text", label: "text records", hint: "description, avatar, socials, any text key" },
   { kind: "address", power: "address", label: "payment addresses", hint: "the address people pay, per chain" },
-  { kind: "data", power: "data", label: "owned accounts", hint: "the ENSIP-28 listings and proofs", rootOnly: true },
+  { kind: "data", power: "data", label: "wallets on the record", hint: "the ENSIP-28 listings and proofs", rootOnly: true },
   { kind: "link", power: "link", label: "shared profile", hint: "which profile each name uses", rootOnly: true },
 ]
 

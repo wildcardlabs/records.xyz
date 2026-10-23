@@ -10,7 +10,7 @@ export const SECTIONS: { id: Section; label: string; hint: string }[] = [
   { id: "addresses", label: "payment addresses", hint: "where to pay this name, per chain and coin" },
   { id: "website", label: "website", hint: "decentralised content behind the name" },
   { id: "advanced", label: "advanced", hint: "records most people never need" },
-  { id: "owned", label: "owned accounts", hint: "wallets this name has proven are its own" },
+  { id: "owned", label: "wallets on the record", hint: "wallets this name has proven are its own" },
 ]
 
 type TextSpec = { key: string; label: string; section: Section; placeholder?: string; hint?: string; featured?: boolean; validate?: (v: string) => string | null }
