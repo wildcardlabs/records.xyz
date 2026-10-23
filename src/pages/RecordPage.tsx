@@ -364,7 +364,7 @@ export default function RecordPage() {
             <div className="px-5 py-10 text-center">
               <div className="t-fig-title">No wallets on the record yet</div>
               <p className="t-fig-body mx-auto mt-2 max-w-[44ch]">
-                {canEdit ? "add the wallet you are connected with; the owner publishes." : "if this is your name, connect a wallet to add it."}
+                {canEdit ? "verify the wallet you are connected with; the owner publishes." : "if this is your name, connect a wallet to verify it."}
               </p>
             </div>
           ) : (
@@ -380,7 +380,7 @@ export default function RecordPage() {
             <div className="flex flex-wrap items-center gap-3 border-t border-line px-4 py-2.5 sm:px-5">
               {isConnected ? (
                 <>
-                  <Button size="sm" variant="accent" disabled={!canAddAccount} onClick={() => openAdd()}>+ add my wallet</Button>
+                  <Button size="sm" variant="accent" disabled={!canAddAccount} onClick={() => openAdd()}>+ verify my wallet</Button>
                   <span className="t-caption normal-case tracking-normal">
                     {canAddAccount ? `the wallet you are connected with signs (${shortAddr(address!, 4)}) · the owner publishes` : "this resolver cannot store wallets on the record."}
                   </span>
@@ -388,7 +388,7 @@ export default function RecordPage() {
               ) : (
                 <>
                   <ConnectButton />
-                  <span className="t-caption normal-case tracking-normal">connect the wallet you want to add</span>
+                  <span className="t-caption normal-case tracking-normal">connect the wallet you want to verify</span>
                 </>
               )}
             </div>
