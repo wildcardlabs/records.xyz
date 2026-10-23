@@ -106,7 +106,7 @@ function AddAccountDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="font-mono">
         <DialogHeader>
-          <DialogTitle className="t-h3 lowercase">Add this wallet to {name}</DialogTitle>
+          <DialogTitle className="t-h3 lowercase">Verify this wallet belongs to {name}</DialogTitle>
           <DialogDescription className="t-body">
             Sign a message saying this wallet belongs to {name} until the date you pick. Free; nothing goes onchain until the owner publishes.
           </DialogDescription>
@@ -114,11 +114,11 @@ function AddAccountDialog({
 
         <div className="grid gap-4 py-2">
           <div className="grid gap-2">
-            <Label>wallet being added (the one connected now)</Label>
+            <Label>wallet being verified (the one connected now)</Label>
             {isConnected && address ? (
               <div className="border border-line bg-paper-2 px-3 py-2 text-[12px] tabular">{address}</div>
             ) : (
-              <StatusText tone="err" className="text-[12px]">connect the wallet you want to add first.</StatusText>
+              <StatusText tone="err" className="text-[12px]">connect the wallet you want to verify first.</StatusText>
             )}
           </div>
           <div className="grid gap-2">
