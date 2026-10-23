@@ -257,14 +257,14 @@ export default function RecordPage() {
                   status={summaryStatus}
                   detail={
                     verified.length === total
-                      ? `${total} ${total === 1 ? "account" : "accounts"} across ${chainCount} ${chainCount === 1 ? "chain" : "chains"}`
-                      : `${verified.length} of ${total} accounts verified`
+                      ? `${total} ${total === 1 ? "wallet" : "wallets"} across ${chainCount} ${chainCount === 1 ? "chain" : "chains"}`
+                      : `${verified.length} of ${total} wallets verified`
                   }
                 />
               ) : record.isError ? (
                 <StatusMark size="lg" status="unverified" detail={`could not reach ${recordsChain.label}`} />
               ) : data?.resolver ? (
-                <StatusMark size="lg" status="unverified" detail="no accounts on the record yet" />
+                <StatusMark size="lg" status="unverified" detail="no wallets on the record yet" />
               ) : (
                 <StatusMark size="lg" status="invalid" detail={`no resolver on ${recordsChain.label}`} />
               )}
@@ -287,7 +287,7 @@ export default function RecordPage() {
 
         {data && data.resolver && !data.supportsData ? (
           <p className="mt-5 text-[12px]">
-            <StatusText tone="wait">this resolver cannot store owned accounts.</StatusText>{" "}
+            <StatusText tone="wait">this resolver cannot store wallets on the record.</StatusText>{" "}
             <span className="text-ink-muted">upgrade the name to ENSv2 in the <a className="link-blue text-ink" href={ensApp} target="_blank" rel="noreferrer">ENS app</a>{recordsChainId === 11155111 ? "" : " once ENSv2 reaches mainnet"}.</span>
           </p>
         ) : null}
@@ -351,17 +351,20 @@ export default function RecordPage() {
           </p>
         ) : null}
 
-        {/* fig 2 · owned accounts */}
-        <Figure n={2} name={`owned accounts · ${name}`} className="mt-6" padded={false} dotted={false} id="accounts">
+        {/* fig 2 · wallets on the record */}
+        <Figure n={2} name={`wallets on the record · ${name}`} className="mt-6" padded={false} dotted={false} id="accounts">
+          <div className="border-b border-line px-4 py-2 sm:px-5">
+            <span className="t-caption normal-case tracking-normal">wallets that have signed to say they belong to {name}</span>
+          </div>
           {loading ? (
             <AccountsTableSkeleton />
           ) : record.isError ? (
             <div className="t-fig-body px-5 py-10 text-center text-ink-dim">waiting for the network…</div>
           ) : rows.length === 0 ? (
             <div className="px-5 py-10 text-center">
-              <div className="t-fig-title">No accounts on the record yet</div>
+              <div className="t-fig-title">No wallets on the record yet</div>
               <p className="t-fig-body mx-auto mt-2 max-w-[44ch]">
-                {canEdit ? "add the wallet you are connected with. the owner publishes." : "if this is your name, connect a wallet to add one."}
+                {canEdit ? "add the wallet you are connected with; the owner publishes." : "if this is your name, connect a wallet to add it."}
               </p>
             </div>
           ) : (
@@ -377,9 +380,9 @@ export default function RecordPage() {
             <div className="flex flex-wrap items-center gap-3 border-t border-line px-4 py-2.5 sm:px-5">
               {isConnected ? (
                 <>
-                  <Button size="sm" variant="accent" disabled={!canAddAccount} onClick={() => openAdd()}>+ add an account</Button>
+                  <Button size="sm" variant="accent" disabled={!canAddAccount} onClick={() => openAdd()}>+ add my wallet</Button>
                   <span className="t-caption normal-case tracking-normal">
-                    {canAddAccount ? `signs from the connected wallet, ${shortAddr(address!, 4)} · switch wallets to add another` : "this resolver cannot store owned accounts."}
+                    {canAddAccount ? `the wallet you are connected with signs (${shortAddr(address!, 4)}) · the owner publishes` : "this resolver cannot store wallets on the record."}
                   </span>
                 </>
               ) : (
@@ -398,7 +401,7 @@ export default function RecordPage() {
             canPublish={canPublish}
             checking={accountsAuthority.isLoading}
             capable={canAddAccount}
-            incapableReason="this resolver cannot store owned accounts."
+            incapableReason="this resolver cannot store wallets on the record."
             explorer={explorer}
             state={stateFor("accounts")}
             onPublish={publishAccounts}
@@ -423,7 +426,7 @@ export default function RecordPage() {
             ) : (
               <div className="flex flex-wrap items-center gap-3 px-4 py-2.5 sm:px-5">
                 <Button size="sm" variant="outline" onClick={() => setHistoryOpen(true)}>show every change</Button>
-                <span className="t-caption normal-case tracking-normal">records, accounts, links and permissions, newest first</span>
+                <span className="t-caption normal-case tracking-normal">profile, wallets, links and permissions, newest first</span>
               </div>
             )}
           </Figure>
@@ -509,7 +512,7 @@ export default function RecordPage() {
               ))}
             </ul>
           </FaqRow>
-          <FaqRow q="can i send funds to an owned account?">
+          <FaqRow q="can i send funds to a wallet on the record?">
             No. It is an identity claim, not a payment address. Pay the name's address records instead.
           </FaqRow>
           {data?.capabilities && data.supportsData ? (
@@ -537,7 +540,7 @@ export default function RecordPage() {
               <FaqRow q="what happens to the profile a name leaves?">
                 Nothing. It stays on the resolver; the name just stops reading it and shows the default profile, or nothing until its next edit.
               </FaqRow>
-              <FaqRow q="do owned accounts travel with a shared profile?">
+              <FaqRow q="do wallets on the record travel with a shared profile?">
                 The records do, but each consent names one ENS name. Under another name they show as invalid until their wallets sign again for it.
               </FaqRow>
             </>

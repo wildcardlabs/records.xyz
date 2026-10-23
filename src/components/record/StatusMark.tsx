@@ -69,11 +69,11 @@ function StatusMark({ status, size = "sm", detail, className }: { status: RowSta
 }
 
 const statusHelp: { status: RowStatus; text: string }[] = [
-  { status: "verified", text: "the account signed a consent for this name and the signature checks out on its chain." },
+  { status: "verified", text: "the wallet signed to say it belongs to this name, and the signature checks out on its chain." },
   { status: "expiring", text: "verified, but the consent lapses within 30 days. the owner can renew it." },
-  { status: "expired", text: "the consent's expiry has passed. the account is no longer an owned account." },
-  { status: "invalid", text: "the proof exists but its signature does not verify for this account, name and chain." },
-  { status: "unverified", text: "the name lists the account but no proof record exists for it." },
+  { status: "expired", text: "the consent's expiry has passed. the wallet is no longer on the record." },
+  { status: "invalid", text: "the proof exists but its signature does not verify for this wallet, name and chain." },
+  { status: "unverified", text: "the name lists the wallet but no proof record exists for it." },
   { status: "draft", text: "a consent was signed in this browser and is waiting for the owner to publish." },
 ]
 

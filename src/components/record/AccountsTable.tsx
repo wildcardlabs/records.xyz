@@ -101,7 +101,7 @@ function AccountsTable({
       <TableHeader>
         <TableRow>
           <TableHead>status</TableHead>
-          <TableHead>account</TableHead>
+          <TableHead>wallet</TableHead>
           <TableHead>chain</TableHead>
           <TableHead>type</TableHead>
           <TableHead className="text-right">consent valid until</TableHead>

@@ -11,7 +11,7 @@ import { shortAddr } from "@/lib/format"
 const GROUPS: { id: HistoryRow["group"] | "all"; label: string }[] = [
   { id: "all", label: "everything" },
   { id: "records", label: "profile" },
-  { id: "accounts", label: "owned accounts" },
+  { id: "accounts", label: "wallets" },
   { id: "links", label: "shared profile" },
   { id: "access", label: "access" },
   { id: "name", label: "the name" },

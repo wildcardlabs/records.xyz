@@ -62,7 +62,7 @@ function ConsentedMark({ name }: { name: string }) {
         <VerifiedSeal />
       </TooltipTrigger>
       <TooltipContent className="max-w-xs font-mono text-[11px] lowercase whitespace-normal">
-        this address signed a consent for {name} on this chain · checked onchain
+        this wallet also signed to say it belongs to {name} · checked onchain
       </TooltipContent>
     </Tooltip>
   )

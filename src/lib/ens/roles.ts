@@ -29,7 +29,7 @@ export const adminOf = (bits: bigint) => bits << 128n
 export const POWER_LABEL: Record<Power, string> = {
   address: "payment addresses",
   text: "text records",
-  data: "owned accounts",
+  data: "wallets on the record",
   contenthash: "content hash",
   abi: "abi",
   interface: "interfaces",
