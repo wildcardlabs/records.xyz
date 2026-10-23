@@ -98,16 +98,16 @@ function SharedFigure({
                         <span className="text-[11px] text-blue">change staged</span>
                       ) : isMe ? (
                         r.recordId !== "0" && shared ? (
-                          <Button size="sm" variant="ghost" onClick={() => onStage({ sourceName: name, recordId: "0", scope: defaultId !== "0" && defaultId !== r.recordId ? `${name} leaves record #${r.recordId} · shows the default record` : `${name} leaves record #${r.recordId} · starts blank` })}>
+                          <Button size="sm" variant="ghost" onClick={() => onStage({ sourceName: name, recordId: "0", scope: defaultId !== "0" && defaultId !== r.recordId ? `${name} leaves record #${r.recordId} · uses the default record` : `${name} leaves record #${r.recordId} · starts blank` })}>
                             leave
                           </Button>
                         ) : null
                       ) : eff !== myId && myId !== "0" ? (
-                        <Button size="sm" variant="outline" onClick={() => onStage({ sourceName: r.name, recordId: myId, scope: `${r.name} shows ${name}'s records (#${myId})` })}>
-                          show {name}'s records
+                        <Button size="sm" variant="outline" onClick={() => onStage({ sourceName: r.name, recordId: myId, scope: `${r.name} uses ${name}'s records (#${myId})` })}>
+                          use {name}'s records
                         </Button>
                       ) : eff === myId && r.recordId !== "0" ? (
-                        <Button size="sm" variant="ghost" onClick={() => onStage({ sourceName: r.name, recordId: "0", scope: defaultId !== "0" && defaultId !== r.recordId ? `${r.name} stops sharing · shows the default record` : `${r.name} stops sharing · starts blank` })}>
+                        <Button size="sm" variant="ghost" onClick={() => onStage({ sourceName: r.name, recordId: "0", scope: defaultId !== "0" && defaultId !== r.recordId ? `${r.name} stops sharing · uses the default record` : `${r.name} stops sharing · starts blank` })}>
                           detach
                         </Button>
                       ) : null}
@@ -131,7 +131,7 @@ function SharedFigure({
                   {stagedFor(ROOT_NAME) ? (
                     <span className="text-[11px] text-blue">change staged</span>
                   ) : myId !== "0" && defaultId !== myId ? (
-                    <Button size="sm" variant="outline" onClick={() => onStage({ sourceName: ROOT_NAME, recordId: myId, scope: `default record · names without their own show ${name}'s records (#${myId})` })}>
+                    <Button size="sm" variant="outline" onClick={() => onStage({ sourceName: ROOT_NAME, recordId: myId, scope: `default record · names without their own use ${name}'s records (#${myId})` })}>
                       use {name}'s records
                     </Button>
                   ) : defaultId !== "0" && defaultId === myId ? (

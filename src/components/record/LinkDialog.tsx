@@ -15,7 +15,7 @@ import { useMyNames } from "@/hooks/useMyNames"
 
 /**
  * Stage a record link between this name and another name on the same ENSv2 resolver.
- * Either the other name starts showing this name's records, or this name starts showing
+ * Either the other name starts using this name's records, or this name starts using
  * the other's. The owner publishes the link like any other change.
  */
 function LinkDialog({
@@ -77,12 +77,12 @@ function LinkDialog({
       const theirs = theirOwn !== "0" ? theirOwn : defaultRecordId
       if (direction === "theirs-to-mine") {
         if (myRecordId === "0") return setError(`${name} has no records yet. edit a record and publish first.`)
-        if (theirs === myRecordId) return setError(`${target} already shows ${name}'s records.`)
-        onStage({ sourceName: target, recordId: myRecordId, scope: `${target} shows ${name}'s records (#${myRecordId})` })
+        if (theirs === myRecordId) return setError(`${target} already uses ${name}'s records.`)
+        onStage({ sourceName: target, recordId: myRecordId, scope: `${target} uses ${name}'s records (#${myRecordId})` })
       } else {
         if (theirs === "0") return setError(`${target} has no records yet.`)
-        if (theirs === myRecordId) return setError(`${name} already shows ${target}'s records.`)
-        onStage({ sourceName: name, recordId: theirs, scope: `${name} shows ${target}'s records (#${theirs})` })
+        if (theirs === myRecordId) return setError(`${name} already uses ${target}'s records.`)
+        onStage({ sourceName: name, recordId: theirs, scope: `${name} uses ${target}'s records (#${theirs})` })
       }
       onOpenChange(false)
       setOther("")
@@ -127,16 +127,16 @@ function LinkDialog({
             <div className="grid gap-1.5 text-[12px]">
               <label className="flex cursor-pointer items-start gap-2">
                 <input type="radio" name="direction" className="mt-1 accent-[var(--blue)]" checked={direction === "theirs-to-mine"} onChange={() => setDirection("theirs-to-mine")} />
-                <span><span className="font-semibold">{name}'s</span> <span className="text-ink-dim">· the other name starts showing what {name} shows today</span></span>
+                <span><span className="font-semibold">{name}'s</span> <span className="text-ink-dim">· the other name starts using what {name} has today</span></span>
               </label>
               <label className="flex cursor-pointer items-start gap-2">
                 <input type="radio" name="direction" className="mt-1 accent-[var(--blue)]" checked={direction === "mine-to-theirs"} onChange={() => setDirection("mine-to-theirs")} />
-                <span><span className="font-semibold">the other name's</span> <span className="text-ink-dim">· {name} starts showing what the other name shows today</span></span>
+                <span><span className="font-semibold">the other name's</span> <span className="text-ink-dim">· {name} starts using what the other name has today</span></span>
               </label>
             </div>
           </div>
           <p className="t-caption normal-case tracking-normal">
-            the record left behind is not deleted; it is just no longer read by that name. owned accounts stay valid only if the consents were signed for the name that shows them.
+            the record left behind is not deleted; it is just no longer read by that name. owned accounts stay valid only if the consents were signed for the name that uses them.
           </p>
           {error ? <StatusText tone="err" className="text-[12px]">{error}</StatusText> : null}
         </div>
