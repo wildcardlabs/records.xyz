@@ -57,7 +57,7 @@ function HistoryFigure({ name, recordsChainId, explorer, enabled }: { name: stri
       ) : shown.length === 0 ? (
         <p className="t-fig-body p-4 text-ink-dim sm:p-5">{rows.length === 0 ? "nothing recorded yet." : "nothing of that kind in the pages loaded so far."}</p>
       ) : (
-        <Table>
+        <Table stack>
           <TableHeader>
             <TableRow>
               <TableHead>when</TableHead>
@@ -69,14 +69,14 @@ function HistoryFigure({ name, recordsChainId, explorer, enabled }: { name: stri
           <TableBody>
             {shown.map((r) => (
               <TableRow key={r.id}>
-                <TableCell className="tabular text-ink-dim">{when(r.at)}</TableCell>
-                <TableCell>
+                <TableCell data-label="when" className="tabular text-ink-dim">{when(r.at)}</TableCell>
+                <TableCell data-label="what">
                   <span className="inline-flex items-center gap-2">
                     <span className="font-semibold text-ink">{r.label}</span>
                     {group === "all" ? <Badge variant="dim">{GROUPS.find((g) => g.id === r.group)?.label}</Badge> : null}
                   </span>
                 </TableCell>
-                <TableCell className="whitespace-normal">
+                <TableCell data-label="change" className="whitespace-normal">
                   {r.full && r.full !== r.detail ? (
                     <Tooltip>
                       <TooltipTrigger render={<span className="cursor-help" />}>{r.detail}</TooltipTrigger>
@@ -86,7 +86,7 @@ function HistoryFigure({ name, recordsChainId, explorer, enabled }: { name: stri
                     r.detail
                   )}
                 </TableCell>
-                <TableCell className="text-right">
+                <TableCell data-label="tx" className="text-right">
                   <a className="link-blue text-ink-dim" href={`${explorer}/tx/${r.tx}`} target="_blank" rel="noreferrer">{shortAddr(r.tx, 4)}</a>
                 </TableCell>
               </TableRow>

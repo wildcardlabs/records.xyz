@@ -70,7 +70,7 @@ export default function NamesPage() {
             ) : shown.length === 0 ? (
               <p className="t-fig-body p-4 text-ink-dim sm:p-5">nothing matches.</p>
             ) : (
-              <Table>
+              <Table stack>
                 <TableHeader>
                   <TableRow>
                     <TableHead>name</TableHead>
@@ -83,17 +83,17 @@ export default function NamesPage() {
                 <TableBody>
                   {pager.slice.map((n) => (
                     <TableRow key={`${n.chainId}:${n.name}`}>
-                      <TableCell>
+                      <TableCell data-label="name">
                         <span className="inline-flex items-center gap-2">
                           <Link className="link-blue font-semibold text-ink" to={pathFor(n)}>{n.name}</Link>
                           {n.isPrimary ? <LivePill pulse={false}>primary</LivePill> : null}
                         </span>
                       </TableCell>
-                      <TableCell>
+                      <TableCell data-label="chain">
                         <span className="inline-flex items-center gap-1.5"><span className="dot text-blue-2" />{chainById(n.chainId)?.label ?? n.chainId}{n.authority === "ens_v2" ? <Badge variant="blue">v2</Badge> : null}</span>
                       </TableCell>
-                      <TableCell>{n.relations.length ? n.relations.join(" · ") : "—"}</TableCell>
-                      <TableCell>
+                      <TableCell data-label="role">{n.relations.length ? n.relations.join(" · ") : "—"}</TableCell>
+                      <TableCell data-label="expires">
                         {n.expiresAt ? <span className={daysUntil(n.expiresAt) < 30 ? "text-wait" : undefined}>{fmtDate(n.expiresAt)} · {daysUntil(n.expiresAt)} days</span> : <span className="text-ink-dim">—</span>}
                       </TableCell>
                       <TableCell className="text-right">

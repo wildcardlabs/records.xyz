@@ -160,7 +160,7 @@ function ProfileCard({
               <div className="h-3 w-40 bg-wash" />
             </div>
           ) : profile && profile.addresses.length > 0 ? (
-            <Table>
+            <Table stack>
               <TableHeader>
                 <TableRow>
                   <TableHead>chain</TableHead>
@@ -170,7 +170,7 @@ function ProfileCard({
               <TableBody>
                 {profile.addresses.map((a) => (
                   <TableRow key={a.coinType}>
-                    <TableCell>
+                    <TableCell data-label="chain">
                       <span className="inline-flex items-center gap-1.5"><span className={cn("dot", a.isDefault ? "text-blue" : "text-blue-2")} />{a.label}</span>
                       {a.isDefault ? (
                         <span className="t-caption block normal-case tracking-normal">
@@ -178,7 +178,7 @@ function ProfileCard({
                         </span>
                       ) : null}
                     </TableCell>
-                    <TableCell>
+                    <TableCell data-label="address">
                       <span className="inline-flex items-center gap-1.5">
                         <span className="tabular font-semibold text-ink">{shortAddr(a.address, 6)}</span>
                         {a.evm && consented?.(a.coinType, a.address) ? <ConsentedMark name={name} /> : null}
