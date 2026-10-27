@@ -7,7 +7,7 @@ import { useConnection } from "wagmi"
 import type { Address, Hex } from "viem"
 import { normalize } from "viem/ens"
 import { Button } from "@/components/ui/button"
-import { Eyebrow, Figure, Section, SectionHeader, StatRow, StatusText, Code, FaqRow, V2Mark, k, s, c, p } from "@/components/wrap"
+import { Eyebrow, Figure, Section, SectionHeader, StatRow, StatusText, Code, FaqRow, k, s, c, p } from "@/components/wrap"
 import { AccountsTableSkeleton } from "@/components/record/AccountsTable"
 import { StatusMark, statusHelp } from "@/components/record/StatusMark"
 import { ConnectButton } from "@/components/wallet/ConnectButton"
@@ -237,11 +237,8 @@ export default function RecordPage() {
       <Section>
         <div className="flex flex-wrap items-start justify-between gap-6">
           <div className="min-w-0">
-            <div className="t-eyebrow"># record · {recordsChain.label}</div>
-            <h1 className="t-display mt-2 flex flex-wrap items-baseline gap-x-4 break-all text-ink">
-              {name}
-              {isV2 ? <V2Mark size={32} className="self-center" /> : null}
-            </h1>
+            <div className="t-eyebrow"># record · {recordsChain.label}{isV2 ? " · ensv2" : data?.resolver && !record.isLoading ? " · ensv1" : ""}</div>
+            <h1 className="t-display mt-2 break-all text-ink">{name}</h1>
             <div className="mt-5 flex flex-wrap items-center gap-3">
               {loading ? (
                 <div className="h-12 w-56 bg-wash" />
