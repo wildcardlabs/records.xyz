@@ -1,3 +1,4 @@
+import { AddressLink } from "@/components/wrap"
 import { useMemo, useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -73,6 +74,7 @@ function HistoryFigure({ name, recordsChainId, explorer, enabled }: { name: stri
                 <TableCell data-label="what">
                   <span className="inline-flex items-center gap-2">
                     <span className="font-semibold text-ink">{r.label}</span>
+                    {r.address ? <AddressLink address={r.address} chars={4} /> : null}
                     {group === "all" ? <Badge variant="dim">{GROUPS.find((g) => g.id === r.group)?.label}</Badge> : null}
                   </span>
                 </TableCell>

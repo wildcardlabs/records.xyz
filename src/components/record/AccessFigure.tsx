@@ -1,3 +1,4 @@
+import { AddressLink } from "@/components/wrap"
 import { useMemo } from "react"
 import type { Address } from "viem"
 import { Badge } from "@/components/ui/badge"
@@ -9,7 +10,6 @@ import { addressLabel } from "@/lib/ens/profile"
 import { TEXT_SPECS, listCoins } from "@/lib/records"
 import type { BigNameRoleRow } from "@/lib/ens/bigname"
 import { type AccessChange, type Power, POWER_LABEL, ROLE, adminOf, coinResource, keyResource, powersFromBigName } from "@/lib/ens/roles"
-import { shortAddr } from "@/lib/format"
 
 /** Label a resource id by matching it against the keys and chains the app knows. */
 function useResourceLabels(recordsChainId: number, extraKeys: string[]) {
@@ -93,7 +93,7 @@ function AccessFigure({
                 <TableRow key={`${r.address}:${r.resource}`} className={pendingRevoke ? "opacity-60" : undefined}>
                   <TableCell data-label="wallet">
                     <span className="inline-flex items-center gap-2">
-                      <span className="tabular font-semibold text-ink">{shortAddr(r.address, 6)}</span>
+                      <AddressLink address={r.address} />
                       {isYou ? <LivePill pulse={false}>you</LivePill> : null}
                     </span>
                   </TableCell>

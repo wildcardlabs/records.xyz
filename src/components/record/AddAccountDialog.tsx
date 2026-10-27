@@ -1,3 +1,4 @@
+import { AddressLink } from "@/components/wrap"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import { useConnection, useSignTypedData, useSwitchChain } from "wagmi"
@@ -116,7 +117,7 @@ function AddAccountDialog({
           <div className="grid gap-2">
             <Label>wallet being verified (the one connected now)</Label>
             {isConnected && address ? (
-              <div className="border border-line bg-paper-2 px-3 py-2 text-[12px] tabular">{address}</div>
+              <div className="border border-line bg-paper-2 px-3 py-2 text-[12px] tabular"><AddressLink address={address} full className="font-medium" /></div>
             ) : (
               <StatusText tone="err" className="text-[12px]">connect the wallet you want to verify first.</StatusText>
             )}

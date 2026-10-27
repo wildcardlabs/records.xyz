@@ -1,3 +1,4 @@
+import { AddressLink } from "@/components/wrap"
 import { Button } from "@/components/ui/button"
 import { StatusText } from "@/components/wrap"
 import { StatusMark } from "./StatusMark"
@@ -7,6 +8,8 @@ export type PendingRow = {
   key: string
   status: "draft" | "removing"
   label: string
+  /** when the label is a wallet, link it to that wallet's names */
+  address?: string
   detail: string
   tabular?: boolean
   onDiscard: () => void
@@ -22,7 +25,7 @@ function PendingRows({ rows, onDiscardAll }: { rows: PendingRow[]; onDiscardAll?
         {rows.map((r) => (
           <li key={r.key} className="flex flex-wrap items-center gap-3 py-2.5">
             <StatusMark status={r.status} />
-            <span className="font-semibold">{r.label}</span>
+            {r.address ? <AddressLink address={r.address} /> : <span className="font-semibold">{r.label}</span>}
             <span className={`min-w-0 flex-1 truncate text-ink-dim ${r.tabular ? "tabular" : ""}`}>{r.detail}</span>
             <Button size="sm" variant="ghost" className="ml-auto" onClick={r.onDiscard}>discard</Button>
           </li>

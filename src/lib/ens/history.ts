@@ -21,6 +21,8 @@ export type HistoryRow = {
   detail: string
   /** full value when the detail is truncated */
   full?: string
+  /** a wallet the row is about, linked to its names */
+  address?: string
 }
 
 type RawEvent = {
@@ -53,7 +55,7 @@ const clip = (s: string, n = 64) => (s.length > n ? `${s.slice(0, n - 1)}…` : 
 const isEmptyHex = (v: unknown) => typeof v !== "string" || v === "" || v === "0x"
 
 /** A record write, by key family. */
-function recordRow(key: string, value: unknown, recordsChainId: number): Pick<HistoryRow, "group" | "label" | "detail" | "full"> {
+function recordRow(key: string, value: unknown, recordsChainId: number): Pick<HistoryRow, "group" | "label" | "detail" | "full" | "address"> {
   const str = typeof value === "string" ? value : ""
   const [family, ...rest] = key.split(":")
   const arg = rest.join(":")
@@ -77,7 +79,7 @@ function recordRow(key: string, value: unknown, recordsChainId: number): Pick<Hi
       return { group: "accounts", label: "chains with accounts", detail: chains.length ? chains.map((c) => chainById(c)?.label ?? `chain ${c}`).join(", ") : "none" }
     }
     const proof = parseProofKey(arg)
-    if (proof) return { group: "accounts", label: `consent · ${shortAddr(proof.account, 4)}`, detail: isEmptyHex(str) ? `removed on ${chainById(proof.chainId)?.label ?? proof.chainId}` : `signed on ${chainById(proof.chainId)?.label ?? proof.chainId}` }
+    if (proof) return { group: "accounts", label: "consent", address: proof.account, detail: isEmptyHex(str) ? `removed on ${chainById(proof.chainId)?.label ?? proof.chainId}` : `signed on ${chainById(proof.chainId)?.label ?? proof.chainId}` }
     const listing = parseListingKey(arg)
     if (listing) {
       const accounts = isEmptyHex(str) ? [] : (decodeListing(str as Hex) ?? [])
@@ -108,7 +110,7 @@ function toRow(e: RawEvent, recordsChainId: number): HistoryRow | null {
       const added = (d.added_powers ?? []).filter((p) => !p.startsWith("admin_")).length
       const removed = (d.removed_powers ?? []).filter((p) => !p.startsWith("admin_")).length
       const parts = [added ? `${added} granted` : "", removed ? `${removed} revoked` : ""].filter(Boolean)
-      return { ...base, group: "access", label: `permissions · ${who}`, detail: parts.join(" · ") || "changed" }
+      return { ...base, group: "access", label: "permissions", address: d.address, detail: `${who} · ${parts.join(" · ") || "changed"}` }
     }
     case "reverse_changed":
       return { ...base, group: "name", label: "primary name", detail: d.address ? `set for ${shortAddr(d.address, 4)}` : "changed" }
@@ -121,7 +123,7 @@ function toRow(e: RawEvent, recordsChainId: number): HistoryRow | null {
       return { ...base, group: "name", label: "released", detail: "registration ended" }
     case "authority_changed":
     case "token_control_transferred":
-      return { ...base, group: "name", label: "owner", detail: d.owner ? `now ${shortAddr(d.owner, 4)}` : d.to ? `now ${shortAddr(d.to, 4)}` : "changed" }
+      return { ...base, group: "name", label: "owner", address: d.owner ?? d.to, detail: d.owner ? `now ${shortAddr(d.owner, 4)}` : d.to ? `now ${shortAddr(d.to, 4)}` : "changed" }
     case "name_wrapped":
       return { ...base, group: "name", label: "wrapped", detail: "name wrapper (v1)" }
     case "migration_applied":

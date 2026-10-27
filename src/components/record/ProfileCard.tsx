@@ -1,3 +1,4 @@
+import { AddressLink } from "@/components/wrap"
 import { useState } from "react"
 import { Copy, ExternalLink, Globe, MapPin } from "lucide-react"
 import { toast } from "sonner"
@@ -180,7 +181,7 @@ function ProfileCard({
                     </TableCell>
                     <TableCell data-label="address">
                       <span className="inline-flex items-center gap-1.5">
-                        <span className="tabular font-semibold text-ink">{shortAddr(a.address, 6)}</span>
+                        {a.evm ? <AddressLink address={a.address} /> : <span className="tabular font-semibold text-ink">{shortAddr(a.address, 6)}</span>}
                         {a.evm && consented?.(a.coinType, a.address) ? <ConsentedMark name={name} /> : null}
                         {a.evm && primary?.(a.coinType, a.address) ? <PrimaryMark name={name} chain={primary(a.coinType, a.address)!} /> : null}
                         <button type="button" className="link-blue text-ink-dim" aria-label="copy address" onClick={() => { navigator.clipboard?.writeText(a.address); toast("address copied") }}>

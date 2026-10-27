@@ -192,8 +192,8 @@ export default function RecordPage() {
 
   // pending rows per group, each discardable where it was staged
   const accountRows: PendingRow[] = [
-    ...drafts.adds.map((d) => ({ key: `a:${d.chainId}:${d.account}`, status: "draft" as const, label: shortAddr(d.account, 6), detail: `${chainById(d.chainId)?.label} · valid until ${fmtDate(BigInt(d.expiresAt))}`, tabular: true, onDiscard: () => drafts.dropDraft(d) })),
-    ...drafts.removals.map((r) => ({ key: `r:${r.chainId}:${r.account}`, status: "removing" as const, label: shortAddr(r.account, 6), detail: `${chainById(r.chainId)?.label} · remove`, tabular: true, onDiscard: () => drafts.unmarkRemoval(r) })),
+    ...drafts.adds.map((d) => ({ key: `a:${d.chainId}:${d.account}`, status: "draft" as const, label: shortAddr(d.account, 6), address: d.account, detail: `${chainById(d.chainId)?.label} · valid until ${fmtDate(BigInt(d.expiresAt))}`, tabular: true, onDiscard: () => drafts.dropDraft(d) })),
+    ...drafts.removals.map((r) => ({ key: `r:${r.chainId}:${r.account}`, status: "removing" as const, label: shortAddr(r.account, 6), address: r.account, detail: `${chainById(r.chainId)?.label} · remove`, tabular: true, onDiscard: () => drafts.unmarkRemoval(r) })),
   ]
   const recordRows: PendingRow[] = Object.entries(drafts.records).flatMap(([id, value]) => {
     const def = defFromId(id)
