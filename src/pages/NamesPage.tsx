@@ -46,7 +46,7 @@ export default function NamesPage() {
               { label: "wallet", value: shortAddr(address, 4) },
               { label: "names", value: mine.isLoading ? "…" : String(names.length) },
               { label: "on ensv2", value: mine.isLoading ? "…" : String(v2) },
-              { label: "source", value: indexed ? "bigname" : "primary only", hint: indexed ? "sepolia indexed · mainnet primary name" : "no indexer on this chain yet" },
+              { label: "source", value: indexed ? "bigname" : "primary only", hint: indexed ? "owned and managed names" : "no indexer on this chain yet" },
             ]}
           />
           <Figure n={1} name={`names · ${shortAddr(address, 4)}`} padded={false} dotted={false}>
@@ -107,7 +107,7 @@ export default function NamesPage() {
             {!mine.isLoading && shown.length > 0 ? <Pager page={pager.page} pages={pager.pages} from={pager.from} to={pager.to} total={pager.total} onPage={pager.setPage} /> : null}
           </Figure>
           <p className="t-caption mt-3 normal-case tracking-normal">
-            sepolia names come from <a className="link-blue" href="https://bigname.sh" target="_blank" rel="noreferrer">bigname</a>; on mainnet only the wallet's primary name is known until an indexer covers it.
+            from <a className="link-blue" href="https://bigname.sh" target="_blank" rel="noreferrer">bigname</a>
           </p>
         </>
       )}
