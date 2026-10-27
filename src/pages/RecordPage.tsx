@@ -85,6 +85,11 @@ export default function RecordPage() {
   })
   const accessAuthority = auth({ adminBits: adminBits ? adminBits.toString() : undefined })
   const linkAuthority = auth({ link: true })
+  // may the connected wallet change any profile record? (v1: owner or manager; v2: a text or address role)
+  const editTextAuthority = auth({ text: true })
+  const editAddrAuthority = auth({ addr: true })
+  const canEditProfile = !!(editTextAuthority.data?.canPublish || editAddrAuthority.data?.canPublish)
+  const checkingEdit = editTextAuthority.isLoading || editAddrAuthority.isLoading
   const canPublish = accountsAuthority.data?.canPublish ?? false
   const profileWritable = !!data?.capabilities?.profileWrite
   const hasLinks = !!data?.capabilities?.links
@@ -295,8 +300,8 @@ export default function RecordPage() {
                 recordsChainId={recordsChainId}
                 set={profile.set}
                 drafts={drafts}
-                enabled={isConnected && profileWritable}
-                disabledReason={!isConnected ? "connect a wallet to edit." : !profileWritable ? "this resolver does not accept writes from this app." : undefined}
+                enabled={isConnected && profileWritable && canEditProfile}
+                disabledReason={!isConnected ? "connect a wallet to edit." : !profileWritable ? "this resolver does not accept writes from this app." : !canEditProfile ? "this wallet may not edit this name." : undefined}
                 onDone={() => setEditingProfile(false)}
               />
             ) : (
@@ -304,13 +309,21 @@ export default function RecordPage() {
                 <ProfileCard name={name} profile={profile.data} loading={profile.isLoading || record.isLoading} consented={consented} primary={primaryFor} />
                 {isConnected && !record.isLoading ? (
                   <div className="flex flex-wrap items-center gap-3 border-t border-line px-4 py-2.5 sm:px-5">
-                    <Button size="sm" variant="outline" disabled={!profileWritable} onClick={() => setEditingProfile(true)}>
+                    <Button size="sm" variant="outline" disabled={!profileWritable || !canEditProfile || checkingEdit} onClick={() => setEditingProfile(true)}>
                       edit profile
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => setPrimaryOpen(true)}>
-                      set as my primary name
-                    </Button>
-                    {!profileWritable ? <span className="t-caption normal-case tracking-normal">this resolver does not accept writes from this app.</span> : null}
+                    {address && cardAddresses.includes(address.toLowerCase() as Address) ? (
+                      <Button size="sm" variant="outline" onClick={() => setPrimaryOpen(true)}>
+                        set as my primary name
+                      </Button>
+                    ) : null}
+                    {!profileWritable ? (
+                      <span className="t-caption normal-case tracking-normal">this resolver does not accept writes from this app.</span>
+                    ) : checkingEdit ? (
+                      <span className="t-caption normal-case tracking-normal">checking permissions…</span>
+                    ) : !canEditProfile ? (
+                      <span className="t-caption normal-case tracking-normal">this wallet may not edit {name}</span>
+                    ) : null}
                   </div>
                 ) : null}
                 <PublishPanel
