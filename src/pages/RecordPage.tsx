@@ -353,8 +353,7 @@ export default function RecordPage() {
             <div className="t-fig-body px-5 py-10 text-center text-ink-dim">waiting for the network…</div>
           ) : rows.length === 0 ? (
             <div className="px-5 py-10 text-center">
-              <div className="t-fig-title">No wallets on the record yet</div>
-              <p className="t-fig-body mx-auto mt-2 max-w-[44ch]">
+              <p className="t-fig-body mx-auto max-w-[44ch]">
                 {canEdit ? `Verify your wallet below to prove it belongs to ${name}. It shows here once the owner publishes.` : `Connect your wallet to prove it belongs to ${name}.`}
               </p>
             </div>
