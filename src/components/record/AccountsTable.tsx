@@ -1,3 +1,4 @@
+import { AddressLink } from "@/components/wrap"
 import { Copy, ExternalLink } from "lucide-react"
 import { cn } from "cn"
 import { toast } from "sonner"
@@ -6,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { StatusMark, statusSpec, type RowStatus } from "./StatusMark"
 import { chainById } from "@/lib/ens/chains"
-import { daysUntil, fmtDate, shortAddr } from "@/lib/format"
+import { daysUntil, fmtDate } from "@/lib/format"
 import type { AccountKind } from "@/hooks/useRecord"
 
 export type Row = {
@@ -62,7 +63,7 @@ function AccountsTable({
               </span>
             </div>
             <div className="mt-2 flex items-center gap-2">
-              <span className="tabular text-[13px] font-semibold text-ink">{shortAddr(r.account, 6)}</span>
+              <AddressLink address={r.account} className="text-[13px]" />
               <button type="button" className="link-blue text-ink-dim" aria-label="copy address" onClick={() => copy(r.account, "address")}>
                 <Copy className="size-3.5" />
               </button>
@@ -126,7 +127,7 @@ function AccountsTable({
               </TableCell>
               <TableCell className="py-3">
                 <span className="inline-flex items-center gap-1.5">
-                  <span className="tabular text-[12.5px] font-semibold text-ink">{shortAddr(r.account, 6)}</span>
+                  <AddressLink address={r.account} className="text-[12.5px]" />
                   <button type="button" className="link-blue text-ink-dim" aria-label="copy address" onClick={() => copy(r.account, "address")}>
                     <Copy className="size-3.5" />
                   </button>

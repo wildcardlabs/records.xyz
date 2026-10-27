@@ -33,7 +33,7 @@ function ConnectButton() {
           <DropdownMenuGroup>
             <DropdownMenuLabel className="t-label text-ink-dim">{connector?.name ?? "wallet"}</DropdownMenuLabel>
             <DropdownMenuItem onClick={() => navigator.clipboard?.writeText(address)}>copy address</DropdownMenuItem>
-            <DropdownMenuItem render={<Link to="/names" />}>your names</DropdownMenuItem>
+            <DropdownMenuItem render={<Link to={`/${address}`} />}>your names</DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => disconnect()}>disconnect</DropdownMenuItem>

@@ -1,7 +1,8 @@
+import { AddressLink } from "@/components/wrap"
 import { useEffect, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
-import type { Address, Hex } from "viem"
+import type { Hex } from "viem"
 import { useConnection, useSwitchChain, useWaitForTransactionReceipt, useWriteContract } from "wagmi"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -57,7 +58,7 @@ function PrimaryDialog({ open, onOpenChange, name, recordsChainId }: { open: boo
         <DialogHeader>
           <DialogTitle className="t-h3 lowercase">Make {name} your primary name</DialogTitle>
           <DialogDescription className="t-body">
-            What apps show for {address ? shortAddr(address as Address, 4) : "your wallet"}. One transaction per row, on that chain.
+            What apps show for {address ? <AddressLink address={address} chars={4} /> : "your wallet"}. One transaction per row, on that chain.
           </DialogDescription>
         </DialogHeader>
         {rows.isLoading ? (

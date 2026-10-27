@@ -1,3 +1,4 @@
+import { AddressLink } from "@/components/wrap"
 import { useMemo, useState } from "react"
 import { Link } from "react-router-dom"
 import { useConnection } from "wagmi"
@@ -49,7 +50,7 @@ export default function NamesPage({ address: given }: { address?: Address } = {}
           <StatRow
             className="mb-6"
             stats={[
-              { label: "wallet", value: shortAddr(address, 4), hint: isYou ? "you" : undefined },
+              { label: "wallet", value: <AddressLink address={address} chars={4} />, hint: isYou ? "you" : undefined },
               { label: "names", value: mine.isLoading ? "…" : String(names.length) },
               { label: "on ensv2", value: mine.isLoading ? "…" : String(v2) },
               { label: "source", value: indexed ? "bigname" : "primary only", hint: indexed ? "owned and managed names" : "no indexer on this chain yet" },
