@@ -64,7 +64,7 @@ function SharedFigure({
       {loading ? (
         <div className="space-y-2 p-4"><div className="h-3 w-56 bg-wash" /><div className="h-3 w-40 bg-wash" /></div>
       ) : myId === "0" ? (
-        <p className="t-fig-body px-4 py-4 text-ink-dim sm:px-5">edit the profile and publish it first; then other names can use it.</p>
+        <p className="t-fig-body px-4 py-4 text-ink-dim sm:px-5">edit and publish the profile first; then other names can use it.</p>
       ) : (
         <ul className="divide-y divide-line-soft">
           {pager.slice.map((r) => {

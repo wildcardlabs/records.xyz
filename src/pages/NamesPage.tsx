@@ -40,7 +40,7 @@ export default function NamesPage({ address: given }: { address?: Address } = {}
       <SectionHeader
         eyebrow={given && !isYou ? "names" : "your names"}
         title={given && !isYou ? `Names of ${shortAddr(given, 4)}` : "Your names"}
-        lede={address ? `Every ENS name ${given && !isYou ? "this wallet" : "the connected wallet"} owns or manages. Open one to read${given && !isYou ? "" : " or edit"} its record.` : "Connect a wallet to list the ENS names it owns or manages."}
+        lede={address ? (given && !isYou ? `Every ENS name ${shortAddr(given, 4)} owns or manages. Open one to read its record.` : "Every ENS name you own or manage. Open one to read or edit its record.") : "Connect your wallet to see the names you own or manage."}
       />
       {!address ? (
         <ConnectButton />
@@ -72,7 +72,7 @@ export default function NamesPage({ address: given }: { address?: Address } = {}
             ) : mine.isError ? (
               <div className="p-4 text-[12px]"><StatusText tone="err">could not list names.</StatusText> <button type="button" className="link-blue text-ink" onClick={() => mine.refetch()}>try again</button></div>
             ) : names.length === 0 ? (
-              <p className="t-fig-body p-4 text-ink-dim sm:p-5">no names found for this wallet{indexed ? "" : ". without an indexer only the primary name can be found"}.</p>
+              <p className="t-fig-body p-4 text-ink-dim sm:p-5">{given && !isYou ? "this wallet owns or manages no names" : "you own or manage no names yet"}{indexed ? "" : " · without an indexer only the primary name can be found"}.</p>
             ) : shown.length === 0 ? (
               <p className="t-fig-body p-4 text-ink-dim sm:p-5">nothing matches.</p>
             ) : (

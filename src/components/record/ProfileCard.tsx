@@ -148,7 +148,7 @@ function ProfileCard({
               </div>
             </div>
           </div>
-          {empty ? <p className="t-caption mt-4 normal-case tracking-normal">this name has no profile records yet.</p> : null}
+          {empty ? <p className="t-caption mt-4 normal-case tracking-normal">no profile yet.</p> : null}
         </div>
         <div className={cn("min-w-0", hasBanner && "sm:border-t sm:border-line")}>
           <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-2">
@@ -199,7 +199,7 @@ function ProfileCard({
               </TableBody>
             </Table>
           ) : (
-            <p className="t-fig-body p-4 text-ink-dim">no payment addresses set.</p>
+            <p className="t-fig-body p-4 text-ink-dim">no payment addresses yet.</p>
           )}
         </div>
       </FigSplit>

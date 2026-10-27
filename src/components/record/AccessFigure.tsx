@@ -69,7 +69,7 @@ function AccessFigure({
       ) : loading ? (
         <div className="space-y-2 p-4"><div className="h-3 w-56 bg-wash" /><div className="h-3 w-40 bg-wash" /></div>
       ) : list.length === 0 ? (
-        <p className="t-fig-body p-4 text-ink-dim sm:p-5">no roles found on this resolver.</p>
+        <p className="t-fig-body p-4 text-ink-dim sm:p-5">no one has been given access yet.</p>
       ) : (
         <Table stack>
           <TableHeader>

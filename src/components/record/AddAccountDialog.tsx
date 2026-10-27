@@ -107,23 +107,23 @@ function AddAccountDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="font-mono">
         <DialogHeader>
-          <DialogTitle className="t-h3 lowercase">Verify this wallet belongs to {name}</DialogTitle>
+          <DialogTitle className="t-h3 lowercase">Verify your wallet belongs to {name}</DialogTitle>
           <DialogDescription className="t-body">
-            Sign a message saying this wallet belongs to {name} until the date you pick. Free; nothing goes onchain until the owner publishes.
+            Sign a message saying your wallet belongs to {name} until the date you pick. Signing is free; nothing goes onchain until the owner publishes.
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4 py-2">
           <div className="grid gap-2">
-            <Label>wallet being verified (the one connected now)</Label>
+            <Label>your wallet</Label>
             {isConnected && address ? (
               <div className="border border-line bg-paper-2 px-3 py-2 text-[12px] tabular"><AddressLink address={address} full className="font-medium" /></div>
             ) : (
-              <StatusText tone="err" className="text-[12px]">connect the wallet you want to verify first.</StatusText>
+              <StatusText tone="err" className="text-[12px]">connect your wallet first.</StatusText>
             )}
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="chain">which chain is this wallet on?</Label>
+            <Label htmlFor="chain">which chain is it on?</Label>
             <select
               id="chain"
               value={chainId}
@@ -147,7 +147,7 @@ function AddAccountDialog({
                 <option key={p.label} value={i}>{p.label} · until {fmtDate(nowSeconds() + p.secs)}</option>
               ))}
             </select>
-            <span className="t-caption normal-case tracking-normal">a consent cannot be cancelled, only left to expire · pick the shortest window that works</span>
+            <span className="t-caption normal-case tracking-normal">a consent can't be cancelled, only left to expire · pick the shortest window that works</span>
           </div>
           <div className="t-caption normal-case tracking-normal">your wallet may ask to switch to {recordsChain?.label} first · the message is tied to the name's network</div>
           {error ? <StatusText tone="err" className="text-[12px]">{error}</StatusText> : null}
