@@ -9,10 +9,6 @@ const DEFAULT_RPCS: Record<number, string[]> = {
   8453: ["https://mainnet.base.org", "https://base-rpc.publicnode.com"],
   10: ["https://mainnet.optimism.io", "https://optimism-rpc.publicnode.com"],
   42161: ["https://arb1.arbitrum.io/rpc", "https://arbitrum-one-rpc.publicnode.com"],
-  11155111: ["https://ethereum-sepolia-rpc.publicnode.com", "https://sepolia.drpc.org", "https://1rpc.io/sepolia"],
-  84532: ["https://sepolia.base.org", "https://base-sepolia-rpc.publicnode.com"],
-  11155420: ["https://sepolia.optimism.io", "https://optimism-sepolia-rpc.publicnode.com"],
-  421614: ["https://sepolia-rollup.arbitrum.io/rpc", "https://arbitrum-sepolia-rpc.publicnode.com"],
 }
 
 /** Per-chain RPC list: VITE_RPC_URL_<chainId> override first, then our defaults, then the chain's own public RPC. */

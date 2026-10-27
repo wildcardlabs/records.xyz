@@ -1,7 +1,7 @@
 import { type Address, type Hex, encodeAbiParameters, encodeFunctionData, keccak256, toBytes } from "viem"
 
 /**
- * ENSv2 PermissionedResolver access control (mainnet deployment 2026-10, same layout on Sepolia).
+ * ENSv2 PermissionedResolver access control (mainnet deployment 2026-10).
  * Roles are bits; the admin role for a bit is the same bit shifted left by 128. Roles granted on
  * ROOT_RESOURCE (0) apply to every resource. A resource is keccak256 of the record argument:
  * the text/data key as a string, or the coin type as a 32-byte word. There is no name in the

@@ -20,6 +20,12 @@ type RawNames = {
 }
 
 const isReverse = (n: string) => n.endsWith(".addr.reverse") || n.endsWith(".reverse")
+/** some registrations carry sentinel expiries far past any real date; treat those as "no expiry" */
+const saneExpiry = (v: string | null | undefined): number | null => {
+  if (!v) return null
+  const n = Number(v)
+  return Number.isFinite(n) && n > 0 && n < 4_102_444_800 ? n : null
+}
 
 /** BigName `GET /v1/addresses/{address}/names`: every name this address owns or manages on a chain the indexer covers. */
 async function fetchIndexedNames(chainId: number, address: Address): Promise<MyName[]> {
@@ -42,7 +48,7 @@ async function fetchIndexedNames(chainId: number, address: Address): Promise<MyN
         relations: (r.relations ?? []).filter((x) => x === "owner" || x === "manager"),
         authority: r.authority === "ens_v2" ? "ens_v2" : r.authority === "ens_v1" || r.authority === "ens_v0" ? "ens_v1" : null,
         isPrimary: !!r.is_primary,
-        expiresAt: r.expires_at ? Number(r.expires_at) : null,
+        expiresAt: saneExpiry(r.expires_at),
       })
     }
     if (!raw.page?.has_more || !raw.page.next_cursor) break

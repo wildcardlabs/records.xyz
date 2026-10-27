@@ -108,7 +108,7 @@ export default function Home() {
               <span className="mx-2">·</span>
             </>
           ) : null}
-          see a live record: <Link className="link-blue text-ink" to="/nick.eth">nick.eth</Link> on ENSv2 · <Link className="link-blue text-ink" to="/steve.eth?net=sepolia">steve.eth</Link> on sepolia · or look up <Link className="link-blue text-ink" to="/vitalik.eth">vitalik.eth</Link>
+          see a live record: <Link className="link-blue text-ink" to="/nick.eth">nick.eth</Link> on ENSv2 · or look up <Link className="link-blue text-ink" to="/vitalik.eth">vitalik.eth</Link>
         </div>
 
 

@@ -1,5 +1,5 @@
 import { type Address, type Chain, namehash } from "viem"
-import { arbitrum, arbitrumSepolia, base, baseSepolia, mainnet, optimism, optimismSepolia, sepolia } from "viem/chains"
+import { arbitrum, base, mainnet, optimism } from "viem/chains"
 import { publicClientFor } from "./clients"
 
 /**
@@ -20,15 +20,7 @@ const MAINNET_TARGETS: PrimaryTarget[] = [
   { kind: "l2", chain: arbitrum, label: "arbitrum", registrar: "0x0000000000D8e504002cC26E3Ec46D81971C1664", explorer: "https://arbiscan.io" },
 ]
 
-const SEPOLIA_TARGETS: PrimaryTarget[] = [
-  { kind: "default", chain: sepolia, label: "every EVM chain", registrar: "0x4F382928805ba0e23B30cFB75fC9E848e82DFD47", explorer: "https://sepolia.etherscan.io" },
-  { kind: "home", chain: sepolia, label: "sepolia", registrar: "0xA0a1AbcDAe1a2a4A2EF8e9113Ff0e02DD81DC0C6", explorer: "https://sepolia.etherscan.io" },
-  { kind: "l2", chain: baseSepolia, label: "base sepolia", registrar: "0x00000BeEF055f7934784D6d81b6BC86665630dbA", explorer: "https://sepolia.basescan.org" },
-  { kind: "l2", chain: optimismSepolia, label: "op sepolia", registrar: "0x00000BeEF055f7934784D6d81b6BC86665630dbA", explorer: "https://sepolia-optimism.etherscan.io" },
-  { kind: "l2", chain: arbitrumSepolia, label: "arbitrum sepolia", registrar: "0x00000BeEF055f7934784D6d81b6BC86665630dbA", explorer: "https://sepolia.arbiscan.io" },
-]
-
-export const primaryTargets = (recordsChainId: number): PrimaryTarget[] => (recordsChainId === 11155111 ? SEPOLIA_TARGETS : MAINNET_TARGETS)
+export const primaryTargets = (_recordsChainId: number): PrimaryTarget[] => MAINNET_TARGETS
 
 export const reverseRegistrarAbi = [
   // the v1 registrar returns the node, the default and L2 registrars return nothing; declare none so both decode

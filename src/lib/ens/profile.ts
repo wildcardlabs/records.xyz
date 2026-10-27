@@ -62,10 +62,6 @@ const CHAIN_LABELS: Record<number, { label: string; explorer: string }> = {
   59144: { label: "linea", explorer: "https://lineascan.build" },
   534352: { label: "scroll", explorer: "https://scrollscan.com" },
   42220: { label: "celo", explorer: "https://celoscan.io" },
-  11155111: { label: "sepolia", explorer: "https://sepolia.etherscan.io" },
-  84532: { label: "base sepolia", explorer: "https://sepolia.basescan.org" },
-  11155420: { label: "op sepolia", explorer: "https://sepolia-optimism.etherscan.io" },
-  421614: { label: "arbitrum sepolia", explorer: "https://sepolia.arbiscan.io" },
 }
 
 const COIN_EXPLORERS: Record<string, string> = {
@@ -75,10 +71,9 @@ const COIN_EXPLORERS: Record<string, string> = {
 
 /**
  * How to name an address record for people: the chain for EVM coin types (coin 60 is "the chain
- * the name lives on", so sepolia for a sepolia name), the coin for everything else.
+ * the name lives on"), the coin for everything else.
  */
-export function addressLabel(coinType: number, recordsChainId: number): { label: string; longName: string; explorer?: string } {
-  if (coinType === COIN_TYPE_ETH && recordsChainId === 11155111) return { ...CHAIN_LABELS[11155111], longName: "Sepolia" }
+export function addressLabel(coinType: number, _recordsChainId: number): { label: string; longName: string; explorer?: string } {
   if (coinType === COIN_TYPE_DEFAULT) return { label: "any evm chain", longName: "default address" }
   const chainId = chainIdForCoinType(coinType)
   if (chainId !== null && CHAIN_LABELS[chainId]) return { ...CHAIN_LABELS[chainId], longName: CHAIN_LABELS[chainId].label }
@@ -89,10 +84,7 @@ export function addressLabel(coinType: number, recordsChainId: number): { label:
 
 /** The address records offered up front for a records chain: its own chain first, then the usual suspects. */
 export function featuredAddressDefs(recordsChainId: number): RecordDef[] {
-  const coins =
-    recordsChainId === 11155111
-      ? [COIN_TYPE_DEFAULT, COIN_TYPE_ETH, coinTypeForChain(84532), coinTypeForChain(11155420), coinTypeForChain(421614)]
-      : [COIN_TYPE_DEFAULT, COIN_TYPE_ETH, coinTypeForChain(8453), coinTypeForChain(10), coinTypeForChain(42161), ...["btc", "sol"].map(coinTypeForName).filter((c): c is number => c !== undefined)]
+  const coins = [COIN_TYPE_DEFAULT, COIN_TYPE_ETH, coinTypeForChain(8453), coinTypeForChain(10), coinTypeForChain(42161), ...["btc", "sol"].map(coinTypeForName).filter((c): c is number => c !== undefined)]
   return coins.map((c) => withLabel(addressDef(c), recordsChainId))
 }
 
@@ -104,7 +96,7 @@ export function withLabel(def: RecordDef, recordsChainId: number): RecordDef {
 }
 
 const isHttp = (v: string) => /^https?:\/\//i.test(v)
-const metadataNet = (chainId: number) => (chainId === 11155111 ? "sepolia" : "mainnet")
+const metadataNet = (_chainId: number) => "mainnet"
 
 function avatarUrlFor(avatar: string | null, name: string, recordsChainId: number): string | null {
   if (!avatar) return null
