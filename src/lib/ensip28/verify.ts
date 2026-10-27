@@ -2,7 +2,7 @@ import { type Address, type Hex, type PublicClient, isAddressEqual, recoverTyped
 import { decodeProof } from "./encode"
 import { MAX_VALIDITY_SECONDS, consentDigest, consentTypedData } from "./typedData"
 
-export type ProofStatus = "verified" | "expired" | "expiring" | "unverified" | "invalid"
+export type ProofStatus = "verified" | "expired" | "expiring" | "unverified" | "invalid" | "other-name"
 
 export type ProofCheck = {
   status: ProofStatus

@@ -108,3 +108,44 @@ export function buildLinkCall(c: LinkChange): Hex {
 }
 
 export const sameLink = (a: LinkChange, b: LinkChange) => a.sourceName === b.sourceName
+
+/**
+ * Every name on the resolver and the record it reads, with record ids taken from the resolver
+ * itself: the indexer can lag behind a link, and a stale id would show the wrong profile.
+ */
+export async function loadLinks(client: PublicClient, chainId: number, name: string, resolver: Address): Promise<{ rows: ResolverLink[]; indexed: boolean }> {
+  let names: { name: string; node: Hex }[] = [{ name, node: namehash(name) }]
+  let indexed = false
+  if (BIGNAME_BASE[chainId]) {
+    try {
+      const [links, bound] = await Promise.all([fetchResolverLinks(chainId, resolver), fetchBoundNames(chainId, resolver).catch(() => null)])
+      for (const r of [...(links ?? []), ...(bound ?? [])]) {
+        if ("isDefault" in r && r.isDefault) continue
+        if (!names.some((n) => n.node.toLowerCase() === r.node.toLowerCase())) names.push({ name: r.name, node: r.node })
+      }
+      indexed = links !== null
+    } catch {
+      /* indexer down: this name and the root still come from chain */
+    }
+  }
+  names = names.filter((n) => n.name)
+  const ids = await Promise.all(
+    [ROOT_NODE, ...names.map((n) => n.node)].map((node) =>
+      client.readContract({ address: resolver, abi: linkAbi, functionName: "getRecordId", args: [node] }).then((v) => v.toString()).catch(() => "0")
+    )
+  )
+  const rows: ResolverLink[] = [{ name: ROOT_NAME, node: ROOT_NODE, recordId: ids[0], isDefault: true }]
+  names.forEach((n, i) => rows.push({ name: n.name, node: n.node, recordId: ids[i + 1], isDefault: false }))
+  return { rows, indexed }
+}
+
+/** The names that read the same record as `name`, excluding it. */
+export function siblingsOf(rows: ResolverLink[] | undefined, name: string): string[] {
+  if (!rows) return []
+  const root = rows.find((r) => r.isDefault)?.recordId ?? "0"
+  const eff = (r: ResolverLink) => (r.recordId !== "0" ? r.recordId : root)
+  const me = rows.find((r) => !r.isDefault && r.name === name)
+  const mine = me ? eff(me) : root
+  if (mine === "0") return []
+  return rows.filter((r) => !r.isDefault && r.name !== name && eff(r) === mine).map((r) => r.name)
+}

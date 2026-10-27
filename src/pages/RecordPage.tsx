@@ -28,6 +28,7 @@ import { HistoryFigure } from "@/components/record/HistoryFigure"
 import { usePrimaryNamesFor } from "@/hooks/usePrimaryNames"
 import { targetForCoin } from "@/lib/ens/primary"
 import { useResolverLinks, linksQueryKey } from "@/hooks/useResolverLinks"
+import { siblingsOf } from "@/lib/ens/links"
 import { useResolverRoles } from "@/hooks/useResolverRoles"
 import { adminBitsFor } from "@/lib/ens/roles"
 import { hasBigName } from "@/lib/ens/bigname"
@@ -57,7 +58,6 @@ export default function RecordPage() {
   const record = useRecord(name ?? undefined, recordsChainId)
   const owner = useNameOwner(name ?? undefined, recordsChainId)
   const drafts = useDrafts(name ?? undefined, recordsChainId)
-  const profile = useProfile(name ?? undefined, recordsChainId, Object.keys(drafts.records))
   const { address, isConnected } = useConnection()
   const qc = useQueryClient()
   const [dialog, setDialog] = useState<{ open: boolean; chainId?: number }>({ open: false })
@@ -103,6 +103,9 @@ export default function RecordPage() {
     mined: publisher.active === group && publisher.mined,
   })
   const links = useResolverLinks(name ?? undefined, recordsChainId, data?.resolver, hasLinks)
+  const siblings = useMemo(() => siblingsOf(links.data?.rows, name ?? ""), [links.data, name])
+  // on ENSv2 the profile may be shared and the indexer may lag a link: read values from the chain
+  const profile = useProfile(name ?? undefined, recordsChainId, Object.keys(drafts.records), { chainFirst: hasLinks, keyNames: siblings })
   const canLink = hasLinks && !!linkAuthority.data?.canPublish
   const defaultRecordId = links.data?.rows.find((r) => r.isDefault)?.recordId ?? "0"
   const myRecordId = effectiveRecord(links.data?.rows.find((r) => !r.isDefault && r.name === name), defaultRecordId)
