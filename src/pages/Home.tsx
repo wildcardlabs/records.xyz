@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { normalize } from "viem/ens"
+import { getAddress, isAddress } from "viem"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useConnection } from "wagmi"
@@ -76,7 +77,8 @@ export default function Home() {
   function go(e: React.FormEvent) {
     e.preventDefault()
     const raw = q.trim()
-    if (!raw) return setErr("type an ENS name first, like alice.eth")
+    if (!raw) return setErr("type an ENS name or a wallet address first")
+    if (isAddress(raw)) return nav(`/${getAddress(raw)}`)
     try {
       const name = normalize(raw)
       if (!name.includes(".")) throw new Error("that is not a full name. include the ending, like alice.eth")
@@ -97,7 +99,7 @@ export default function Home() {
           lede="Prove which wallets belong to your ENS name. Each wallet signs its own consent, and anyone can check it live onchain."
         />
         <form onSubmit={go} className="flex max-w-xl flex-col gap-2 sm:flex-row sm:items-stretch">
-          <Input value={q} onChange={(e) => { setQ(e.target.value); setErr(null) }} placeholder="look up any ENS name, like alice.eth" aria-label="ens name" autoFocus />
+          <Input value={q} onChange={(e) => { setQ(e.target.value); setErr(null) }} placeholder="look up any ENS name or wallet address" aria-label="ens name" autoFocus />
           <Button type="submit" variant="accent" className="h-10 px-5 tracking-[.02em]">open the record</Button>
         </form>
         {err ? <StatusText tone="err" className="mt-2 block text-[12px]">{err}</StatusText> : null}

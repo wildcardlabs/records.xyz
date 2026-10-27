@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react"
 import { Link } from "react-router-dom"
 import { useConnection } from "wagmi"
+import type { Address } from "viem"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,9 +13,14 @@ import { useMyNames } from "@/hooks/useMyNames"
 import { chainById } from "@/lib/ens/chains"
 import { daysUntil, fmtDate, shortAddr } from "@/lib/format"
 
-/** Every name the connected wallet owns or manages, with a filter for wallets that hold hundreds. */
-export default function NamesPage() {
-  const { address, isConnected } = useConnection()
+/**
+ * Every name a wallet owns or manages, with a filter for wallets that hold hundreds.
+ * `/names` shows the connected wallet; `/0x…` shows any address, no wallet needed.
+ */
+export default function NamesPage({ address: given }: { address?: Address } = {}) {
+  const { address: connected, isConnected } = useConnection()
+  const address = given ?? (isConnected ? connected : undefined)
+  const isYou = !!given && !!connected && given.toLowerCase() === connected.toLowerCase()
   const mine = useMyNames(address)
   const [q, setQ] = useState("")
   const [chain, setChain] = useState<number | "all">("all")
@@ -32,18 +38,18 @@ export default function NamesPage() {
   return (
     <Section>
       <SectionHeader
-        eyebrow="your names"
-        title="Your names"
-        lede={isConnected ? `Every ENS name the connected wallet owns or manages. Open one to read or edit its record.` : "Connect a wallet to list the ENS names it owns or manages."}
+        eyebrow={given && !isYou ? "names" : "your names"}
+        title={given && !isYou ? `Names of ${shortAddr(given, 4)}` : "Your names"}
+        lede={address ? `Every ENS name ${given && !isYou ? "this wallet" : "the connected wallet"} owns or manages. Open one to read${given && !isYou ? "" : " or edit"} its record.` : "Connect a wallet to list the ENS names it owns or manages."}
       />
-      {!isConnected || !address ? (
+      {!address ? (
         <ConnectButton />
       ) : (
         <>
           <StatRow
             className="mb-6"
             stats={[
-              { label: "wallet", value: shortAddr(address, 4) },
+              { label: "wallet", value: shortAddr(address, 4), hint: isYou ? "you" : undefined },
               { label: "names", value: mine.isLoading ? "…" : String(names.length) },
               { label: "on ensv2", value: mine.isLoading ? "…" : String(v2) },
               { label: "source", value: indexed ? "bigname" : "primary only", hint: indexed ? "owned and managed names" : "no indexer on this chain yet" },
