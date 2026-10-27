@@ -100,7 +100,15 @@ export default function NamesPage({ address: given }: { address?: Address } = {}
                       </TableCell>
                       <TableCell data-label="role">{n.relations.length ? n.relations.join(" · ") : "—"}</TableCell>
                       <TableCell data-label="expires">
-                        {n.expiresAt ? <span className={daysUntil(n.expiresAt) < 30 ? "text-wait" : undefined}>{fmtDate(n.expiresAt)} · {daysUntil(n.expiresAt)} days</span> : <span className="text-ink-dim">—</span>}
+                        {n.expiresAt ? (
+                          daysUntil(n.expiresAt) < 0 ? (
+                            <span className="text-err">{fmtDate(n.expiresAt)} · expired</span>
+                          ) : (
+                            <span className={daysUntil(n.expiresAt) < 30 ? "text-wait" : undefined}>{fmtDate(n.expiresAt)} · {daysUntil(n.expiresAt)} days</span>
+                          )
+                        ) : (
+                          <span className="text-ink-dim">—</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-right">
                         <Button size="sm" variant="outline" render={<Link to={pathFor(n)} />}>open</Button>
