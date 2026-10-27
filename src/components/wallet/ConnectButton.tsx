@@ -1,16 +1,28 @@
 import { Link } from "react-router-dom"
-import { useConnect, useConnection, useDisconnect } from "wagmi"
+import { useState } from "react"
+import { useConnect, useConnection, useDisconnect, useEnsAvatar, useEnsName } from "wagmi"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { chainById } from "@/lib/ens/chains"
 import { shortAddr } from "@/lib/format"
+
+/** DiceBear "waves" art seeded with the address, for wallets without an avatar. */
+const fallbackAvatar = (address: string) => `https://api.dicebear.com/10.x/waves/svg?seed=${address.toLowerCase()}`
+
+function WalletAvatar({ address, src }: { address: string; src: string | null | undefined }) {
+  const [broken, setBroken] = useState(false)
+  const url = src && !broken ? src : fallbackAvatar(address)
+  return <img src={url} alt="" width={20} height={20} className="size-5 shrink-0 border border-line bg-paper object-cover" onError={() => setBroken(true)} />
+}
 
 /** Wallet menu in the nav: connector list when disconnected, address + chain + disconnect when connected. */
 function ConnectButton() {
-  const { address, chainId, isConnected, connector } = useConnection()
+  const { address, isConnected, connector } = useConnection()
   const { connectors, connectAsync, isPending } = useConnect()
   const { disconnect } = useDisconnect()
+  // the wallet's primary name on mainnet and that name's avatar, when it has them
+  const primary = useEnsName({ address, chainId: 1, query: { enabled: !!address, staleTime: 60_000 } })
+  const avatar = useEnsAvatar({ name: primary.data ?? undefined, chainId: 1, query: { enabled: !!primary.data, staleTime: 60_000 } })
   // wallets found by EIP-6963 discovery each get their own entry; the generic "injected" entry is only
   // useful when nothing was discovered, and it does nothing at all when no wallet is installed
   const discovered = connectors.filter((c) => c.type === "injected" && c.id !== "injected")
@@ -21,17 +33,15 @@ function ConnectButton() {
   })
 
   if (isConnected && address) {
-    const chain = chainId ? chainById(chainId) : undefined
     return (
       <DropdownMenu>
         <DropdownMenuTrigger render={<Button variant="outline" />}>
-          <span className="dot text-ok" />
-          {shortAddr(address)}
-          <span className="text-ink-dim">· {chain?.label ?? `chain ${chainId}`}</span>
+          <WalletAvatar address={address} src={avatar.data} />
+          {primary.data ?? shortAddr(address)}
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="min-w-52 font-mono text-[12px]">
           <DropdownMenuGroup>
-            <DropdownMenuLabel className="t-label text-ink-dim">{connector?.name ?? "wallet"}</DropdownMenuLabel>
+            <DropdownMenuLabel className="t-label text-ink-dim">{connector?.name ?? "wallet"} · {shortAddr(address)}</DropdownMenuLabel>
             <DropdownMenuItem onClick={() => navigator.clipboard?.writeText(address)}>copy address</DropdownMenuItem>
             <DropdownMenuItem render={<Link to={`/${address}`} />}>your names</DropdownMenuItem>
           </DropdownMenuGroup>

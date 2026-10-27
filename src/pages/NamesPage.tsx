@@ -3,11 +3,10 @@ import { useMemo, useState } from "react"
 import { Link } from "react-router-dom"
 import { useConnection } from "wagmi"
 import type { Address } from "viem"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Figure, LivePill, Pager, Section, SectionHeader, StatRow, StatusText, usePager } from "@/components/wrap"
+import { Figure, LivePill, Pager, Section, SectionHeader, StatRow, StatusText, V2Mark, usePager } from "@/components/wrap"
 import { ConnectButton } from "@/components/wallet/ConnectButton"
 import { pathFor } from "@/components/wallet/MyNames"
 import { useMyNames } from "@/hooks/useMyNames"
@@ -97,7 +96,7 @@ export default function NamesPage({ address: given }: { address?: Address } = {}
                         </span>
                       </TableCell>
                       <TableCell data-label="chain">
-                        <span className="inline-flex items-center gap-1.5"><span className="dot text-blue-2" />{chainById(n.chainId)?.label ?? n.chainId}{n.authority === "ens_v2" ? <Badge variant="blue">v2</Badge> : null}</span>
+                        <span className="inline-flex items-center gap-1.5"><span className="dot text-blue-2" />{chainById(n.chainId)?.label ?? n.chainId}{n.authority === "ens_v2" ? <V2Mark size={13} /> : null}</span>
                       </TableCell>
                       <TableCell data-label="role">{n.relations.length ? n.relations.join(" · ") : "—"}</TableCell>
                       <TableCell data-label="expires">
