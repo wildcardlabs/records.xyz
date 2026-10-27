@@ -42,7 +42,9 @@ function MyNameChips({ exclude }: { exclude?: { name: string; chainId: number } 
     [mine.data, exclude]
   )
   const matches = useMemo(() => matchNames(names, q), [names, q])
-  if (!isConnected || !address || mine.isLoading || names.length === 0) return null
+  // only on a name the wallet owns or manages: "your other names" makes no sense on a stranger's record
+  const owns = !exclude || (mine.data?.names ?? []).some((n) => n.name === exclude.name && n.chainId === exclude.chainId)
+  if (!isConnected || !address || mine.isLoading || names.length === 0 || !owns) return null
   const total = names.length + (exclude ? 1 : 0)
 
   if (names.length <= MAX_CHIPS) {
