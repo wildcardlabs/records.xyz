@@ -277,6 +277,17 @@
     .table-stack td:not([data-label]):not(:empty) { padding-top: 8px; }
   }
 
+  /* the ENSv2 "V2": Times-like italic (Tinos) in ENS blue */
+  .v2-mark {
+    font-family: Tinos, "Times New Roman", Times, serif;
+    font-style: italic;
+    font-weight: 700;
+    font-size: 1.05em;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    color: #3b7fc4;
+  }
+
   /* ---- typography ---- */
   .t-display {
     font: 500 56px/1.05 var(--font-mono-stack);
