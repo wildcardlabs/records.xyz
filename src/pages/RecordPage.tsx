@@ -229,7 +229,6 @@ export default function RecordPage() {
   const pendingCount = drafts.accountCount
   const canAddAccount = !!data?.supportsData
   const openAdd = (chainId?: number) => setDialog({ open: true, chainId })
-  const ensApp = "https://app.ens.domains/"
 
   return (
     <>
@@ -275,12 +274,6 @@ export default function RecordPage() {
           </div>
         </div>
 
-        {data && data.resolver && !data.supportsData ? (
-          <p className="mt-5 text-[12px]">
-            <StatusText tone="wait">this resolver cannot store wallets on the record.</StatusText>{" "}
-            <span className="text-ink-muted">upgrade the name to ENSv2 in the <a className="link-blue text-ink" href={ensApp} target="_blank" rel="noreferrer">ENS app</a>.</span>
-          </p>
-        ) : null}
         {data?.chains.some((c) => c.malformed) ? (
           <p className="mt-4 text-[12px]"><StatusText tone="err">a malformed listing record was ignored.</StatusText></p>
         ) : null}
@@ -301,7 +294,7 @@ export default function RecordPage() {
                 set={profile.set}
                 drafts={drafts}
                 enabled={isConnected && profileWritable && canEditProfile}
-                disabledReason={!isConnected ? "connect a wallet to edit." : !profileWritable ? "this resolver does not accept writes from this app." : !canEditProfile ? "this wallet may not edit this name." : undefined}
+                disabledReason={!isConnected ? "connect your wallet to edit." : !profileWritable ? "this name's resolver can't be edited here." : !canEditProfile ? `you can't edit ${name} with this wallet.` : undefined}
                 onDone={() => setEditingProfile(false)}
               />
             ) : (
@@ -318,11 +311,11 @@ export default function RecordPage() {
                       </Button>
                     ) : null}
                     {!profileWritable ? (
-                      <span className="t-caption normal-case tracking-normal">this resolver does not accept writes from this app.</span>
+                      <span className="t-caption normal-case tracking-normal">this name's resolver can't be edited here.</span>
                     ) : checkingEdit ? (
                       <span className="t-caption normal-case tracking-normal">checking permissions…</span>
                     ) : !canEditProfile ? (
-                      <span className="t-caption normal-case tracking-normal">this wallet may not edit {name}</span>
+                      <span className="t-caption normal-case tracking-normal">you can't edit {name} with this wallet</span>
                     ) : null}
                   </div>
                 ) : null}
@@ -334,7 +327,7 @@ export default function RecordPage() {
                   canPublish={recordsAuthority.data?.canPublish ?? false}
                   checking={recordsAuthority.isLoading}
                   capable={profileWritable}
-                  incapableReason="this resolver does not accept writes from this app."
+                  incapableReason="this name's resolver can't be edited here."
                   explorer={explorer}
                   state={stateFor("records")}
                   onPublish={publishRecords}
@@ -362,7 +355,7 @@ export default function RecordPage() {
             <div className="px-5 py-10 text-center">
               <div className="t-fig-title">No wallets on the record yet</div>
               <p className="t-fig-body mx-auto mt-2 max-w-[44ch]">
-                {canEdit ? `Verify your wallet below to prove it belongs to ${name}. Once the name's owner publishes, it shows here.` : `Connect a wallet to prove it belongs to ${name}.`}
+                {canEdit ? `Verify your wallet below to prove it belongs to ${name}. It shows here once the owner publishes.` : `Connect your wallet to prove it belongs to ${name}.`}
               </p>
             </div>
           ) : (
@@ -380,13 +373,13 @@ export default function RecordPage() {
                 <>
                   <Button size="sm" variant="accent" disabled={!canAddAccount} onClick={() => openAdd()}>+ verify my wallet</Button>
                   <span className="t-caption normal-case tracking-normal">
-                    {canAddAccount ? `the wallet you are connected with signs (${shortAddr(address!, 4)}) · the owner publishes` : "this resolver cannot store wallets on the record."}
+                    {canAddAccount ? `signs with ${shortAddr(address!, 4)} · the owner publishes` : "this name's resolver doesn't support ENSIP-28."}
                   </span>
                 </>
               ) : (
                 <>
                   <ConnectButton />
-                  <span className="t-caption normal-case tracking-normal">connect the wallet you want to verify</span>
+                  <span className="t-caption normal-case tracking-normal">connect your wallet to verify it</span>
                 </>
               )}
             </div>
@@ -399,7 +392,7 @@ export default function RecordPage() {
             canPublish={canPublish}
             checking={accountsAuthority.isLoading}
             capable={canAddAccount}
-            incapableReason="this resolver cannot store wallets on the record."
+            incapableReason="this name's resolver doesn't support ENSIP-28."
             explorer={explorer}
             state={stateFor("accounts")}
             onPublish={publishAccounts}
@@ -503,7 +496,7 @@ export default function RecordPage() {
             </ul>
           </FaqRow>
           <FaqRow q="can i send funds to a wallet on the record?">
-            No. It is an identity claim, not a payment address. Pay the name's address records instead.
+            No. It says the wallet belongs to the name; it is not a payment address. Pay the name's address records instead.
           </FaqRow>
           {data?.capabilities && data.supportsData ? (
             <FaqRow q="where is this stored?">
@@ -528,10 +521,10 @@ export default function RecordPage() {
           {hasLinks ? (
             <>
               <FaqRow q="what happens to the profile a name leaves?">
-                Nothing. It stays on the resolver; the name just stops reading it and shows the default profile, or nothing until its next edit.
+                Nothing. It stays on the resolver. The name just stops using it and shows the default profile, or nothing until you edit it again.
               </FaqRow>
               <FaqRow q="do wallets on the record travel with a shared profile?">
-                The records do, but each consent names one ENS name. Under another name they show as invalid until their wallets sign again for it.
+                The records do, but each wallet's consent names one ENS name. Under another name they show as invalid until the wallets sign again for that name.
               </FaqRow>
             </>
           ) : null}

@@ -137,7 +137,7 @@ function GrantDialog({
               <span>also let it delegate this permission to others <span className="text-ink-dim">· usually off</span></span>
             </label>
           ) : (
-            <p className="t-caption normal-case tracking-normal">a one-key grant cannot be delegated further.</p>
+            <p className="t-caption normal-case tracking-normal">a one-key grant can't be delegated further.</p>
           )}
           <p className="t-caption normal-case tracking-normal">
             applies to every name this resolver serves for you, not only {name}.

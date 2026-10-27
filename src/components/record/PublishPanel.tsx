@@ -87,13 +87,13 @@ function PublishButton({
         {label}
       </Button>
       {count > 0 && !capable ? (
-        <span className="t-caption normal-case tracking-normal">{incapableReason ?? "this name's resolver cannot take this write."}</span>
+        <span className="t-caption normal-case tracking-normal">{incapableReason ?? "this name's resolver can't be edited here."}</span>
       ) : count > 0 && !canPublish && !checking ? (
-        <span className="t-caption normal-case tracking-normal">connect the owner wallet to publish.</span>
+        <span className="t-caption normal-case tracking-normal">connect the owner's wallet to publish.</span>
       ) : count > 0 && checking ? (
         <span className="t-caption normal-case tracking-normal">checking permissions…</span>
       ) : state.blocked ? (
-        <span className="t-caption normal-case tracking-normal">another transaction is in flight.</span>
+        <span className="t-caption normal-case tracking-normal">wait for the other transaction to finish.</span>
       ) : null}
       {state.txHash ? (
         <span className="text-[11px]">
