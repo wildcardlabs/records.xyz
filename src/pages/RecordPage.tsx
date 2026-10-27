@@ -288,7 +288,7 @@ export default function RecordPage() {
         {data && data.resolver && !data.supportsData ? (
           <p className="mt-5 text-[12px]">
             <StatusText tone="wait">this resolver cannot store wallets on the record.</StatusText>{" "}
-            <span className="text-ink-muted">upgrade the name to ENSv2 in the <a className="link-blue text-ink" href={ensApp} target="_blank" rel="noreferrer">ENS app</a>{recordsChainId === 11155111 ? "" : " once ENSv2 reaches mainnet"}.</span>
+            <span className="text-ink-muted">upgrade the name to ENSv2 in the <a className="link-blue text-ink" href={ensApp} target="_blank" rel="noreferrer">ENS app</a>.</span>
           </p>
         ) : null}
         {data?.chains.some((c) => c.malformed) ? (

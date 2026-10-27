@@ -135,7 +135,7 @@ export const universalResolverV2Abi = [
   },
 ] as const
 
-/** ENSv2 PermissionedResolver (post-audit-2 branch, live on Sepolia since 2026-10-01): setters take the DNS-encoded name. */
+/** ENSv2 PermissionedResolver (live on mainnet since 2026-10 and on Sepolia): setters take the DNS-encoded name. */
 export const nameKeyedResolverAbi = [
   {
     type: "function",

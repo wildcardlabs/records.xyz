@@ -108,7 +108,7 @@ export default function Home() {
               <span className="mx-2">·</span>
             </>
           ) : null}
-          see a live record: <Link className="link-blue text-ink" to="/steve.eth?net=sepolia">steve.eth</Link> on sepolia · or look up <Link className="link-blue text-ink" to="/vitalik.eth">vitalik.eth</Link>
+          see a live record: <Link className="link-blue text-ink" to="/nick.eth">nick.eth</Link> on ENSv2 · <Link className="link-blue text-ink" to="/steve.eth?net=sepolia">steve.eth</Link> on sepolia · or look up <Link className="link-blue text-ink" to="/vitalik.eth">vitalik.eth</Link>
         </div>
 
 
@@ -173,7 +173,7 @@ export default function Home() {
           <div className="grid divide-y divide-line lg:grid-cols-3 lg:divide-x lg:divide-y-0">
             {[
               { num: "01", title: "Profile and payment addresses", body: "Avatar, bio, links, an address for any chain or coin, the content hash. Edit on any name you own." },
-              { num: "02", title: "Wallets on the record", body: "Every wallet that has signed to say it belongs to the name, verified from that signature. Needs ENSv2: sepolia today, mainnet when it ships." },
+              { num: "02", title: "Wallets on the record", body: "Every wallet that has signed to say it belongs to the name, verified from that signature. Needs the name on ENSv2." },
               { num: "03", title: "Shared profile and access", body: "On ENSv2, several names can use one profile, and a teammate or an agent can edit one record without owning the name." },
             ].map((c) => (
               <div key={c.num} className="p-5">
@@ -191,7 +191,7 @@ export default function Home() {
       <Section>
         <Eyebrow>faq</Eyebrow>
         <div className="mt-3 border-t border-line">
-          <FaqRow q="what do i need to get started?">Any ENS name. Wallets on the record, shared profiles and per-key access need an ENSv2 name: sepolia today, mainnet when ENSv2 ships.</FaqRow>
+          <FaqRow q="what do i need to get started?">Any ENS name. Wallets on the record, shared profiles and per-key access need the name on ENSv2, which is live on mainnet: upgrade it in the ENS app.</FaqRow>
           <FaqRow q="does it cost anything?">Signing is free. Publishing is one normal transaction from the owner wallet.</FaqRow>
           <FaqRow q="how is a consent verified?">In your browser, from chain: the consent must be unexpired and dated at most two years out, and the signature must recover to the wallet (ecrecover) or be confirmed by the account itself (ERC-1271).</FaqRow>
           <FaqRow q="where are my signatures kept before i publish?">In your browser only. Sign with each wallet, then publish from the owner wallet in the same browser.</FaqRow>

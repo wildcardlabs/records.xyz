@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { type Address, type Hex, namehash } from "viem"
 import { ACCOUNT_CHAINS } from "@/lib/ens/chains"
+import { ENS_REGISTRY } from "@/lib/ens/abis"
 import { publicClient } from "@/lib/ens/clients"
 import { findResolver, readDataRecord, readDataRecords } from "@/lib/ens/resolve"
 import { type ResolverCapabilities, resolverCapabilities, supportsOwnedAccounts } from "@/lib/ens/capabilities"
@@ -36,6 +37,8 @@ export type RecordData = {
   fetchedAt: number
 }
 
+const registryResolverAbi = [{ type: "function", name: "resolver", stateMutability: "view", inputs: [{ type: "bytes32" }], outputs: [{ type: "address" }] }] as const
+
 async function accountKind(chainId: number, account: Address): Promise<AccountKind> {
   try {
     const code = await publicClient(chainId).getCode({ address: account })
@@ -50,11 +53,26 @@ async function accountKind(chainId: number, account: Address): Promise<AccountKi
 export async function fetchRecord(name: string, recordsChainId: number): Promise<RecordData> {
   const client = publicClient(recordsChainId)
   const node = namehash(name)
-  const resolver = await findResolver(client, name)
+  let resolver = await findResolver(client, name)
   const base: RecordData = { name, node, recordsChainId, resolver, supportsData: false, capabilities: null, chains: [], fetchedAt: Date.now() }
   if (!resolver) return base
-  base.capabilities = await resolverCapabilities(client, name, resolver)
-  base.supportsData = supportsOwnedAccounts(base.capabilities)
+  let caps = await resolverCapabilities(client, name, resolver)
+  // ENSv2's Universal Resolver answers for an unmigrated v1 name through a read-only mirror of the
+  // v1 registry. Writes still go to the resolver the v1 registry names, so use that one when the
+  // mirror exposes no setters and the registry has a different resolver with some.
+  if (caps.writeFlavour === null && caps.profileWrite === null) {
+    const v1 = await client.readContract({ address: ENS_REGISTRY, abi: registryResolverAbi, functionName: "resolver", args: [node] }).catch(() => null)
+    if (v1 && !/^0x0{40}$/.test(v1) && v1.toLowerCase() !== resolver.toLowerCase()) {
+      const v1caps = await resolverCapabilities(client, name, v1)
+      if (v1caps.writeFlavour !== null || v1caps.profileWrite !== null) {
+        resolver = v1
+        caps = { ...v1caps, readsData: caps.readsData || v1caps.readsData }
+        base.resolver = v1
+      }
+    }
+  }
+  base.capabilities = caps
+  base.supportsData = supportsOwnedAccounts(caps)
 
   // which chains to look at: the optional accounts-chains record, else probe every supported chain
   const chainsValue = await readDataRecord(client, name, CHAINS_KEY).catch(() => "0x" as Hex)
