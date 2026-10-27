@@ -373,7 +373,7 @@ export default function RecordPage() {
                 <>
                   <Button size="sm" variant="accent" disabled={!canAddAccount} onClick={() => openAdd()}>+ verify my wallet</Button>
                   <span className="t-caption normal-case tracking-normal">
-                    {canAddAccount ? `signs with ${shortAddr(address!, 4)} · the owner publishes` : <>needs the name on ENSv2 · <a className="link-blue text-ink" href="https://app.ens.domains/" target="_blank" rel="noreferrer">upgrade it in the ENS app</a></>}
+                    {canAddAccount ? `signs with ${shortAddr(address!, 4)} · the owner publishes` : "this name's resolver doesn't support ENSIP-28."}
                   </span>
                 </>
               ) : (
@@ -392,7 +392,7 @@ export default function RecordPage() {
             canPublish={canPublish}
             checking={accountsAuthority.isLoading}
             capable={canAddAccount}
-            incapableReason="needs the name on ENSv2."
+            incapableReason="this name's resolver doesn't support ENSIP-28."
             explorer={explorer}
             state={stateFor("accounts")}
             onPublish={publishAccounts}
