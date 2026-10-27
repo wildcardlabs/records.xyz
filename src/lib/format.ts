@@ -4,7 +4,7 @@ export const shortAddr = (a: string, n = 4) => `${a.slice(0, 2 + n)}…${a.slice
 
 export function fmtDate(unixSeconds: bigint | number): string {
   const d = new Date(Number(unixSeconds) * 1000)
-  return d.toISOString().slice(0, 10)
+  return Number.isFinite(d.getTime()) ? d.toISOString().slice(0, 10) : "—"
 }
 
 export function daysUntil(unixSeconds: bigint | number, now = Date.now()): number {

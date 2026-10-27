@@ -53,11 +53,11 @@ export default function NamesPage() {
             <div className="flex flex-col gap-2 border-b border-line px-4 py-3 sm:flex-row sm:items-center sm:px-5">
               <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="filter by name" aria-label="filter names" className="h-9 sm:max-w-xs" />
               <div className="flex flex-wrap gap-1.5 text-[11px]">
-                {(["all", ...chains] as (number | "all")[]).map((c) => (
+                {chains.length > 1 ? (["all", ...chains] as (number | "all")[]).map((c) => (
                   <button key={String(c)} type="button" onClick={() => setChain(c)} className={`border px-2 py-0.5 ${chain === c ? "border-blue text-blue" : "border-line text-ink-muted hover:border-blue hover:text-blue"}`}>
                     {c === "all" ? "every chain" : chainById(c)?.label ?? c}
                   </button>
-                ))}
+                )) : null}
               </div>
               <span className="t-caption normal-case tracking-normal sm:ml-auto">{mine.isLoading ? "looking up…" : shown.length === names.length ? `${names.length} ${names.length === 1 ? "name" : "names"}` : `${shown.length} of ${names.length}`}</span>
             </div>

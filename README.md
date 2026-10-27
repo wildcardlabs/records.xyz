@@ -20,7 +20,7 @@ have every proof verified live in their browser, with no indexer and no trust in
 | `/<name>` + owner wallet | Publishes every listing, proof and removal in one `multicall` on the resolver. |
 | `/design` | The living design system: tokens, primitives, signature components. |
 
-Records chain is mainnet by default; append `?net=sepolia` to read and write on Sepolia.
+Records live on Ethereum mainnet.
 
 ## Stack
 

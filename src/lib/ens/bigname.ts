@@ -1,14 +1,13 @@
 import type { Address } from "viem"
 
 /**
- * BigName: ENS Labs' indexer for ENS, ENSv2 and Basenames, on mainnet and sepolia.
+ * BigName: ENS Labs' indexer for ENS, ENSv2 and Basenames.
  * Uses the documented product read `GET /v1/names/{name}` (source=indexed, the default); the response is
  * ETag-cacheable and the browser handles revalidation. Arbitrary data records (ENSIP-24) are outside the
  * indexer's grammar, so owned accounts are never read from here. Docs: https://bigname.sh/docs/
  */
 export const BIGNAME_BASE: Record<number, string> = {
   1: "https://api.bigname.sh/v1",
-  11155111: "https://sepolia.api.bigname.sh/v1",
 }
 
 export type BigNameRecord = {

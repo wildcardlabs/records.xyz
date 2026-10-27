@@ -21,15 +21,15 @@ describe.runIf(process.env.LIVE === "1")("live mainnet reads", () => {
     expect(rec.resolver).toBe(resolver)
   }, 60_000)
 
-  it("reads steve.eth on sepolia ENSv2 and reports resolver capabilities", async () => {
-    const client = publicClient(11155111)
-    const resolver = await findResolver(client, "steve.eth")
+  it("reads nick.eth on mainnet ENSv2 and reports resolver capabilities", async () => {
+    const client = publicClient(1)
+    const resolver = await findResolver(client, "nick.eth")
     expect(resolver).toMatch(/^0x[0-9a-fA-F]{40}$/)
-    const caps = await resolverCapabilities(client, "steve.eth", resolver!)
-    const owner = await getNameOwner(client, "steve.eth")
-    const rec = await fetchRecord("steve.eth", 11155111)
+    const caps = await resolverCapabilities(client, "nick.eth", resolver!)
+    const owner = await getNameOwner(client, "nick.eth")
+    const rec = await fetchRecord("nick.eth", 1)
     console.log(JSON.stringify({ resolver, caps, owner, supportsData: rec.supportsData, chains: rec.chains.length }, null, 1))
-    const auth = await getPublishAuthority(client, "steve.eth", resolver!, caps, "0x0000000000000000000000000000000000000001", owner.owner)
+    const auth = await getPublishAuthority(client, "nick.eth", resolver!, caps, "0x0000000000000000000000000000000000000001", owner.owner)
     console.log("authority for 0x…01:", auth)
     expect(caps.inspected.length).toBeGreaterThan(0)
   }, 90_000)

@@ -20,7 +20,6 @@ export function effectiveRecord(row: ResolverLink | undefined, defaultId: string
  */
 function SharedFigure({
   name,
-  recordsChainId,
   rows,
   indexed,
   loading,
@@ -30,7 +29,6 @@ function SharedFigure({
   onStage,
 }: {
   name: string
-  recordsChainId: number
   rows: ResolverLink[] | undefined
   indexed: boolean
   loading: boolean
@@ -48,7 +46,6 @@ function SharedFigure({
   const recordCount = new Set(names.map((r) => effectiveRecord(r, defaultId)).filter((id) => id !== "0")).size
   const sharers = (id: string) => names.filter((r) => effectiveRecord(r, defaultId) === id).length
   const stagedFor = (source: string) => staged.find((s) => s.sourceName === source)
-  const net = recordsChainId === 11155111 ? "?net=sepolia" : ""
 
   const [q, setQ] = useState("")
   const sorted = useMemo(() => {
@@ -120,7 +117,7 @@ function SharedFigure({
                 <TableRow key={r.node} className={pending ? "opacity-60" : undefined}>
                   <TableCell data-label="name">
                     <span className="inline-flex items-center gap-2">
-                      {isMe ? <span className="font-semibold text-ink">{r.name}</span> : <Link className="link-blue font-semibold text-ink" to={`/${r.name}${net}`}>{r.name}</Link>}
+                      {isMe ? <span className="font-semibold text-ink">{r.name}</span> : <Link className="link-blue font-semibold text-ink" to={`/${r.name}`}>{r.name}</Link>}
                       {isMe ? <LivePill pulse={false}>this name</LivePill> : null}
                     </span>
                   </TableCell>

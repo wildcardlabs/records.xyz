@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react"
 import { Copy, RefreshCw } from "lucide-react"
-import { Link, useParams, useSearchParams } from "react-router-dom"
+import { Link, useParams } from "react-router-dom"
 import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { useConnection } from "wagmi"
@@ -14,7 +14,6 @@ import { ConnectButton } from "@/components/wallet/ConnectButton"
 import { MyNameChips } from "@/components/wallet/MyNames"
 import { AccountsTable, type Row } from "@/components/record/AccountsTable"
 import { AddAccountDialog } from "@/components/record/AddAccountDialog"
-import { NetworkSelect } from "@/components/record/NetworkSelect"
 import { useRecord, recordQueryKey } from "@/hooks/useRecord"
 import { useNameOwner } from "@/hooks/useNameOwner"
 import { useProfile } from "@/hooks/useProfile"
@@ -34,7 +33,7 @@ import { adminBitsFor } from "@/lib/ens/roles"
 import { hasBigName } from "@/lib/ens/bigname"
 import { usePublishAuthority } from "@/hooks/usePublishAuthority"
 import { useDrafts } from "@/hooks/useDrafts"
-import { chainById, DEFAULT_RECORDS_CHAIN, RECORDS_CHAINS } from "@/lib/ens/chains"
+import { chainById, DEFAULT_RECORDS_CHAIN } from "@/lib/ens/chains"
 import type { PublishPlan } from "@/lib/ens/write"
 import { type PublishGroup, usePublisher } from "@/hooks/usePublisher"
 import { type PendingRow, PublishPanel, type PublishState } from "@/components/record/PublishPanel"
@@ -43,23 +42,10 @@ import { addressLabel } from "@/lib/ens/profile"
 import { COIN_TYPE_DEFAULT, chainIdForCoinType, decodeValue, defFromId } from "@/lib/records"
 import { daysUntil, fmtDate, sameAddr, shortAddr } from "@/lib/format"
 
-function useRecordsChain() {
-  const [params, setParams] = useSearchParams()
-  const slug = params.get("net")
-  const meta = RECORDS_CHAINS.find((c) => c.slug === slug) ?? DEFAULT_RECORDS_CHAIN
-  const set = (chainId: number) => {
-    const next = new URLSearchParams(params)
-    const m = chainById(chainId)
-    if (!m || m.chain.id === DEFAULT_RECORDS_CHAIN.chain.id) next.delete("net")
-    else next.set("net", m.slug)
-    setParams(next, { replace: true })
-  }
-  return { recordsChainId: meta.chain.id, recordsChain: meta, set }
-}
-
 export default function RecordPage() {
   const { name: rawName = "" } = useParams()
-  const { recordsChainId, recordsChain, set: setRecordsChain } = useRecordsChain()
+  const recordsChain = DEFAULT_RECORDS_CHAIN
+  const recordsChainId = recordsChain.chain.id
 
   let name: string | null = null
   try {
@@ -154,7 +140,7 @@ export default function RecordPage() {
   const consented = (coinType: number, addr: string) => {
     // the default address stands for every EVM chain: a consent on any chain marks it
     if (coinType === COIN_TYPE_DEFAULT) return verified.some((a) => a.account.toLowerCase() === addr.toLowerCase())
-    const chainId = coinType === 60 ? (recordsChainId === 11155111 ? 11155111 : 1) : chainIdForCoinType(coinType)
+    const chainId = coinType === 60 ? 1 : chainIdForCoinType(coinType)
     return chainId !== null && consentedKeys.has(`${chainId}:${addr.toLowerCase()}`)
   }
   // does each payment address point back at this name as its primary, per chain?
@@ -238,7 +224,7 @@ export default function RecordPage() {
   const pendingCount = drafts.accountCount
   const canAddAccount = !!data?.supportsData
   const openAdd = (chainId?: number) => setDialog({ open: true, chainId })
-  const ensApp = recordsChainId === 11155111 ? "https://sepolia.app.ens.domains/" : "https://app.ens.domains/"
+  const ensApp = "https://app.ens.domains/"
 
   return (
     <>
@@ -278,7 +264,6 @@ export default function RecordPage() {
             <MyNameChips exclude={{ name, chainId: recordsChainId }} />
           </div>
           <div className="flex flex-col items-start gap-2 sm:items-end">
-            <NetworkSelect value={recordsChainId} onChange={setRecordsChain} />
             <Button variant="outline" size="sm" onClick={() => { navigator.clipboard?.writeText(window.location.href); toast("link copied") }}>
               <Copy data-icon="inline-start" /> copy link
             </Button>
@@ -440,7 +425,6 @@ export default function RecordPage() {
           <Figure n={4} name={`shared profile · ${data?.resolver ? shortAddr(data.resolver) : ""}`} padded={false} dotted={false}>
             <SharedFigure
               name={name}
-              recordsChainId={recordsChainId}
               rows={links.data?.rows}
               indexed={links.data?.indexed ?? hasBigName(recordsChainId)}
               loading={links.isLoading}
