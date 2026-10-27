@@ -5,6 +5,7 @@ import { CHAINS_KEY, decodeChains, decodeListing, parseListingKey, parseProofKey
 import { addressDef, contenthashDef, decodeValue, textDef } from "@/lib/records"
 import { chainById } from "./chains"
 import { shortAddr } from "@/lib/format"
+import { POWER_LABEL, powersFromBigName } from "./roles"
 
 /** One line of a name's history, ready to show. */
 export type HistoryRow = {
@@ -76,14 +77,14 @@ function recordRow(key: string, value: unknown, recordsChainId: number): Pick<Hi
   if (family === "data") {
     if (arg === CHAINS_KEY) {
       const chains = isEmptyHex(str) ? [] : (decodeChains(str as Hex) ?? [])
-      return { group: "accounts", label: "chains with accounts", detail: chains.length ? chains.map((c) => chainById(c)?.label ?? `chain ${c}`).join(", ") : "none" }
+      return { group: "accounts", label: "chains with wallets", detail: chains.length ? chains.map((c) => chainById(c)?.label ?? `chain ${c}`).join(", ") : "none" }
     }
     const proof = parseProofKey(arg)
     if (proof) return { group: "accounts", label: "consent", address: proof.account, detail: isEmptyHex(str) ? `removed on ${chainById(proof.chainId)?.label ?? proof.chainId}` : `signed on ${chainById(proof.chainId)?.label ?? proof.chainId}` }
     const listing = parseListingKey(arg)
     if (listing) {
       const accounts = isEmptyHex(str) ? [] : (decodeListing(str as Hex) ?? [])
-      return { group: "accounts", label: `accounts on ${chainById(listing.chainId)?.label ?? listing.chainId}`, detail: accounts.length ? accounts.map((a) => shortAddr(a, 4)).join(", ") : "none" }
+      return { group: "accounts", label: `wallets on ${chainById(listing.chainId)?.label ?? listing.chainId}`, detail: accounts.length ? accounts.map((a) => shortAddr(a, 4)).join(", ") : "none" }
     }
     return { group: "records", label: `data · ${arg}`, detail: isEmptyHex(str) ? "cleared" : clip(str, 40), full: str || undefined }
   }
@@ -99,18 +100,37 @@ function toRow(e: RawEvent, recordsChainId: number): HistoryRow | null {
     case "record_changed":
       return d.key ? { ...base, ...recordRow(d.key, d.value, recordsChainId) } : null
     case "resolver_record_linked":
-      return { ...base, group: "links", label: "record link", detail: d.record_id && d.record_id !== "0" ? `now uses record #${d.record_id}` : "detached from its record" }
+      return { ...base, group: "links", label: "profile", detail: d.record_id && d.record_id !== "0" ? "started using a profile on this resolver" : "detached from its profile" }
     case "resolver_changed":
       return { ...base, group: "name", label: "resolver", detail: d.resolver?.address ? `set to ${shortAddr(d.resolver.address, 6)}` : "changed" }
     case "permission_changed":
     case "root_permission_changed":
     case "roles_changed":
     case "eac_roles_changed": {
-      const who = d.address ? shortAddr(d.address, 4) : "a wallet"
-      const added = (d.added_powers ?? []).filter((p) => !p.startsWith("admin_")).length
-      const removed = (d.removed_powers ?? []).filter((p) => !p.startsWith("admin_")).length
-      const parts = [added ? `${added} granted` : "", removed ? `${removed} revoked` : ""].filter(Boolean)
-      return { ...base, group: "access", label: "permissions", address: d.address, detail: `${who} · ${parts.join(" · ") || "changed"}` }
+      // resolver roles have app labels; registry-level powers (who may set the resolver, create subnames, transfer) get plain words
+      const REGISTRY_POWER: Record<string, string> = {
+        set_resolver: "the resolver",
+        set_subregistry: "subnames",
+        can_transfer: "ownership",
+        can_transfer_admin: "ownership",
+        renew: "renewal",
+        burn: "burning",
+        set_token_observer: "the token observer",
+      }
+      const names = (list: string[] | undefined) => {
+        const { powers } = powersFromBigName(list ?? [])
+        const out = powers.map((p) => POWER_LABEL[p])
+        for (const raw of list ?? []) {
+          if (raw.startsWith("admin_")) continue
+          const label = REGISTRY_POWER[raw]
+          if (label && !out.includes(label)) out.push(label)
+        }
+        return out
+      }
+      const added = names(d.added_powers)
+      const removed = names(d.removed_powers)
+      const parts = [added.length ? `may now change ${added.join(", ")}` : "", removed.length ? `may no longer change ${removed.join(", ")}` : ""].filter(Boolean)
+      return { ...base, group: "access", label: "permissions", address: d.address, detail: parts.join(" · ") || "changed" }
     }
     case "reverse_changed":
       return { ...base, group: "name", label: "primary name", detail: d.address ? `set for ${shortAddr(d.address, 4)}` : "changed" }
@@ -154,4 +174,18 @@ export async function fetchNameHistory(recordsChainId: number, name: string, cur
       return true
     })
   return { rows, nextCursor: raw.page?.has_more ? (raw.page.next_cursor ?? null) : null }
+}
+
+/** The whole history, newest first, up to `max` events (a few indexer pages), so tabs can filter and page locally. */
+export async function fetchNameHistoryAll(recordsChainId: number, name: string, max = 500): Promise<HistoryRow[] | null> {
+  const rows: HistoryRow[] = []
+  let cursor: string | null = null
+  while (rows.length < max) {
+    const page = await fetchNameHistory(recordsChainId, name, cursor, 100)
+    if (!page) return null
+    rows.push(...page.rows)
+    if (!page.nextCursor) break
+    cursor = page.nextCursor
+  }
+  return rows
 }

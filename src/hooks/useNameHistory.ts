@@ -1,14 +1,12 @@
-import { useInfiniteQuery } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
 import { hasBigName } from "@/lib/ens/bigname"
-import { fetchNameHistory } from "@/lib/ens/history"
+import { fetchNameHistoryAll } from "@/lib/ens/history"
 
-/** A name's history from BigName, a page at a time. */
+/** A name's whole history from BigName, newest first. */
 export function useNameHistory(name: string | undefined, recordsChainId: number, enabled: boolean) {
-  return useInfiniteQuery({
+  return useQuery({
     queryKey: ["name-history", recordsChainId, name],
-    queryFn: ({ pageParam }) => fetchNameHistory(recordsChainId, name!, pageParam as string | null),
-    initialPageParam: null as string | null,
-    getNextPageParam: (last) => last?.nextCursor ?? undefined,
+    queryFn: () => fetchNameHistoryAll(recordsChainId, name!),
     enabled: enabled && !!name && hasBigName(recordsChainId),
     staleTime: 60_000,
     retry: 1,

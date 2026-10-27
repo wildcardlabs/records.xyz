@@ -65,7 +65,6 @@ export default function RecordPage() {
   const [grantOpen, setGrantOpen] = useState(false)
   const [linkOpen, setLinkOpen] = useState(false)
   const [primaryOpen, setPrimaryOpen] = useState(false)
-  const [historyOpen, setHistoryOpen] = useState(false)
 
   const data = record.data
   const auth = (needs: Parameters<typeof usePublishAuthority>[7]) =>
@@ -362,7 +361,7 @@ export default function RecordPage() {
             <div className="px-5 py-10 text-center">
               <div className="t-fig-title">No wallets on the record yet</div>
               <p className="t-fig-body mx-auto mt-2 max-w-[44ch]">
-                {canEdit ? "verify the wallet you are connected with; the owner publishes." : "if this is your name, connect a wallet to verify it."}
+                {canEdit ? `Verify your wallet below to prove it belongs to ${name}. Once the name's owner publishes, it shows here.` : `Connect a wallet to prove it belongs to ${name}.`}
               </p>
             </div>
           ) : (
@@ -416,17 +415,10 @@ export default function RecordPage() {
           ]}
         />
 
-        {/* fig 3 · history, collapsed until asked for */}
+        {/* fig 3 · history */}
         {hasBigName(recordsChainId) ? (
           <Figure n={3} name={`history · ${name}`} className="mt-6" padded={false} dotted={false}>
-            {historyOpen ? (
-              <HistoryFigure name={name} recordsChainId={recordsChainId} explorer={explorer} enabled />
-            ) : (
-              <div className="flex flex-wrap items-center gap-3 px-4 py-2.5 sm:px-5">
-                <Button size="sm" variant="outline" onClick={() => setHistoryOpen(true)}>show every change</Button>
-                <span className="t-caption normal-case tracking-normal">profile, wallets, links and permissions, newest first</span>
-              </div>
-            )}
+            <HistoryFigure name={name} recordsChainId={recordsChainId} explorer={explorer} enabled />
           </Figure>
         ) : null}
       </Section>
