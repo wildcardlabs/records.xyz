@@ -86,7 +86,7 @@ function AccountsTable({
                   <Button size="sm" variant="outline" onClick={() => onUndo?.(r)}>undo</Button>
                 ) : (
                   <>
-                    <Button size="sm" variant="outline" onClick={() => onRenew?.(r)}>renew</Button>
+                    <Button size="sm" variant="outline" onClick={() => onRenew?.(r)}>{r.status === "other-name" ? "sign again" : "renew"}</Button>
                     <Button size="sm" variant="destructive" onClick={() => onRemove?.(r)}>remove</Button>
                   </>
                 )}
@@ -167,7 +167,7 @@ function AccountsTable({
                       <Button size="sm" variant="outline" onClick={() => onUndo?.(r)}>undo</Button>
                     ) : (
                       <>
-                        <Button size="sm" variant="outline" onClick={() => onRenew?.(r)}>renew</Button>
+                        <Button size="sm" variant="outline" onClick={() => onRenew?.(r)}>{r.status === "other-name" ? "sign again" : "renew"}</Button>
                         <Button size="sm" variant="destructive" onClick={() => onRemove?.(r)}>remove</Button>
                       </>
                     )}

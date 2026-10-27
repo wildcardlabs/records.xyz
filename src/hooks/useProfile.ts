@@ -2,7 +2,7 @@ import { useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { publicClient } from "@/lib/ens/clients"
 import { profileFromRecordSet } from "@/lib/ens/profile"
-import { fetchRecordSet } from "@/lib/ens/recordset"
+import { type RecordSetOptions, fetchRecordSet } from "@/lib/ens/recordset"
 import { type RecordDef, defFromId } from "@/lib/records"
 
 export const profileQueryKey = (name: string, recordsChainId: number) => ["profile", recordsChainId, name] as const
@@ -11,13 +11,14 @@ export const profileQueryKey = (name: string, recordsChainId: number) => ["profi
  * Every record the app shows for a name, in stored form. `extraIds` are record ids the caller
  * also wants read (staged custom keys, say) when the chain, not the indexer, answers.
  */
-export function useRecordSet(name: string | undefined, recordsChainId: number, extraIds: string[] = []) {
+export function useRecordSet(name: string | undefined, recordsChainId: number, extraIds: string[] = [], opts: RecordSetOptions = {}) {
   const extraKey = extraIds.slice().sort().join(",")
+  const optKey = `${opts.chainFirst ? "chain" : "indexed"}:${(opts.keyNames ?? []).slice().sort().join(",")}`
   return useQuery({
-    queryKey: [...profileQueryKey(name ?? "", recordsChainId), extraKey],
+    queryKey: [...profileQueryKey(name ?? "", recordsChainId), extraKey, optKey],
     queryFn: () => {
       const defs = extraIds.map(defFromId).filter((d): d is RecordDef => d !== null)
-      return fetchRecordSet(publicClient(recordsChainId), name!, recordsChainId, defs)
+      return fetchRecordSet(publicClient(recordsChainId), name!, recordsChainId, defs, opts)
     },
     enabled: !!name,
     staleTime: 60_000,
@@ -26,8 +27,8 @@ export function useRecordSet(name: string | undefined, recordsChainId: number, e
 }
 
 /** The record set plus its human-facing projection for the profile card. */
-export function useProfile(name: string | undefined, recordsChainId: number, extraIds: string[] = []) {
-  const q = useRecordSet(name, recordsChainId, extraIds)
+export function useProfile(name: string | undefined, recordsChainId: number, extraIds: string[] = [], opts: RecordSetOptions = {}) {
+  const q = useRecordSet(name, recordsChainId, extraIds, opts)
   const data = useMemo(() => (q.data && name ? profileFromRecordSet(q.data, name, recordsChainId) : undefined), [q.data, name, recordsChainId])
   return { data, set: q.data, isLoading: q.isLoading, isFetching: q.isFetching, isError: q.isError, refetch: q.refetch }
 }

@@ -1,4 +1,4 @@
-import { CircleDashed, Clock3, PenLine, Trash2, X, type LucideIcon } from "lucide-react"
+import { CircleDashed, Clock3, PenLine, Signature, Trash2, X, type LucideIcon } from "lucide-react"
 import { cn } from "cn"
 import type { ProofStatus } from "@/lib/ensip28"
 
@@ -26,6 +26,7 @@ const spec: Record<RowStatus, { icon: IconComponent; tone: Tone; label: string; 
   expired: { icon: X, tone: "err", label: "expired", short: "consent lapsed" },
   invalid: { icon: X, tone: "err", label: "invalid", short: "signature does not verify" },
   unverified: { icon: CircleDashed, tone: "dim", label: "unverified", short: "listed without a proof" },
+  "other-name": { icon: Signature, tone: "wait", label: "other name", short: "signed for a name sharing this profile" },
   draft: { icon: PenLine, tone: "blue", label: "draft", short: "signed · not published yet" },
   removing: { icon: Trash2, tone: "err", label: "removing", short: "gone after publish" },
 }
@@ -74,6 +75,7 @@ const statusHelp: { status: RowStatus; text: string }[] = [
   { status: "expired", text: "the consent's expiry has passed. the wallet is no longer on the record." },
   { status: "invalid", text: "the proof exists but its signature does not verify for this wallet, name and chain." },
   { status: "unverified", text: "the name lists the wallet but no proof record exists for it." },
+  { status: "other-name", text: "the consent was signed for another name that shares this profile. sign again for this name to verify it here." },
   { status: "draft", text: "a consent was signed in this browser and is waiting for the owner to publish." },
 ]
 

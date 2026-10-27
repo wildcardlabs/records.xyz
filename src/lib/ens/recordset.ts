@@ -48,9 +48,24 @@ const isEmpty = (v: string) => !v || v === "0x" || v === "0x00000000000000000000
  * Read every record we know how to show for a name: BigName when it covers the chain, otherwise
  * the chain through the Universal Resolver. Values stay in stored form; decode with the registry.
  */
-export async function fetchRecordSet(client: PublicClient, name: string, recordsChainId: number, extraDefs: RecordDef[] = []): Promise<RecordSet> {
+export type RecordSetOptions = {
+  /** read values from the chain even when an indexer exists (ENSv2 shared profiles: the indexer may lag a link) */
+  chainFirst?: boolean
+  /** names whose indexed key inventories to read from chain as well (names sharing this profile) */
+  keyNames?: string[]
+}
+
+export async function fetchRecordSet(client: PublicClient, name: string, recordsChainId: number, extraDefs: RecordDef[] = [], opts: RecordSetOptions = {}): Promise<RecordSet> {
   const values: Record<string, string> = {}
-  if (hasBigName(recordsChainId)) {
+  if (hasBigName(recordsChainId) && opts.chainFirst) {
+    // the indexer knows which keys exist; the chain knows their current values
+    const inventory = await Promise.all([name, ...(opts.keyNames ?? [])].map((n) => fetchBigName(recordsChainId, n).catch(() => null)))
+    for (const bn of inventory) {
+      if (!bn) continue
+      for (const k of Object.keys(bn.texts)) extraDefs = [...extraDefs, textDef(k)]
+      for (const ct of Object.keys(bn.addresses)) extraDefs = [...extraDefs, addressDef(Number(ct))]
+    }
+  } else if (hasBigName(recordsChainId)) {
     try {
       const bn = await fetchBigName(recordsChainId, name)
       if (bn) {

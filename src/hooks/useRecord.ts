@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query"
 import { type Address, type Hex, namehash } from "viem"
 import { ACCOUNT_CHAINS } from "@/lib/ens/chains"
 import { ENS_REGISTRY } from "@/lib/ens/abis"
+import { loadLinks, siblingsOf } from "@/lib/ens/links"
 import { publicClient } from "@/lib/ens/clients"
 import { findResolver, readDataRecord, readDataRecords } from "@/lib/ens/resolve"
 import { type ResolverCapabilities, resolverCapabilities, supportsOwnedAccounts } from "@/lib/ens/capabilities"
@@ -106,6 +107,26 @@ export async function fetchRecord(name: string, recordsChainId: number): Promise
       })
     )
     chains.push({ chainId, accounts: rows, malformed: false })
+  }
+  // on a shared profile the consents travel with the record but each names one ENS name: a proof that
+  // fails here may verify under a sibling name. say so instead of "invalid".
+  const foreign = chains.flatMap((c) => c.accounts.filter((a) => a.check.status === "invalid" && a.check.reason === "signature does not verify"))
+  if (foreign.length > 0 && caps.links) {
+    try {
+      const links = await loadLinks(client, recordsChainId, name, resolver)
+      const siblings = siblingsOf(links.rows, name)
+      for (const a of foreign) {
+        for (const sib of siblings) {
+          const check = await verifyOwnedAccount({ node: namehash(sib), recordsChainId, accountChainId: a.chainId, account: a.account, proofValue: a.proofValue, client: publicClient(a.chainId) })
+          if (check.status === "verified" || check.status === "expiring") {
+            a.check = { ...check, status: "other-name", reason: `signed for ${sib} · sign again for ${name}` }
+            break
+          }
+        }
+      }
+    } catch {
+      /* leave them invalid */
+    }
   }
   base.chains = chains
   return base
