@@ -20,6 +20,7 @@ type RawNames = {
 }
 
 const isReverse = (n: string) => n.endsWith(".addr.reverse") || n.endsWith(".reverse")
+const isEthSecondLevel = (n: string) => n.endsWith(".eth") && n.split(".").length === 2
 /** some registrations carry sentinel expiries far past any real date; treat those as "no expiry" */
 const saneExpiry = (v: string | null | undefined): number | null => {
   if (!v) return null
@@ -48,7 +49,9 @@ async function fetchIndexedNames(chainId: number, address: Address): Promise<MyN
         relations: (r.relations ?? []).filter((x) => x === "owner" || x === "manager"),
         authority: r.authority === "ens_v2" ? "ens_v2" : r.authority === "ens_v1" || r.authority === "ens_v0" ? "ens_v1" : null,
         isPrimary: !!r.is_primary,
-        expiresAt: saneExpiry(r.expires_at),
+        // only a registration expires: a .eth second-level name, or any name on ENSv2. for a v1 subname the
+        // indexer reports the NameWrapper's expiry, which with no fuses burned changes nothing when it passes
+        expiresAt: r.authority === "ens_v2" || isEthSecondLevel(r.name) ? saneExpiry(r.expires_at) : null,
       })
     }
     if (!raw.page?.has_more || !raw.page.next_cursor) break
