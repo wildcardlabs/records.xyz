@@ -84,9 +84,8 @@ function MyNameChips({ exclude }: { exclude?: { name: string; chainId: number } 
               ) : (
                 matches.map((n) => (
                   <li key={`${n.chainId}:${n.name}`}>
-                    <Link to={pathFor(n)} className="flex items-baseline justify-between gap-3 px-3 py-2 text-[12px] hover:bg-wash" onClick={() => setQ("")}>
-                      <span className="font-semibold text-ink">{n.name}</span>
-                      <span className="text-ink-dim">{chainById(n.chainId)?.label}{n.authority === "ens_v2" ? " · v2" : ""}</span>
+                    <Link to={pathFor(n)} className="block px-3 py-2 text-[12px] font-semibold text-ink hover:bg-wash" onClick={() => setQ("")}>
+                      {n.name}
                     </Link>
                   </li>
                 ))
