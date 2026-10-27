@@ -78,11 +78,11 @@ function LinkDialog({
       if (direction === "theirs-to-mine") {
         if (myRecordId === "0") return setError(`${name} has no profile yet. edit and publish one first.`)
         if (theirs === myRecordId) return setError(`${target} already uses ${name}'s profile.`)
-        onStage({ sourceName: target, recordId: myRecordId, scope: `${target} uses ${name}'s profile (#${myRecordId})` })
+        onStage({ sourceName: target, recordId: myRecordId, scope: `${target} uses ${name}'s profile` })
       } else {
         if (theirs === "0") return setError(`${target} has no profile yet.`)
         if (theirs === myRecordId) return setError(`${name} already uses ${target}'s profile.`)
-        onStage({ sourceName: name, recordId: theirs, scope: `${name} uses ${target}'s profile (#${theirs})` })
+        onStage({ sourceName: name, recordId: theirs, scope: `${name} uses ${target}'s profile` })
       }
       onOpenChange(false)
       setOther("")
