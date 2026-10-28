@@ -15,6 +15,7 @@ export default function App() {
         <Route element={<Shell navRight={<ConnectButton />} />}>
           <Route index element={<Home />} />
           {import.meta.env.DEV ? <Route path="design" element={<DesignSystem />} /> : null}
+          <Route path="account" element={<NamesPage />} />
           <Route path="names" element={<NamesPage />} />
           <Route path="renew" element={<RenewPage />} />
           <Route path="renew/:name" element={<RenewPage />} />

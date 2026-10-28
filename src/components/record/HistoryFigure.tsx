@@ -3,7 +3,8 @@ import { AddressLink, HcaPill, Pager, StatusText, usePager } from "@/components/
 import { useHcaOwners } from "@/hooks/useHcaOwners"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { useNameHistory } from "@/hooks/useNameHistory"
+import { Link } from "react-router-dom"
+import { useHistory } from "@/hooks/useNameHistory"
 import type { HistoryRow } from "@/lib/ens/history"
 import { shortAddr } from "@/lib/format"
 
@@ -21,9 +22,9 @@ const when = (at: number) => {
   return `${d.toISOString().slice(0, 10)} ${d.toISOString().slice(11, 16)}`
 }
 
-/** Every change to a name, newest first, from the indexer: one tab per kind, fifteen rows a page. */
-function HistoryFigure({ name, recordsChainId, explorer, enabled }: { name: string; recordsChainId: number; explorer: string; enabled: boolean }) {
-  const q = useNameHistory(name, recordsChainId, enabled)
+/** Every change to a name, or to everything a wallet owns, newest first: one tab per kind, fifteen rows a page. */
+function HistoryFigure({ name, address, recordsChainId, explorer, enabled }: { name?: string; address?: string; recordsChainId: number; explorer: string; enabled: boolean }) {
+  const q = useHistory({ name, address }, recordsChainId, enabled)
   const [tab, setTab] = useState<(typeof TABS)[number]["id"]>("all")
   const rows = q.data ?? []
   const shown = useMemo(() => rows.filter((r) => tab === "all" || r.group === tab), [rows, tab])
@@ -59,6 +60,7 @@ function HistoryFigure({ name, recordsChainId, explorer, enabled }: { name: stri
           <TableHeader>
             <TableRow>
               <TableHead>when</TableHead>
+              {address ? <TableHead>name</TableHead> : null}
               <TableHead>what</TableHead>
               <TableHead>change</TableHead>
               <TableHead className="text-right">tx</TableHead>
@@ -68,6 +70,11 @@ function HistoryFigure({ name, recordsChainId, explorer, enabled }: { name: stri
             {pager.slice.map((r) => (
               <TableRow key={r.id}>
                 <TableCell data-label="when" className="tabular text-ink-dim">{when(r.at)}</TableCell>
+                {address ? (
+                  <TableCell data-label="name">
+                    {r.name ? <Link className="link-blue font-semibold text-ink" to={`/${r.name}`}>{r.name}</Link> : r.resolver ? <span className="text-ink-dim">{r.recordId ? `record ${r.recordId} · ` : ""}{shortAddr(r.resolver, 4)}</span> : <span className="text-ink-dim">—</span>}
+                  </TableCell>
+                ) : null}
                 <TableCell data-label="what">
                   <span className="inline-flex items-center gap-2">
                     <span className="font-semibold text-ink">{r.label}</span>

@@ -13,6 +13,8 @@ import { useMyNames } from "@/hooks/useMyNames"
 import { chainById } from "@/lib/ens/chains"
 import { isEthSecondLevel } from "@/lib/ens/renew"
 import { daysUntil, fmtDate, shortAddr } from "@/lib/format"
+import { HistoryFigure } from "@/components/record/HistoryFigure"
+import { DEFAULT_RECORDS_CHAIN } from "@/lib/ens/chains"
 
 /**
  * Every name a wallet owns or manages, with a filter for wallets that hold hundreds.
@@ -32,15 +34,15 @@ export default function NamesPage({ address: given }: { address?: Address } = {}
     const needle = q.trim().toLowerCase()
     return names.filter((n) => (chain === "all" || n.chainId === chain) && (!needle || n.name.includes(needle)))
   }, [names, q, chain])
-  const pager = usePager(shown)
+  const pager = usePager(shown, 15)
   const v2 = names.filter((n) => n.authority === "ens_v2").length
   const indexed = (mine.data?.indexedChains.length ?? 0) > 0
 
   return (
     <Section>
       <SectionHeader
-        eyebrow={given && !isYou ? "names" : "your names"}
-        title={given && !isYou ? `Names of ${shortAddr(given, 4)}` : "Your names"}
+        eyebrow={given && !isYou ? "names" : "account"}
+        title={given && !isYou ? `Names of ${shortAddr(given, 4)}` : "Names"}
         lede={address ? (given && !isYou ? `Every ENS name ${shortAddr(given, 4)} owns or manages. Open one to read its record.` : "Every ENS name you own or manage. Open one to read or edit its record.") : "Connect your wallet to see the names you own or manage."}
       />
       {!address ? (
@@ -127,6 +129,10 @@ export default function NamesPage({ address: given }: { address?: Address } = {}
           <p className="t-caption mt-3 normal-case tracking-normal">
             from <a className="link-blue" href="https://bigname.sh" target="_blank" rel="noreferrer">bigname</a>
           </p>
+          <SectionHeader className="mt-14" eyebrow="account" title="History" />
+          <Figure n={2} name={`history · ${shortAddr(address, 4)}`} padded={false} dotted={false}>
+            <HistoryFigure address={address} recordsChainId={DEFAULT_RECORDS_CHAIN.chain.id} explorer={DEFAULT_RECORDS_CHAIN.explorer} enabled />
+          </Figure>
         </>
       )}
     </Section>

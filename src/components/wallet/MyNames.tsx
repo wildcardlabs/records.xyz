@@ -56,7 +56,7 @@ function MyNameChips({ exclude }: { exclude?: { name: string; chainId: number } 
             <Badge variant="outline">{n.name}{n.chainId !== DEFAULT_RECORDS_CHAIN.chain.id ? ` · ${chainById(n.chainId)?.label}` : ""}</Badge>
           </Link>
         ))}
-        <Link className="link-blue text-ink" to="/names">all names</Link>
+        <Link className="link-blue text-ink" to="/account">all names</Link>
       </div>
     )
   }
@@ -93,7 +93,7 @@ function MyNameChips({ exclude }: { exclude?: { name: string; chainId: number } 
             </ul>
           ) : null}
         </div>
-        <Link className="link-blue shrink-0 text-ink" to="/names">all {total} names</Link>
+        <Link className="link-blue shrink-0 text-ink" to="/account">all {total} names</Link>
       </div>
     </div>
   )
