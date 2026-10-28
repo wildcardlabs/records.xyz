@@ -19,6 +19,9 @@ type RawNames = {
   page?: { has_more?: boolean; next_cursor?: string | null }
 }
 
+/** statuses that mean the registration is gone for good */
+const RELEASED = new Set(["released", "available", "burned", "revoked"])
+
 const isReverse = (n: string) => n.endsWith(".addr.reverse") || n.endsWith(".reverse")
 const isEthSecondLevel = (n: string) => n.endsWith(".eth") && n.split(".").length === 2
 /** some registrations carry sentinel expiries far past any real date; treat those as "no expiry" */
@@ -42,7 +45,8 @@ async function fetchIndexedNames(chainId: number, address: Address): Promise<MyN
     const raw = (await res.json()) as RawNames
     for (const r of raw.data ?? []) {
       if (!r.name || r.namespace !== "ens" || isReverse(r.name) || r.name.includes("[")) continue
-      if (r.status && r.status !== "active") continue
+      // keep expired names: they can still be extended during the grace period, and the list marks them
+      if (r.status && RELEASED.has(r.status)) continue
       out.push({
         name: r.name,
         chainId,
