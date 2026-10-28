@@ -58,7 +58,7 @@ function PrimaryDialog({ open, onOpenChange, name, recordsChainId }: { open: boo
         <DialogHeader>
           <DialogTitle className="t-h3 lowercase">Make {name} your primary name</DialogTitle>
           <DialogDescription className="t-body">
-            What apps show for {address ? <AddressLink address={address} chars={4} /> : "your wallet"}. One transaction per row, on that chain.
+            The name apps show for {address ? <AddressLink address={address} chars={4} /> : "your wallet"}. One transaction per chain.
           </DialogDescription>
         </DialogHeader>
         {rows.isLoading ? (
@@ -83,7 +83,7 @@ function PrimaryDialog({ open, onOpenChange, name, recordsChainId }: { open: boo
                   <TableRow key={`${r.target.kind}:${r.target.chain.id}`}>
                     <TableCell data-label="chain">
                       <span className="inline-flex items-center gap-1.5"><span className={`dot ${r.target.kind === "default" ? "text-blue" : "text-blue-2"}`} />{r.target.label}</span>
-                      {r.target.kind === "default" ? <span className="t-caption block normal-case tracking-normal">the default · a chain's own entry overrides it</span> : null}
+                      {r.target.kind === "default" ? <span className="t-caption block normal-case tracking-normal">default for chains without their own</span> : null}
                     </TableCell>
                     <TableCell data-label="primary name now">
                       {r.name ? (

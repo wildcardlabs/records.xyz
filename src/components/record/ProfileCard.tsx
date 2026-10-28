@@ -63,7 +63,7 @@ function ConsentedMark({ name }: { name: string }) {
         <VerifiedSeal />
       </TooltipTrigger>
       <TooltipContent className="max-w-xs font-mono text-[11px] lowercase whitespace-normal">
-        this wallet also signed to say it belongs to {name} · checked onchain
+        this wallet signed to say it belongs to {name}
       </TooltipContent>
     </Tooltip>
   )
@@ -76,7 +76,7 @@ function PrimaryMark({ name, chain }: { name: string; chain: string }) {
         <Badge variant="outline">primary</Badge>
       </TooltipTrigger>
       <TooltipContent className="max-w-xs font-mono text-[11px] lowercase whitespace-normal">
-        this address names {name} as its primary name on {chain} · the link runs both ways
+        {name} is this address's primary name on {chain}
       </TooltipContent>
     </Tooltip>
   )

@@ -51,7 +51,7 @@ function HistoryFigure({ name, recordsChainId, explorer, enabled }: { name: stri
       ) : q.isError ? (
         <div className="p-4 text-[12px]"><StatusText tone="err">could not load history.</StatusText> <button type="button" className="link-blue text-ink" onClick={() => q.refetch()}>try again</button></div>
       ) : shown.length === 0 ? (
-        <p className="t-fig-body p-4 text-ink-dim sm:p-5">{rows.length === 0 ? "nothing recorded yet." : `no changes to ${current.label === "everything" ? "anything" : current.label} yet.`}</p>
+        <p className="t-fig-body p-4 text-ink-dim sm:p-5">{rows.length === 0 ? "nothing recorded yet." : "nothing here yet."}</p>
       ) : (
         <Table stack>
           <TableHeader>

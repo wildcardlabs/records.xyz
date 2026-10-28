@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label"
 import { StatusText } from "@/components/wrap"
 import type { RecordSet } from "@/lib/ens/recordset"
 import { featuredAddressDefs, withLabel } from "@/lib/ens/profile"
-import { COIN_TYPE_DEFAULT, SECTIONS, TEXT_SPECS, type RecordDef, type Section, abiDef, addressDef, contenthashDef, decodeValue, defFromId, encodeValue, isEvmCoinType, listCoins, searchDefs, textDef, validateValue } from "@/lib/records"
+import { COIN_TYPE_DEFAULT, SECTIONS, TEXT_SPECS, type RecordDef, type Section, abiDef, addressDef, contenthashDef, decodeValue, defFromId, encodeValue, isEvmCoinType, searchDefs, textDef, validateValue } from "@/lib/records"
 
 type DraftsApi = {
   /** staged values by record id, in stored form */
@@ -160,7 +160,6 @@ function RecordEditor({
   }
 
   const staged = Object.keys(drafts.records).length
-  const coinCount = listCoins().length
   // the default address covers every EVM chain without one; show it as the placeholder of those fields
   const defaultAddr = values[addressDef(COIN_TYPE_DEFAULT).id]?.trim() ?? ""
   const placeholderFor = (def: RecordDef) =>
@@ -219,7 +218,7 @@ function RecordEditor({
       <div className="p-4 sm:p-5">
         <p className="t-caption mb-3 normal-case tracking-normal">
           {EDIT_SECTIONS.find((s) => s.id === section)?.hint}
-          {section === "addresses" ? ` · set the default once and every EVM chain without its own address uses it. leave a field blank to clear it. search above for any of ${coinCount} coins.` : section === "advanced" ? " · search above to add a custom text key." : " · leave a field blank to clear it."}
+          {section === "addresses" ? " · the default covers every EVM chain without its own address. blank clears." : section === "advanced" ? " · search above to add a text key." : " · blank clears."}
         </p>
         <div className="grid gap-3 sm:grid-cols-2">
           {defs.map((def) => {
@@ -272,9 +271,9 @@ function RecordEditor({
       </div>
 
       <div className="flex flex-wrap items-center gap-3 border-t border-line px-4 py-3 sm:px-5">
-        <Button variant={enabled ? "accent" : "outline"} disabled={!enabled} onClick={stage}>save changes for publishing</Button>
+        <Button variant={enabled ? "accent" : "outline"} disabled={!enabled} onClick={stage}>save changes</Button>
         {onDone ? <Button variant="ghost" onClick={onDone}>cancel</Button> : null}
-        {staged > 0 ? <span className="text-[12px] text-ink-muted">{staged} {staged === 1 ? "change" : "changes"} waiting · nothing is written until you publish.</span> : null}
+        {staged > 0 ? <span className="text-[12px] text-ink-muted">{staged} {staged === 1 ? "change" : "changes"} waiting to publish.</span> : null}
         {!enabled && disabledReason ? <span className="t-caption normal-case tracking-normal">{disabledReason}</span> : null}
         {saveError ? <StatusText tone="err" className="text-[12px]">{saveError}</StatusText> : null}
       </div>

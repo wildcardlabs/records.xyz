@@ -16,19 +16,19 @@ import { Figure, FigSplit, Section, SectionHeader, Eyebrow, StatRow, StatusText,
 
 const steps = [
   { num: "01", title: "Add a wallet", body: "Any wallet or smart account you control, on any chain." },
-  { num: "02", title: "Sign a consent", body: "One signature: \"I belong to alice.eth, until this date.\" Free, nothing onchain yet." },
-  { num: "03", title: "Publish", body: "The owner writes every consent in one transaction. From then on anyone can verify it." },
+  { num: "02", title: "Sign a consent", body: "The wallet signs a message naming alice.eth and an expiry date." },
+  { num: "03", title: "Publish", body: "The owner publishes the signatures to the name. Anyone can check them." },
 ]
 
 const features = [
-  { num: "01", title: "Profile", body: "Avatar, bio, links and content hash. Edit any name you own or manage." },
+  { num: "01", title: "Profile", body: "Avatar, bio, links and content hash." },
   { num: "02", title: "Payment addresses", body: "One address per chain or coin, with a default for every EVM chain." },
-  { num: "03", title: "Wallets on the record", body: "Every wallet that signed to say it belongs to the name, verified live from chain." },
-  { num: "04", title: "Primary name", body: "Point your wallet back at the name on mainnet, base, optimism and arbitrum." },
-  { num: "05", title: "Shared profile", body: "Several names use one profile. Change it once and it shows on all of them." },
-  { num: "06", title: "Who can edit", body: "Let a teammate or an agent change some records without owning the name." },
-  { num: "07", title: "History", body: "Every change to the name, newest first, with the transaction behind it." },
-  { num: "08", title: "Any wallet's names", body: "Paste an address to see every name it owns or manages." },
+  { num: "03", title: "Wallets on the record", body: "Wallets that signed to say they belong to the name, checked onchain." },
+  { num: "04", title: "Primary name", body: "The name your wallet shows as, on mainnet, base, optimism and arbitrum." },
+  { num: "05", title: "Shared profile", body: "Several names use one profile. Edit it once." },
+  { num: "06", title: "Who can edit", body: "Let another wallet edit some or all of the records." },
+  { num: "07", title: "History", body: "Every change to the name, newest first." },
+  { num: "08", title: "Any wallet's names", body: "Look up an address to see the names it owns or manages." },
 ]
 
 const support = [
@@ -116,13 +116,13 @@ export default function Home() {
               <span className="mx-2">·</span>
             </>
           ) : null}
-          see a live record: <Link className="link-blue text-ink" to="/nick.eth">nick.eth</Link> on ENSv2 · or look up <Link className="link-blue text-ink" to="/vitalik.eth">vitalik.eth</Link>
+          try <Link className="link-blue text-ink" to="/nick.eth">nick.eth</Link> or <Link className="link-blue text-ink" to="/vitalik.eth">vitalik.eth</Link>
         </div>
 
 
         <Figure n={1} name="example · a record page" className="mt-10" padded={false} dotted={false}>
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-2.5">
-            <span className="t-caption inline-flex items-center gap-2 normal-case tracking-normal"><VerifiedSeal className="size-3.5 text-ok" /> a made-up alice.eth · profile, payment addresses and the wallets that signed for the name</span>
+            <span className="t-caption inline-flex items-center gap-2 normal-case tracking-normal"><VerifiedSeal className="size-3.5 text-ok" /> alice.eth is made up</span>
             <Badge variant="dim">example</Badge>
           </div>
           <ProfileCard
@@ -143,7 +143,7 @@ export default function Home() {
       </Section>
 
       <Section>
-        <SectionHeader eyebrow="what you can do" title="One page for the whole name" lede="Each part is published on its own, from where you edit it." />
+        <SectionHeader eyebrow="what you can do" title="One page for the whole name" />
         <Figure n={2} name="what a record page holds" padded={false} dotted={false}>
           <div className="grid divide-y divide-line sm:grid-cols-2 lg:grid-cols-4 sm:[&>*:nth-child(odd)]:border-r sm:[&>*]:border-line lg:[&>*:nth-child(odd)]:border-r-0 lg:[&>*:not(:nth-child(4n))]:border-r">
             {features.map((f) => (
@@ -160,7 +160,7 @@ export default function Home() {
       </Section>
 
       <Section>
-        <SectionHeader eyebrow="wallets on the record" title="Three steps, one transaction" lede="Your name already resolves to one address per chain. This adds the rest of your wallets, each with a signed consent." />
+        <SectionHeader eyebrow="wallets on the record" title="Three steps, one transaction" lede="Any wallet you control can sign to say it belongs to your name." />
         <Figure n={3} name="how a wallet gets on the record" padded={false} dotted={false}>
           <FigSplit>
             <div className="divide-y divide-line">
@@ -192,14 +192,14 @@ export default function Home() {
       <Section>
         <Eyebrow>faq</Eyebrow>
         <div className="mt-3 border-t border-line">
-          <FaqRow q="what do i need to get started?">Any ENS name on mainnet. Profile, payment addresses and primary name work on every name. Wallets on the record, shared profiles and access need the name on ENSv2.</FaqRow>
-          <FaqRow q="does it cost anything?">Reading is free, and so is signing. Each change you publish is one normal transaction from your wallet.</FaqRow>
-          <FaqRow q="can i edit a name i don't own?">Only if its owner gave your wallet access, on ENSv2. Otherwise you can read it and verify your own wallet for it.</FaqRow>
-          <FaqRow q="how is a wallet verified?">In your browser, from chain. The consent must be unexpired and dated at most two years out, and the signature must come from the wallet itself (ecrecover) or be confirmed by the account (ERC-1271).</FaqRow>
-          <FaqRow q="where are my signatures kept before i publish?">In your browser only. Sign with each wallet, then publish from the owner's wallet in the same browser.</FaqRow>
-          <FaqRow q="can i send money to a wallet on the record?">No. It says the wallet belongs to the name; it is not a payment address. Pay the name's payment addresses instead.</FaqRow>
-          <FaqRow q="how do i remove a wallet?">The owner removes it from the list. The consent itself can't be cancelled, only left to expire, so pick short windows.</FaqRow>
-          <FaqRow q="which standards does this follow?">ENS text, address and content hash records, primary names on every chain, and <a className="link-blue text-ink" href="https://docs.ens.domains/ensip/28/" target="_blank" rel="noreferrer">ENSIP-28</a> for wallets on the record. Shared profiles and access use the ENSv2 resolver. ENSIP-28 is still a draft, and records.xyz tracks it.</FaqRow>
+          <FaqRow q="what do i need?">An ENS name on mainnet. Wallets on the record, shared profiles and access need it on ENSv2.</FaqRow>
+          <FaqRow q="does it cost anything?">Reading and signing are free. Publishing is one transaction.</FaqRow>
+          <FaqRow q="can i edit a name i don't own?">Only if the owner gave your wallet access.</FaqRow>
+          <FaqRow q="how is a wallet verified?">The signature stored on the name must come from that wallet and not have expired. Smart accounts are checked with ERC-1271.</FaqRow>
+          <FaqRow q="where are my signatures kept before i publish?">In this browser, until the owner publishes them.</FaqRow>
+          <FaqRow q="can i send money to a wallet on the record?">No. Use the name's payment addresses. A wallet on the record only says it belongs to the name.</FaqRow>
+          <FaqRow q="how do i remove a wallet?">The owner removes it and publishes. A signature can't be cancelled, only expire, so keep expiries short.</FaqRow>
+          <FaqRow q="which standards does this follow?">Standard ENS records and primary names, plus <a className="link-blue text-ink" href="https://docs.ens.domains/ensip/28/" target="_blank" rel="noreferrer">ENSIP-28</a>, a draft, for wallets on the record. Shared profiles and access are ENSv2 resolver features.</FaqRow>
         </div>
       </Section>
     </>

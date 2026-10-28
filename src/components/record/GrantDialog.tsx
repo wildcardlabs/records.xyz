@@ -15,7 +15,7 @@ type Kind = "text" | "address" | "data" | "link"
 const KINDS: { kind: Kind; power: Power; label: string; hint: string; rootOnly?: boolean }[] = [
   { kind: "text", power: "text", label: "text records", hint: "description, avatar, socials, any text key" },
   { kind: "address", power: "address", label: "payment addresses", hint: "the address people pay, per chain" },
-  { kind: "data", power: "data", label: "wallets on the record", hint: "the ENSIP-28 listings and proofs", rootOnly: true },
+  { kind: "data", power: "data", label: "wallets on the record", hint: "the signed wallets", rootOnly: true },
   { kind: "link", power: "link", label: "shared profile", hint: "which profile each name uses", rootOnly: true },
 ]
 
@@ -91,7 +91,7 @@ function GrantDialog({
         <DialogHeader>
           <DialogTitle className="t-h3 lowercase">Let another wallet edit {name}</DialogTitle>
           <DialogDescription className="t-body">
-            One wallet, one kind of record, no handover. Revoke it any time.
+            Pick what it may change. Revoke it any time.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-2">
@@ -134,13 +134,13 @@ function GrantDialog({
           {scope === "all" ? (
             <label className="flex cursor-pointer items-start gap-2 text-[12px]">
               <input type="checkbox" className="mt-1 accent-[var(--blue)]" checked={withAdmin} onChange={(e) => setWithAdmin(e.target.checked)} />
-              <span>also let it delegate this permission to others <span className="text-ink-dim">· usually off</span></span>
+              <span>it may pass this on to other wallets</span>
             </label>
           ) : (
-            <p className="t-caption normal-case tracking-normal">a one-key grant can't be delegated further.</p>
+            <p className="t-caption normal-case tracking-normal">one-key access can't be passed on.</p>
           )}
           <p className="t-caption normal-case tracking-normal">
-            applies to every name this resolver serves for you, not only {name}.
+            applies to every name of yours on this resolver.
           </p>
           {error ? <StatusText tone="err" className="text-[12px]">{error}</StatusText> : null}
         </div>

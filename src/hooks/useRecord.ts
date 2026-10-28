@@ -119,7 +119,7 @@ export async function fetchRecord(name: string, recordsChainId: number): Promise
         for (const sib of siblings) {
           const check = await verifyOwnedAccount({ node: namehash(sib), recordsChainId, accountChainId: a.chainId, account: a.account, proofValue: a.proofValue, client: publicClient(a.chainId) })
           if (check.status === "verified" || check.status === "expiring") {
-            a.check = { ...check, status: "other-name", reason: `signed for ${sib} · sign again for ${name}` }
+            a.check = { ...check, status: "other-name", reason: `signed for ${sib}` }
             break
           }
         }
