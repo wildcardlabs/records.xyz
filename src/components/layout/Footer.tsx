@@ -2,8 +2,8 @@ import { Link } from "react-router-dom"
 import { Wrap } from "@/components/wrap/Section"
 
 const cols: { h: string; links: { label: string; href: string; ext?: boolean }[] }[] = [
-  { h: "product", links: [{ label: "records", href: "/" }, { label: "ensip-28 ↗", href: "https://docs.ens.domains/ensip/28/", ext: true }] },
-  { h: "standard", links: [{ label: "ensip-28 · owned accounts", href: "https://docs.ens.domains/ensip/28/", ext: true }, { label: "ensip-24 · data records", href: "https://docs.ens.domains/ensip/24/", ext: true }] },
+  { h: "product", links: [{ label: "records", href: "/" }, { label: "your names", href: "/names" }] },
+  { h: "standards", links: [{ label: "ens docs ↗", href: "https://docs.ens.domains", ext: true }, { label: "ensip-28 ↗", href: "https://docs.ens.domains/ensip/28/", ext: true }] },
   { h: "company", links: [{ label: "namepass llc", href: "https://namepass.com", ext: true }, { label: "@records_xyz", href: "https://x.com/records_xyz", ext: true }] },
   { h: "source", links: [{ label: "github", href: "https://github.com/wildcardlabs/records.xyz", ext: true }, { label: "mit license", href: "https://github.com/wildcardlabs/records.xyz/blob/main/LICENSE", ext: true }] },
 ]

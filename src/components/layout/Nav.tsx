@@ -26,9 +26,6 @@ function Nav({ right }: { right?: React.ReactNode }) {
               your names
             </NavLink>
           ) : null}
-          <a className="nav-link" href="https://docs.ens.domains/ensip/28/" target="_blank" rel="noreferrer">
-            ensip-28 ↗
-          </a>
         </nav>
         <div className="ml-auto flex items-center gap-2">{right}</div>
       </Wrap>

@@ -12,24 +12,30 @@ import { ProfileCard } from "@/components/record/ProfileCard"
 import { VerifiedSeal } from "@/components/record/StatusMark"
 import { type Profile, coinTypeFor } from "@/lib/ens/profile"
 import { COIN_TYPE_DEFAULT } from "@/lib/records"
-import { Figure, FigSplit, Section, SectionHeader, Eyebrow, StatRow, StatusText, Code, k, s, c, n, p, FaqRow } from "@/components/wrap"
+import { Figure, FigSplit, Section, SectionHeader, Eyebrow, StatRow, StatusText, FaqRow } from "@/components/wrap"
 
 const steps = [
-  {
-    num: "01",
-    title: "Add a wallet",
-    body: "Any wallet or smart account you control, on any chain.",
-  },
-  {
-    num: "02",
-    title: "Sign a consent",
-    body: "It signs one line: \"I belong to alice.eth, until this date.\" Free, and nothing goes onchain yet.",
-  },
-  {
-    num: "03",
-    title: "Publish",
-    body: "The owner writes every consent in one transaction. From then on anyone can verify it.",
-  },
+  { num: "01", title: "Add a wallet", body: "Any wallet or smart account you control, on any chain." },
+  { num: "02", title: "Sign a consent", body: "One signature: \"I belong to alice.eth, until this date.\" Free, nothing onchain yet." },
+  { num: "03", title: "Publish", body: "The owner writes every consent in one transaction. From then on anyone can verify it." },
+]
+
+const features = [
+  { num: "01", title: "Profile", body: "Avatar, bio, links and content hash. Edit any name you own or manage." },
+  { num: "02", title: "Payment addresses", body: "One address per chain or coin, with a default for every EVM chain." },
+  { num: "03", title: "Wallets on the record", body: "Every wallet that signed to say it belongs to the name, verified live from chain." },
+  { num: "04", title: "Primary name", body: "Point your wallet back at the name on mainnet, base, optimism and arbitrum." },
+  { num: "05", title: "Shared profile", body: "Several names use one profile. Change it once and it shows on all of them." },
+  { num: "06", title: "Who can edit", body: "Let a teammate or an agent change some records without owning the name." },
+  { num: "07", title: "History", body: "Every change to the name, newest first, with the transaction behind it." },
+  { num: "08", title: "Any wallet's names", body: "Paste an address to see every name it owns or manages." },
+]
+
+const support = [
+  { what: "profile, payment addresses, primary name", where: "ENSv1 and ENSv2" },
+  { what: "wallets on the record", where: "ENSv2" },
+  { what: "shared profile, who can edit", where: "ENSv2" },
+  { what: "history, any wallet's names", where: "every name" },
 ]
 
 const at = (iso: string) => BigInt(Math.floor(Date.parse(iso) / 1000))
@@ -94,9 +100,9 @@ export default function Home() {
       <Section>
         <SectionHeader
           as="h1"
-          eyebrow="built on ensip-28 · name owned accounts"
+          eyebrow="ens records · mainnet · ensv1 and ensv2"
           title="Put your accounts on the record"
-          lede="Prove which wallets belong to your ENS name. Each wallet signs its own consent, and anyone can check it live onchain."
+          lede="Every ENS name's records on one page. Read any name, edit the ones you own, and prove which wallets are yours."
         />
         <form onSubmit={go} className="flex max-w-xl flex-col gap-2 sm:flex-row sm:items-stretch">
           <Input value={q} onChange={(e) => { setQ(e.target.value); setErr(null) }} placeholder="look up any ENS name or wallet address" aria-label="ens name" autoFocus />
@@ -116,7 +122,7 @@ export default function Home() {
 
         <Figure n={1} name="example · a record page" className="mt-10" padded={false} dotted={false}>
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-2.5">
-            <span className="t-caption inline-flex items-center gap-2 normal-case tracking-normal"><VerifiedSeal className="size-3.5 text-ok" /> a made-up alice.eth · the seal marks a payment address whose wallet also consented below</span>
+            <span className="t-caption inline-flex items-center gap-2 normal-case tracking-normal"><VerifiedSeal className="size-3.5 text-ok" /> a made-up alice.eth · profile, payment addresses and the wallets that signed for the name</span>
             <Badge variant="dim">example</Badge>
           </div>
           <ProfileCard
@@ -137,8 +143,25 @@ export default function Home() {
       </Section>
 
       <Section>
-        <SectionHeader eyebrow="how it works" title="Three steps, one transaction" lede="Your name already resolves to one address per chain. This adds the rest of your wallets, each with a signed consent." />
-        <Figure n={2} name="how it works" padded={false} dotted={false}>
+        <SectionHeader eyebrow="what you can do" title="One page for the whole name" lede="Each part is published on its own, from where you edit it." />
+        <Figure n={2} name="what a record page holds" padded={false} dotted={false}>
+          <div className="grid divide-y divide-line sm:grid-cols-2 lg:grid-cols-4 sm:[&>*:nth-child(odd)]:border-r sm:[&>*]:border-line lg:[&>*:nth-child(odd)]:border-r-0 lg:[&>*:not(:nth-child(4n))]:border-r">
+            {features.map((f) => (
+              <div key={f.num} className="p-5">
+                <div className="flex items-baseline gap-3">
+                  <span className="text-[11px] text-blue">{f.num}</span>
+                  <span className="t-fig-title">{f.title}</span>
+                </div>
+                <p className="t-fig-body mt-2">{f.body}</p>
+              </div>
+            ))}
+          </div>
+        </Figure>
+      </Section>
+
+      <Section>
+        <SectionHeader eyebrow="wallets on the record" title="Three steps, one transaction" lede="Your name already resolves to one address per chain. This adds the rest of your wallets, each with a signed consent." />
+        <Figure n={3} name="how a wallet gets on the record" padded={false} dotted={false}>
           <FigSplit>
             <div className="divide-y divide-line">
               {steps.map((st) => (
@@ -151,55 +174,32 @@ export default function Home() {
                 </div>
               ))}
             </div>
-            <div className="fig-body">
-              <div className="t-caption px-4 pt-3 normal-case tracking-normal">what ends up stored on the name</div>
-              <Code lines={[
-                [c("# data records on alice.eth")],
-                [k("accounts[8453]"), p(":          "), s("abi.encode(0xb8c2…, 0xd8da…)")],
-                [k("accounts[8453][0xb8c2…]"), p(": "), s("abi.encode("), n("1798761600"), s(", sig)")],
-                [k("accounts[8453][0xd8da…]"), p(": "), s("abi.encode("), n("1798761600"), s(", sig)")],
-                [k("accounts-chains"), p(":         "), s("abi.encode("), n("1"), s(", "), n("8453"), s(")")],
-                [p("")],
-                [c("# the message each wallet signs (eip-712)")],
-                [k("domain"), p(":  "), s("ENS Name Owned Accounts v1 · chainId 1")],
-                [k("Consent"), p(": "), s("{ node, accountChainId, account, expiresAt }")],
-              ]} />
+            <div>
+              <div className="t-caption px-5 pt-4 normal-case tracking-normal">what works where</div>
+              <div className="divide-y divide-line">
+                {support.map((r) => (
+                  <div key={r.what} className="flex items-baseline justify-between gap-4 px-5 py-3">
+                    <span className="t-fig-body">{r.what}</span>
+                    <span className="shrink-0 text-[11px] text-ink-muted">{r.where}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </FigSplit>
         </Figure>
       </Section>
 
       <Section>
-        <SectionHeader eyebrow="one page" title="One page for the whole name" lede="Profile, payment addresses and the wallets on the record, each published from where it is edited." />
-        <Figure n={3} name="what a record page holds" padded={false} dotted={false}>
-          <div className="grid divide-y divide-line lg:grid-cols-3 lg:divide-x lg:divide-y-0">
-            {[
-              { num: "01", title: "Profile and payment addresses", body: "Avatar, bio, links, an address for any chain or coin, the content hash. Edit on any name you own." },
-              { num: "02", title: "Wallets on the record", body: "Every wallet that has signed to say it belongs to the name, checked from that signature. Needs the name on ENSv2." },
-              { num: "03", title: "Shared profile and access", body: "On ENSv2, several names can use one profile, and a teammate or an agent can edit one record without owning the name." },
-            ].map((c) => (
-              <div key={c.num} className="p-5">
-                <div className="flex items-baseline gap-3">
-                  <span className="text-[11px] text-blue">{c.num}</span>
-                  <span className="t-fig-title">{c.title}</span>
-                </div>
-                <p className="t-fig-body mt-2">{c.body}</p>
-              </div>
-            ))}
-          </div>
-        </Figure>
-      </Section>
-
-      <Section>
         <Eyebrow>faq</Eyebrow>
         <div className="mt-3 border-t border-line">
-          <FaqRow q="what do i need to get started?">Any ENS name. Wallets on the record, shared profiles and per-key access need the name on ENSv2; upgrade it in the ENS app.</FaqRow>
-          <FaqRow q="does it cost anything?">Signing is free. Publishing is one normal transaction from the owner's wallet.</FaqRow>
-          <FaqRow q="how is a consent verified?">In your browser, from chain: the consent must be unexpired and dated at most two years out, and the signature must recover to the wallet (ecrecover) or be confirmed by the account itself (ERC-1271).</FaqRow>
+          <FaqRow q="what do i need to get started?">Any ENS name on mainnet. Profile, payment addresses and primary name work on every name. Wallets on the record, shared profiles and access need the name on ENSv2.</FaqRow>
+          <FaqRow q="does it cost anything?">Reading is free, and so is signing. Each change you publish is one normal transaction from your wallet.</FaqRow>
+          <FaqRow q="can i edit a name i don't own?">Only if its owner gave your wallet access, on ENSv2. Otherwise you can read it and verify your own wallet for it.</FaqRow>
+          <FaqRow q="how is a wallet verified?">In your browser, from chain. The consent must be unexpired and dated at most two years out, and the signature must come from the wallet itself (ecrecover) or be confirmed by the account (ERC-1271).</FaqRow>
           <FaqRow q="where are my signatures kept before i publish?">In your browser only. Sign with each wallet, then publish from the owner's wallet in the same browser.</FaqRow>
-          <FaqRow q="can i send money to a wallet on the record?">No. It says the wallet belongs to the name; it is not a payment address. Pay the name's address records instead.</FaqRow>
+          <FaqRow q="can i send money to a wallet on the record?">No. It says the wallet belongs to the name; it is not a payment address. Pay the name's payment addresses instead.</FaqRow>
           <FaqRow q="how do i remove a wallet?">The owner removes it from the list. The consent itself can't be cancelled, only left to expire, so pick short windows.</FaqRow>
-          <FaqRow q="is this an official ENS standard?">It follows ENSIP-28, a draft from the ENS Labs protocol team. Drafts change; records.xyz tracks it.</FaqRow>
+          <FaqRow q="which standards does this follow?">ENS text, address and content hash records, primary names on every chain, and <a className="link-blue text-ink" href="https://docs.ens.domains/ensip/28/" target="_blank" rel="noreferrer">ENSIP-28</a> for wallets on the record. Shared profiles and access use the ENSv2 resolver. ENSIP-28 is still a draft, and records.xyz tracks it.</FaqRow>
         </div>
       </Section>
     </>
