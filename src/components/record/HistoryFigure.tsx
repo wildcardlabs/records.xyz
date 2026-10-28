@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react"
-import { AddressLink, Pager, StatusText, usePager } from "@/components/wrap"
+import { AddressLink, HcaPill, Pager, StatusText, usePager } from "@/components/wrap"
+import { useHcaOwners } from "@/hooks/useHcaOwners"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { useNameHistory } from "@/hooks/useNameHistory"
@@ -27,6 +28,7 @@ function HistoryFigure({ name, recordsChainId, explorer, enabled }: { name: stri
   const rows = q.data ?? []
   const shown = useMemo(() => rows.filter((r) => tab === "all" || r.group === tab), [rows, tab])
   const pager = usePager(shown, 15)
+  const hca = useHcaOwners(pager.slice.map((r) => r.address))
   const current = TABS.find((t) => t.id === tab)!
 
   return (
@@ -70,6 +72,7 @@ function HistoryFigure({ name, recordsChainId, explorer, enabled }: { name: stri
                   <span className="inline-flex items-center gap-2">
                     <span className="font-semibold text-ink">{r.label}</span>
                     {r.address ? <AddressLink address={r.address} chars={4} /> : null}
+                    {r.address && hca.data?.[r.address.toLowerCase()] ? <HcaPill owner={hca.data[r.address.toLowerCase()]} /> : null}
                   </span>
                 </TableCell>
                 <TableCell data-label="change" className="whitespace-normal">

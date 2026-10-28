@@ -211,7 +211,7 @@ export default function RecordPage() {
     const shown = clearing ? "clear" : decodeValue(def, value)
     return [{ key: `rec:${id}`, status: clearing ? ("removing" as const) : ("draft" as const), label, detail: def.kind === "address" && !clearing && shown.length > 20 ? shortAddr(shown, 6) : shown, tabular: def.kind === "address", onDiscard: () => drafts.setRecord(id, null) }]
   })
-  const accessRows: PendingRow[] = drafts.access.map((c) => ({ key: `g:${c.account}:${c.resource}:${c.revoke}`, status: c.revoke ? ("removing" as const) : ("draft" as const), label: `${c.revoke ? "revoke" : "allow"} ${shortAddr(c.account, 6)}`, detail: c.scope, onDiscard: () => drafts.dropAccess(c) }))
+  const accessRows: PendingRow[] = drafts.access.map((c) => ({ key: `g:${c.account}:${c.resource}:${c.revoke}`, status: c.revoke ? ("removing" as const) : ("draft" as const), label: `${c.revoke ? "revoke" : "allow"} ${shortAddr(c.account, 6)}`, detail: c.scope, warn: c.warn, onDiscard: () => drafts.dropAccess(c) }))
   const linkRows: PendingRow[] = drafts.links.map((l) => ({ key: `l:${l.sourceName}`, status: l.recordId === "0" ? ("removing" as const) : ("draft" as const), label: "link", detail: l.scope, onDiscard: () => drafts.dropLink(l) }))
 
   if (!name) {
