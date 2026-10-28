@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react"
-import { Copy, RefreshCw } from "lucide-react"
+import { CalendarPlus, Copy, RefreshCw } from "lucide-react"
 import { Link, useParams } from "react-router-dom"
 import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
@@ -270,7 +270,12 @@ export default function RecordPage() {
             </div>
             <MyNameChips exclude={{ name, chainId: recordsChainId }} />
           </div>
-          <div className="flex flex-col items-start gap-2 sm:items-end">
+          <div className="flex flex-wrap items-start gap-2 sm:justify-end">
+            {name && /^[^.]+\.eth$/.test(name) ? (
+              <Button variant="outline" size="sm" render={<Link to={`/renew/${name}`} />}>
+                <CalendarPlus data-icon="inline-start" /> extend
+              </Button>
+            ) : null}
             <Button variant="outline" size="sm" onClick={() => { navigator.clipboard?.writeText(window.location.href); toast("link copied") }}>
               <Copy data-icon="inline-start" /> copy link
             </Button>

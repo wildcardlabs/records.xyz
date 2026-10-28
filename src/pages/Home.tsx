@@ -104,7 +104,7 @@ export default function Home() {
           as="h1"
           eyebrow="ens records · mainnet · ensv1 and ensv2"
           title="Put your accounts on the record"
-          lede="Every ENS name's records on one page. Read any name, edit the ones you own, and prove which wallets are yours."
+          lede="Every ENS name's records on one page. Read any name, edit the ones you own, prove which wallets are yours, and renew by budget or by duration."
         />
         <form onSubmit={go} className="flex max-w-xl flex-col gap-2 sm:flex-row sm:items-stretch">
           <Input value={q} onChange={(e) => { setQ(e.target.value); setErr(null) }} placeholder="look up any ENS name or wallet address" aria-label="ens name" autoFocus />
