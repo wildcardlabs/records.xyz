@@ -60,7 +60,7 @@ function AccessFigure({
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-2 sm:px-5">
         <span className="t-caption normal-case tracking-normal">
-          {loading ? "reading…" : `${list.length} ${list.length === 1 ? "wallet" : "wallets"} with rights on this resolver`}
+          {loading ? "reading…" : `${list.length} ${list.length === 1 ? "wallet" : "wallets"} may edit`}
         </span>
         <Button size="sm" variant={canAdmin ? "accent" : "outline"} disabled={!canAdmin} onClick={onGrant}>+ allow a wallet</Button>
       </div>
@@ -69,7 +69,7 @@ function AccessFigure({
       ) : loading ? (
         <div className="space-y-2 p-4"><div className="h-3 w-56 bg-wash" /><div className="h-3 w-40 bg-wash" /></div>
       ) : list.length === 0 ? (
-        <p className="t-fig-body p-4 text-ink-dim sm:p-5">no one has been given access yet.</p>
+        <p className="t-fig-body p-4 text-ink-dim sm:p-5">no other wallet can edit yet.</p>
       ) : (
         <Table stack>
           <TableHeader>

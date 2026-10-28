@@ -71,7 +71,7 @@ function LinkDialog({
       const client = publicClient(recordsChainId)
       const theirResolver = await findResolver(client, target)
       if (!theirResolver || !isAddressEqual(theirResolver, resolver)) {
-        return setError(`${target} does not use this resolver. records can only be shared between names on the same resolver.`)
+        return setError(`${target} uses a different resolver, so it can't share this profile.`)
       }
       const theirOwn = (await client.readContract({ address: resolver, abi: linkAbi, functionName: "getRecordId", args: [namehash(target)] })).toString()
       const theirs = theirOwn !== "0" ? theirOwn : defaultRecordId
@@ -99,7 +99,7 @@ function LinkDialog({
         <DialogHeader>
           <DialogTitle className="t-h3 lowercase">Share this profile with another name</DialogTitle>
           <DialogDescription className="t-body">
-            Both names read and write one profile: edit it under either and both change.
+            Both names will show one profile. Edit it from either name.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-2">
@@ -123,7 +123,7 @@ function LinkDialog({
             ) : null}
           </div>
           <div className="grid gap-2">
-            <Label>which records survive</Label>
+            <Label>whose profile to keep</Label>
             <div className="grid gap-1.5 text-[12px]">
               <label className="flex cursor-pointer items-start gap-2">
                 <input type="radio" name="direction" className="mt-1 accent-[var(--blue)]" checked={direction === "theirs-to-mine"} onChange={() => setDirection("theirs-to-mine")} />

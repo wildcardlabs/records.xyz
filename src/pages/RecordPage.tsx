@@ -128,7 +128,7 @@ export default function RecordPage() {
           account: a.account,
           kind: draft?.kind ?? a.kind,
           status: removing ? "removing" : draft ? "draft" : a.check.status,
-          reason: removing ? "will be removed on publish" : draft ? "new consent signed · publish to write" : a.check.reason,
+          reason: removing ? "removed on publish" : draft ? "signed · publish to write" : a.check.reason,
           expiresAt: draft ? BigInt(draft.expiresAt) : a.check.expiresAt,
           pending: removing ? "remove" : draft ? "add" : undefined,
         })
@@ -136,7 +136,7 @@ export default function RecordPage() {
     }
     for (const d of drafts.adds) {
       if (out.some((r) => r.chainId === d.chainId && sameAddr(r.account, d.account))) continue
-      out.push({ chainId: d.chainId, account: d.account, kind: d.kind, status: "draft", reason: "consent signed · publish to write", expiresAt: BigInt(d.expiresAt), pending: "add" })
+      out.push({ chainId: d.chainId, account: d.account, kind: d.kind, status: "draft", reason: "signed · publish to write", expiresAt: BigInt(d.expiresAt), pending: "add" })
     }
     return out.sort((x, y) => x.chainId - y.chainId || x.account.localeCompare(y.account))
   }, [data, drafts.adds, drafts.removals])
@@ -217,7 +217,7 @@ export default function RecordPage() {
   if (!name) {
     return (
       <Section>
-        <SectionHeader eyebrow="record" title="That is not a valid ENS name" lede={`"${rawName}" does not normalise under ENSIP-15.`} />
+        <SectionHeader eyebrow="record" title="That is not a valid ENS name" lede={`"${rawName}" can't be an ENS name. Check the spelling and the ending, like alice.eth.`} />
         <Button variant="outline" render={<Link to="/" />}>back</Button>
       </Section>
     )
@@ -357,7 +357,7 @@ export default function RecordPage() {
           ) : rows.length === 0 ? (
             <div className="px-5 py-10 text-center">
               <p className="t-fig-body mx-auto max-w-[44ch]">
-                {canEdit ? `Verify your wallet below to prove it belongs to ${name}. It shows here once the owner publishes.` : `Connect your wallet to prove it belongs to ${name}.`}
+                {canEdit ? "Verify your wallet below. It shows here once the owner publishes." : `Connect your wallet to verify it belongs to ${name}.`}
               </p>
             </div>
           ) : (
@@ -498,13 +498,12 @@ export default function RecordPage() {
             </ul>
           </FaqRow>
           <FaqRow q="can i send funds to a wallet on the record?">
-            No. It says the wallet belongs to the name; it is not a payment address. Pay the name's address records instead.
+            No. Use the name's payment addresses. A wallet on the record only says it belongs to the name.
           </FaqRow>
           {data?.capabilities && data.supportsData ? (
             <FaqRow q="where is this stored?">
-              On the name's own resolver,{" "}
-              <a className="link-blue" href={`${explorer}/address/${data.resolver}`} target="_blank" rel="noreferrer">{shortAddr(data.resolver!)}</a>
-              {" "}({data.capabilities.writeFlavour === "name" ? "an ENSv2 permissioned resolver" : data.capabilities.canModifyName ? "the ENSv2 public resolver" : "a v1-style resolver"}), as ENSIP-24 data records.
+              On the name's resolver,{" "}
+              <a className="link-blue" href={`${explorer}/address/${data.resolver}`} target="_blank" rel="noreferrer">{shortAddr(data.resolver!)}</a>.
             </FaqRow>
           ) : null}
           <FaqRow q="what gets written">
@@ -516,17 +515,14 @@ export default function RecordPage() {
                 ...rows.filter((r) => r.pending !== "remove").slice(0, 2).map((r) => [k(`accounts[${r.chainId}][${shortAddr(r.account, 3)}]`), p(": "), s(`(${r.expiresAt ?? "expiresAt"}, sig)`)]),
               ]} />
             </Figure>
-            <p className="t-caption mt-2 normal-case tracking-normal">
-              one <code>multicall</code> of {data?.capabilities?.writeFlavour === "name" ? "setData(name, key, value)" : "setData(node, key, value)"} · verified with ERC-1271 for contracts, ecrecover for wallets · expiry at most two years
-            </p>
           </FaqRow>
           {hasLinks ? (
             <>
               <FaqRow q="what happens to the profile a name leaves?">
-                Nothing. It stays on the resolver. The name just stops using it and shows the default profile, or nothing until you edit it again.
+                It stays on the resolver. The name shows the default profile, or nothing, until you edit it again.
               </FaqRow>
               <FaqRow q="do wallets on the record travel with a shared profile?">
-                The records do, but each wallet's consent names one ENS name. Under another name they show as invalid until the wallets sign again for that name.
+                They show on every name using the profile, but each signature names one ENS name and only verifies there.
               </FaqRow>
             </>
           ) : null}

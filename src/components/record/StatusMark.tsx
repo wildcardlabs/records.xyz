@@ -21,11 +21,11 @@ type Tone = "ok" | "wait" | "err" | "dim" | "blue"
 type IconComponent = LucideIcon | typeof VerifiedSeal
 
 const spec: Record<RowStatus, { icon: IconComponent; tone: Tone; label: string; short: string }> = {
-  verified: { icon: VerifiedSeal, tone: "ok", label: "verified", short: "consent checked onchain" },
-  expiring: { icon: Clock3, tone: "wait", label: "verified · expiring", short: "renew before it lapses" },
-  expired: { icon: X, tone: "err", label: "expired", short: "consent lapsed" },
+  verified: { icon: VerifiedSeal, tone: "ok", label: "verified", short: "signature checks out" },
+  expiring: { icon: Clock3, tone: "wait", label: "verified · expiring", short: "expires soon" },
+  expired: { icon: X, tone: "err", label: "expired", short: "signature expired" },
   invalid: { icon: X, tone: "err", label: "invalid", short: "signature does not verify" },
-  unverified: { icon: CircleDashed, tone: "dim", label: "unverified", short: "listed without a proof" },
+  unverified: { icon: CircleDashed, tone: "dim", label: "unverified", short: "listed without a signature" },
   "other-name": { icon: Signature, tone: "wait", label: "other name", short: "signed for a name sharing this profile" },
   draft: { icon: PenLine, tone: "blue", label: "draft", short: "signed · not published yet" },
   removing: { icon: Trash2, tone: "err", label: "removing", short: "gone after publish" },
@@ -70,13 +70,13 @@ function StatusMark({ status, size = "sm", detail, className }: { status: RowSta
 }
 
 const statusHelp: { status: RowStatus; text: string }[] = [
-  { status: "verified", text: "the wallet signed to say it belongs to this name, and the signature checks out on its chain." },
-  { status: "expiring", text: "verified, but the consent lapses within 30 days. the owner can renew it." },
-  { status: "expired", text: "the consent's expiry has passed. the wallet is no longer on the record." },
-  { status: "invalid", text: "the proof exists but its signature does not verify for this wallet, name and chain." },
-  { status: "unverified", text: "the name lists the wallet but no proof record exists for it." },
-  { status: "other-name", text: "the consent was signed for another name that shares this profile. sign again for this name to verify it here." },
-  { status: "draft", text: "a consent was signed in this browser and is waiting for the owner to publish." },
+  { status: "verified", text: "the wallet signed for this name and the signature checks out." },
+  { status: "expiring", text: "verified, but the signature expires within 30 days." },
+  { status: "expired", text: "the signature has expired." },
+  { status: "invalid", text: "the signature doesn't match this wallet, name and chain." },
+  { status: "unverified", text: "the wallet is listed but has no signature." },
+  { status: "other-name", text: "the signature was made for another name that shares this profile, and only verifies there." },
+  { status: "draft", text: "signed in this browser, not published yet." },
 ]
 
 export { StatusMark, VerifiedSeal, statusHelp, spec as statusSpec }

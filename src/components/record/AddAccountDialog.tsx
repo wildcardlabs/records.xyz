@@ -89,7 +89,7 @@ function AddAccountDialog({
       const signature = await signTypedDataAsync(typed)
       const ok = await validateConsentSignature(publicClient(chainId), address, typed, signature)
       if (!ok) {
-        setError(`the signature does not verify for ${shortAddr(address)} on ${chainById(chainId)?.label}. contract accounts must be deployed on that chain.`)
+        setError(`the signature doesn't verify for ${shortAddr(address)} on ${chainById(chainId)?.label}. a smart account must be deployed on that chain.`)
         return
       }
       const kind = await detectKind(chainId, address)
@@ -109,7 +109,7 @@ function AddAccountDialog({
         <DialogHeader>
           <DialogTitle className="t-h3 lowercase">Verify your wallet belongs to {name}</DialogTitle>
           <DialogDescription className="t-body">
-            Sign a message saying your wallet belongs to {name} until the date you pick. Signing is free; nothing goes onchain until the owner publishes.
+            Your wallet signs a message naming {name} and an expiry date. The owner then publishes it.
           </DialogDescription>
         </DialogHeader>
 
@@ -123,7 +123,7 @@ function AddAccountDialog({
             )}
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="chain">which chain is it on?</Label>
+            <Label htmlFor="chain">chain</Label>
             <select
               id="chain"
               value={chainId}
@@ -136,7 +136,7 @@ function AddAccountDialog({
             </select>
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="expiry">how long should this consent last?</Label>
+            <Label htmlFor="expiry">valid for</Label>
             <select
               id="expiry"
               value={preset}
@@ -147,16 +147,16 @@ function AddAccountDialog({
                 <option key={p.label} value={i}>{p.label} · until {fmtDate(nowSeconds() + p.secs)}</option>
               ))}
             </select>
-            <span className="t-caption normal-case tracking-normal">a consent can't be cancelled, only left to expire · pick the shortest window that works</span>
+            <span className="t-caption normal-case tracking-normal">a signature can't be cancelled before it expires</span>
           </div>
-          <div className="t-caption normal-case tracking-normal">your wallet may ask to switch to {recordsChain?.label} first · the message is tied to the name's network</div>
+          <div className="t-caption normal-case tracking-normal">your wallet may ask to switch to {recordsChain?.label} first</div>
           {error ? <StatusText tone="err" className="text-[12px]">{error}</StatusText> : null}
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>cancel</Button>
           <Button variant="accent" disabled={!isConnected || busy} onClick={sign}>
-            {busy ? "check your wallet…" : "sign consent"}
+            {busy ? "check your wallet…" : "sign"}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -75,7 +75,7 @@ function AccountsTable({
             </div>
             <div className="mt-1 text-[11px] text-ink-dim">
               {r.expiresAt ? (
-                <>consent valid until {fmtDate(r.expiresAt)}{days !== undefined ? ` · ${days > 0 ? `${days} days left` : "past"}` : ""}</>
+                <>valid until {fmtDate(r.expiresAt)}{days !== undefined ? ` · ${days > 0 ? `${days} days left` : "past"}` : ""}</>
               ) : (
                 <>{r.reason || statusSpec[r.status].short}</>
               )}
@@ -86,7 +86,7 @@ function AccountsTable({
                   <Button size="sm" variant="outline" onClick={() => onUndo?.(r)}>undo</Button>
                 ) : (
                   <>
-                    <Button size="sm" variant="outline" onClick={() => onRenew?.(r)}>{r.status === "other-name" ? "sign again" : "renew"}</Button>
+                    <Button size="sm" variant="outline" onClick={() => onRenew?.(r)}>{r.status === "other-name" ? "sign for this name" : "renew"}</Button>
                     <Button size="sm" variant="destructive" onClick={() => onRemove?.(r)}>remove</Button>
                   </>
                 )}
@@ -105,7 +105,7 @@ function AccountsTable({
           <TableHead>wallet</TableHead>
           <TableHead>chain</TableHead>
           <TableHead>type</TableHead>
-          <TableHead className="text-right">consent valid until</TableHead>
+          <TableHead className="text-right">valid until</TableHead>
           {canEdit ? <TableHead className="text-right"></TableHead> : null}
         </TableRow>
       </TableHeader>
@@ -167,7 +167,7 @@ function AccountsTable({
                       <Button size="sm" variant="outline" onClick={() => onUndo?.(r)}>undo</Button>
                     ) : (
                       <>
-                        <Button size="sm" variant="outline" onClick={() => onRenew?.(r)}>{r.status === "other-name" ? "sign again" : "renew"}</Button>
+                        <Button size="sm" variant="outline" onClick={() => onRenew?.(r)}>{r.status === "other-name" ? "sign for this name" : "renew"}</Button>
                         <Button size="sm" variant="destructive" onClick={() => onRemove?.(r)}>remove</Button>
                       </>
                     )}
