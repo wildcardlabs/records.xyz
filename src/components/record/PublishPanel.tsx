@@ -11,6 +11,8 @@ export type PendingRow = {
   /** when the label is a wallet, link it to that wallet's names */
   address?: string
   detail: string
+  /** red note after the detail */
+  warn?: string
   tabular?: boolean
   onDiscard: () => void
 }
@@ -26,7 +28,10 @@ function PendingRows({ rows, onDiscardAll }: { rows: PendingRow[]; onDiscardAll?
           <li key={r.key} className="flex flex-wrap items-center gap-3 py-2.5">
             <StatusMark status={r.status} />
             {r.address ? <AddressLink address={r.address} /> : <span className="font-semibold">{r.label}</span>}
-            <span className={`min-w-0 flex-1 truncate text-ink-dim ${r.tabular ? "tabular" : ""}`}>{r.detail}</span>
+            <span className={`min-w-0 flex-1 truncate text-ink-dim ${r.tabular ? "tabular" : ""}`}>
+              {r.detail}
+              {r.warn ? <span className="text-err"> · {r.warn}</span> : null}
+            </span>
             <Button size="sm" variant="ghost" className="ml-auto" onClick={r.onDiscard}>discard</Button>
           </li>
         ))}

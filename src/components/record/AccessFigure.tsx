@@ -5,7 +5,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { LivePill } from "@/components/wrap"
+import { HcaPill, LivePill } from "@/components/wrap"
+import { useHcaOwners } from "@/hooks/useHcaOwners"
 import { addressLabel } from "@/lib/ens/profile"
 import { TEXT_SPECS, listCoins } from "@/lib/records"
 import type { BigNameRoleRow } from "@/lib/ens/bigname"
@@ -23,6 +24,8 @@ function useResourceLabels(recordsChainId: number, extraKeys: string[]) {
     return m
   }, [recordsChainId, extraKeys])
 }
+
+const HCA_WARNING = "the ENS App will no longer be able to edit this resolver."
 
 const SHOWN: Power[] = ["text", "address", "data", "contenthash", "name", "link", "upgrade", "canName", "abi", "interface"]
 
@@ -55,12 +58,13 @@ function AccessFigure({
 }) {
   const labels = useResourceLabels(recordsChainId, extraKeys)
   const list = (rows ?? []).filter((r) => r.powers.length > 0)
+  const hca = useHcaOwners(list.map((r) => r.address))
 
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-2 sm:px-5">
         <span className="t-caption normal-case tracking-normal">
-          {loading ? "reading…" : `${list.length} ${list.length === 1 ? "wallet" : "wallets"} may edit`}
+          {loading ? "reading…" : `${list.length} ${list.length === 1 ? "wallet" : "wallets"} can edit`}
         </span>
         <Button size="sm" variant={canAdmin ? "accent" : "outline"} disabled={!canAdmin} onClick={onGrant}>+ allow a wallet</Button>
       </div>
@@ -84,6 +88,7 @@ function AccessFigure({
             {list.map((r) => {
               const { powers, admin } = powersFromBigName(r.powers)
               const isYou = connected && r.address.toLowerCase() === connected.toLowerCase()
+              const hcaOwner = hca.data?.[r.address.toLowerCase()]
               const pendingRevoke = staged.some((s) => s.revoke && s.account.toLowerCase() === r.address.toLowerCase() && s.resource === r.resource)
               const scopeLabel = labels.get(r.resource) ?? `resource ${r.resource.slice(0, 6)}…`
               let bits = 0n
@@ -95,6 +100,7 @@ function AccessFigure({
                     <span className="inline-flex items-center gap-2">
                       <AddressLink address={r.address} />
                       {isYou ? <LivePill pulse={false}>you</LivePill> : null}
+                      {hcaOwner ? <HcaPill owner={hcaOwner} /> : null}
                     </span>
                   </TableCell>
                   <TableCell data-label="scope">{scopeLabel}</TableCell>
@@ -116,9 +122,9 @@ function AccessFigure({
                   {canAdmin ? (
                     <TableCell className="text-right">
                       {pendingRevoke ? (
-                        <span className="text-[11px] text-err">revoke staged</span>
+                        <span className="text-[11px] text-err">{hcaOwner ? HCA_WARNING : "revoke staged"}</span>
                       ) : isYou ? null : (
-                        <Button size="sm" variant="destructive" onClick={() => onRevoke({ account: r.address, resource: r.resource, roleBitmap: bits.toString(), revoke: true, scope: `${scopeLabel} · everything listed` })}>
+                        <Button size="sm" variant="destructive" onClick={() => onRevoke({ account: r.address, resource: r.resource, roleBitmap: bits.toString(), revoke: true, scope: `${scopeLabel} · everything listed`, warn: hcaOwner ? HCA_WARNING : undefined })}>
                           revoke
                         </Button>
                       )}

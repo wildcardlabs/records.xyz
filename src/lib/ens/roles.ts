@@ -109,6 +109,8 @@ export type AccessChange = {
   revoke: boolean
   /** human label for the scope, e.g. "all keys" or "text key avatar" */
   scope: string
+  /** shown in red beside the staged change when revoking it has a consequence worth stating */
+  warn?: string
   /**
    * scoped grants only: the ABI-encoded setter call (`setText(name, key, "")`, …) whose argument
    * names the resource. The deployed PermissionedResolver disables `grantRoles` and derives
