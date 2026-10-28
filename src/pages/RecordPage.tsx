@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { type ReactNode, useMemo, useState } from "react"
 import { CalendarPlus, Copy, RefreshCw } from "lucide-react"
 import { Link, useParams } from "react-router-dom"
 import { useQueryClient } from "@tanstack/react-query"
@@ -7,7 +7,7 @@ import { useConnection } from "wagmi"
 import type { Address, Hex } from "viem"
 import { normalize } from "viem/ens"
 import { Button } from "@/components/ui/button"
-import { Eyebrow, Figure, Section, SectionHeader, StatRow, StatusText, Code, FaqRow, k, s, c, p } from "@/components/wrap"
+import { AddressLink, Eyebrow, Figure, Section, SectionHeader, StatRow, StatusText, Code, FaqRow, k, s, c, p } from "@/components/wrap"
 import { AccountsTableSkeleton } from "@/components/record/AccountsTable"
 import { StatusMark, statusHelp } from "@/components/record/StatusMark"
 import { ConnectButton } from "@/components/wallet/ConnectButton"
@@ -16,6 +16,8 @@ import { AccountsTable, type Row } from "@/components/record/AccountsTable"
 import { AddAccountDialog } from "@/components/record/AddAccountDialog"
 import { useRecord, recordQueryKey } from "@/hooks/useRecord"
 import { useNameOwner } from "@/hooks/useNameOwner"
+import { useRenewInfo } from "@/hooks/useRenew"
+import { isEthSecondLevel } from "@/lib/ens/renew"
 import { useProfile } from "@/hooks/useProfile"
 import { ProfileCard } from "@/components/record/ProfileCard"
 import { RecordEditor } from "@/components/record/RecordEditor"
@@ -91,6 +93,32 @@ export default function RecordPage() {
   const checkingEdit = editTextAuthority.isLoading || editAddrAuthority.isLoading
   const canPublish = accountsAuthority.data?.canPublish ?? false
   const profileWritable = !!data?.capabilities?.profileWrite
+  // why editing is off, in order of what matters most: the name is gone, no wallet, the resolver, then permission
+  const renewInfo = useRenewInfo(name && isEthSecondLevel(name) ? name : null)
+  const expired = renewInfo.data && (renewInfo.data.status === "grace" || renewInfo.data.status === "expired") ? renewInfo.data : null
+  const editBlock: ReactNode = expired ? (
+    <>
+      {name} expired on {fmtDate(expired.expiry!)}.{" "}
+      {expired.status === "grace" ? (
+        <>
+          <Link className="link-blue text-ink" to={`/renew/${name}`}>extend it</Link> by {fmtDate(expired.graceEnds!)} to keep it.
+        </>
+      ) : (
+        "it is past its grace period."
+      )}
+    </>
+  ) : !isConnected ? (
+    "connect your wallet to edit."
+  ) : !profileWritable ? (
+    "this name's resolver can't be edited here."
+  ) : checkingEdit ? (
+    "checking permissions…"
+  ) : !canEditProfile ? (
+    <>
+      owned by {owner.data?.owner ? <AddressLink address={owner.data.owner} chars={4} /> : "another wallet"} · only the owner{data?.capabilities?.roles ? ", or a wallet it allowed," : owner.data?.manager ? " or manager" : ""} can edit.
+    </>
+  ) : null
+  const editBlockText = expired ? `${name} expired on ${fmtDate(expired.expiry!)}.` : !isConnected ? "connect your wallet to edit." : !profileWritable ? "this name's resolver can't be edited here." : !canEditProfile ? `only the owner of ${name} can edit.` : undefined
   const hasLinks = !!data?.capabilities?.links
   const hasRoles = !!data?.capabilities?.roles
   const isV2 = !!data?.capabilities && (data.capabilities.writeFlavour === "name" || data.capabilities.canModifyName || data.capabilities.roles)
@@ -301,16 +329,16 @@ export default function RecordPage() {
                 recordsChainId={recordsChainId}
                 set={profile.set}
                 drafts={drafts}
-                enabled={isConnected && profileWritable && canEditProfile}
-                disabledReason={!isConnected ? "connect your wallet to edit." : !profileWritable ? "this name's resolver can't be edited here." : !canEditProfile ? `you can't edit ${name} with this wallet.` : undefined}
+                enabled={isConnected && profileWritable && canEditProfile && !expired}
+                disabledReason={editBlockText}
                 onDone={() => setEditingProfile(false)}
               />
             ) : (
               <>
                 <ProfileCard name={name} profile={profile.data} loading={profile.isLoading || record.isLoading} consented={consented} primary={primaryFor} />
-                {isConnected && !record.isLoading ? (
+                {(isConnected || expired) && !record.isLoading ? (
                   <div className="flex flex-wrap items-center gap-3 border-t border-line px-4 py-2.5 sm:px-5">
-                    <Button size="sm" variant="outline" disabled={!profileWritable || !canEditProfile || checkingEdit} onClick={() => setEditingProfile(true)}>
+                    <Button size="sm" variant="outline" disabled={!isConnected || !profileWritable || !canEditProfile || checkingEdit || !!expired} onClick={() => setEditingProfile(true)}>
                       edit profile
                     </Button>
                     {address && cardAddresses.includes(address.toLowerCase() as Address) ? (
@@ -318,13 +346,7 @@ export default function RecordPage() {
                         set as my primary name
                       </Button>
                     ) : null}
-                    {!profileWritable ? (
-                      <span className="t-caption normal-case tracking-normal">this name's resolver can't be edited here.</span>
-                    ) : checkingEdit ? (
-                      <span className="t-caption normal-case tracking-normal">checking permissions…</span>
-                    ) : !canEditProfile ? (
-                      <span className="t-caption normal-case tracking-normal">you can't edit {name} with this wallet</span>
-                    ) : null}
+                    {editBlock ? <span className={`t-caption normal-case tracking-normal ${expired ? "text-err" : ""}`}>{editBlock}</span> : null}
                   </div>
                 ) : null}
                 <PublishPanel
