@@ -11,7 +11,10 @@ export type MyName = {
   relations: string[]
   authority: "ens_v1" | "ens_v2" | null
   isPrimary: boolean
+  /** when the name stops resolving: the v1 date for names still on ENSv1, the registry date on ENSv2 */
   expiresAt: number | null
+  /** last day it can still be renewed */
+  renewBy: number | null
 }
 
 type RawNames = {
@@ -24,6 +27,11 @@ const RELEASED = new Set(["released", "available", "burned", "revoked"])
 
 const isReverse = (n: string) => n.endsWith(".addr.reverse") || n.endsWith(".reverse")
 const isEthSecondLevel = (n: string) => n.endsWith(".eth") && n.split(".").length === 2
+const DAY = 86_400
+/** at launch every v1 name was reserved in the ENSv2 registry with its v1 expiry plus this bonus; BigName reports that date */
+const V1_BONUS = 62 * DAY
+const GRACE_V2 = 28 * DAY
+const GRACE_V1 = 90 * DAY
 /** some registrations carry sentinel expiries far past any real date; treat those as "no expiry" */
 const saneExpiry = (v: string | null | undefined): number | null => {
   if (!v) return null
@@ -47,15 +55,21 @@ async function fetchIndexedNames(chainId: number, address: Address): Promise<MyN
       if (!r.name || r.namespace !== "ens" || isReverse(r.name) || r.name.includes("[")) continue
       // keep expired names: they can still be extended during the grace period, and the list marks them
       if (r.status && RELEASED.has(r.status)) continue
+      const authority = r.authority === "ens_v2" ? "ens_v2" : r.authority === "ens_v1" || r.authority === "ens_v0" ? "ens_v1" : null
+      // only a registration expires: a .eth second-level name, or any name on ENSv2. for a v1 subname the
+      // indexer reports the NameWrapper's expiry, which with no fuses burned changes nothing when it passes
+      const reported = authority === "ens_v2" || isEthSecondLevel(r.name) ? saneExpiry(r.expires_at) : null
+      // a .eth name still on ENSv1 stops resolving at its v1 date, 62 days before the reservation date BigName reports
+      const v1Eth = authority === "ens_v1" && isEthSecondLevel(r.name)
+      const expiresAt = reported !== null && v1Eth ? reported - V1_BONUS : reported
       out.push({
         name: r.name,
         chainId,
         relations: (r.relations ?? []).filter((x) => x === "owner" || x === "manager"),
-        authority: r.authority === "ens_v2" ? "ens_v2" : r.authority === "ens_v1" || r.authority === "ens_v0" ? "ens_v1" : null,
+        authority,
         isPrimary: !!r.is_primary,
-        // only a registration expires: a .eth second-level name, or any name on ENSv2. for a v1 subname the
-        // indexer reports the NameWrapper's expiry, which with no fuses burned changes nothing when it passes
-        expiresAt: r.authority === "ens_v2" || isEthSecondLevel(r.name) ? saneExpiry(r.expires_at) : null,
+        expiresAt,
+        renewBy: expiresAt !== null && isEthSecondLevel(r.name) ? expiresAt + (v1Eth ? GRACE_V1 : GRACE_V2) : null,
       })
     }
     if (!raw.page?.has_more || !raw.page.next_cursor) break
@@ -68,7 +82,7 @@ async function fetchIndexedNames(chainId: number, address: Address): Promise<MyN
 async function fetchPrimaryName(chainId: number, address: Address): Promise<MyName[]> {
   try {
     const name = await publicClient(chainId).getEnsName({ address })
-    return name ? [{ name, chainId, relations: ["primary"], authority: null, isPrimary: true, expiresAt: null }] : []
+    return name ? [{ name, chainId, relations: ["primary"], authority: null, isPrimary: true, expiresAt: null, renewBy: null }] : []
   } catch {
     return []
   }

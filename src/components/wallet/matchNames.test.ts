@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 import { matchNames } from "./MyNames"
 import type { MyName } from "@/lib/ens/names"
 
-const n = (name: string): MyName => ({ name, chainId: 1, relations: ["owner"], authority: null, isPrimary: false, expiresAt: null })
+const n = (name: string): MyName => ({ name, chainId: 1, relations: ["owner"], authority: null, isPrimary: false, expiresAt: null, renewBy: null })
 const names = ["alice.eth", "alicia.eth", "bob.eth", "malice.eth", "steve.eth"].map(n)
 
 describe("matchNames", () => {
