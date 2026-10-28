@@ -301,7 +301,7 @@ function NameStatus({ typed, name, info }: { typed: string; name: string | null;
   if (d.status === "grace")
     return (
       <>
-        <StatusText tone="wait">expired {fmtDate(d.expiry!)}</StatusText> · {daysUntil(d.graceEnds!)} days left to extend {v2}
+        <StatusText tone="err">expired {fmtDate(d.expiry!)} · renew by {fmtDate(d.graceEnds!)}</StatusText> {v2}
       </>
     )
   if (d.status === "expired") return <StatusText tone="err">expired {fmtDate(d.expiry!)} · past its grace period.</StatusText>

@@ -103,7 +103,7 @@ export default function NamesPage({ address: given }: { address?: Address } = {}
                       <TableCell data-label="expires">
                         {n.expiresAt ? (
                           daysUntil(n.expiresAt) < 0 ? (
-                            <span className="text-err">{fmtDate(n.expiresAt)} · expired</span>
+                            <span className="text-err">{fmtDate(n.expiresAt)} · expired{n.renewBy && daysUntil(n.renewBy) >= 0 ? <span className="text-ink-dim"> · renew by {fmtDate(n.renewBy)}</span> : null}</span>
                           ) : (
                             <span className={daysUntil(n.expiresAt) < 30 ? "text-wait" : undefined}>{fmtDate(n.expiresAt)} · {daysUntil(n.expiresAt)} days</span>
                           )
