@@ -1,7 +1,7 @@
 import { type CSSProperties, type ReactNode, useEffect, useMemo, useState } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import { useQueryClient } from "@tanstack/react-query"
-import { ArrowRight, BadgePercent } from "lucide-react"
+import { ArrowRight, BadgePercent, Copy } from "lucide-react"
 import { toast } from "sonner"
 import { type Hex, erc20Abi, pad } from "viem"
 import { normalize } from "viem/ens"
@@ -152,6 +152,11 @@ export default function RenewPage() {
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <Input id="renew-name" className="sm:max-w-md" value={typed} onChange={(e) => setTyped(e.target.value)} placeholder="alice.eth" autoFocus={!given} />
             <YourNamesPicker current={name} onPick={(n) => setTyped(n)} />
+            {name ? (
+              <Button variant="outline" onClick={() => { navigator.clipboard?.writeText(`${window.location.origin}/renew/${name}`); toast("link copied") }}>
+                <Copy data-icon="inline-start" /> copy link
+              </Button>
+            ) : null}
           </div>
           <p className="t-caption mt-3 normal-case tracking-normal">
             <NameStatus typed={typed} name={name} info={info} />
