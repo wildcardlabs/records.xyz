@@ -22,6 +22,11 @@ export type HistoryRow = {
   detail: string
   /** full value when the detail is truncated */
   full?: string
+  /** the name the change belongs to; null for a change on a shared resolver record */
+  name?: string | null
+  /** the resolver and record the change was made on, when the indexer says */
+  resolver?: string
+  recordId?: string
   /** a wallet the row is about, linked to its names */
   address?: string
 }
@@ -29,6 +34,7 @@ export type HistoryRow = {
 type RawEvent = {
   id?: string
   type?: string
+  name?: string | null
   block_number?: number
   timestamp?: string
   transaction_hash?: string
@@ -92,10 +98,16 @@ function recordRow(key: string, value: unknown, recordsChainId: number): Pick<Hi
   return { group: "records", label: key, detail: str ? clip(str) : "changed", full: str || undefined }
 }
 
+/** a date, or "none" for the sentinel expiries some registrations carry */
+function expiryText(v: string | number): string {
+  const n = Number(v)
+  return Number.isFinite(n) && n > 0 && n < 4_102_444_800 ? new Date(n * 1000).toISOString().slice(0, 10) : "none"
+}
+
 function toRow(e: RawEvent, recordsChainId: number): HistoryRow | null {
   if (!e.id || !e.timestamp || !e.transaction_hash) return null
-  const base = { id: e.id, at: Number(e.timestamp), block: e.block_number ?? 0, tx: e.transaction_hash as Hex }
   const d = e.data ?? {}
+  const base = { id: e.id, at: Number(e.timestamp), block: e.block_number ?? 0, tx: e.transaction_hash as Hex, name: e.name ?? null, resolver: d.resolver?.address, recordId: d.record_id }
   switch (d.action) {
     case "record_changed":
       return d.key ? { ...base, ...recordRow(d.key, d.value, recordsChainId) } : null
@@ -135,10 +147,10 @@ function toRow(e: RawEvent, recordsChainId: number): HistoryRow | null {
     case "reverse_changed":
       return { ...base, group: "name", label: "primary name", detail: d.address ? `set for ${shortAddr(d.address, 4)}` : "changed" }
     case "registration_granted":
-      return { ...base, group: "name", label: "registered", detail: d.expires_at ? `until ${new Date(Number(d.expires_at) * 1000).toISOString().slice(0, 10)}` : "" }
+      return { ...base, group: "name", label: "registered", detail: d.expires_at ? `until ${expiryText(d.expires_at)}` : "" }
     case "registration_renewed":
     case "expiry_changed":
-      return { ...base, group: "name", label: "expiry", detail: d.expires_at ? `now ${new Date(Number(d.expires_at) * 1000).toISOString().slice(0, 10)}` : "changed" }
+      return { ...base, group: "name", label: "expiry", detail: d.expires_at ? `now ${expiryText(d.expires_at)}` : "changed" }
     case "registration_released":
       return { ...base, group: "name", label: "released", detail: "registration ended" }
     case "authority_changed":
@@ -157,7 +169,18 @@ function toRow(e: RawEvent, recordsChainId: number): HistoryRow | null {
 export async function fetchNameHistory(recordsChainId: number, name: string, cursor?: string | null, pageSize = 25): Promise<{ rows: HistoryRow[]; nextCursor: string | null } | null> {
   const base = BIGNAME_BASE[recordsChainId]
   if (!base) return null
-  const url = `${base}/names/${encodeURIComponent(name)}/history?include=data&page_size=${pageSize}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`
+  return fetchHistoryPage(recordsChainId, `${base}/names/${encodeURIComponent(name)}/history`, cursor, pageSize)
+}
+
+/** One page of everything a wallet did or had done to its names, newest first. */
+export async function fetchAddressHistory(recordsChainId: number, address: string, cursor?: string | null, pageSize = 25): Promise<{ rows: HistoryRow[]; nextCursor: string | null } | null> {
+  const base = BIGNAME_BASE[recordsChainId]
+  if (!base) return null
+  return fetchHistoryPage(recordsChainId, `${base}/addresses/${address.toLowerCase()}/history`, cursor, pageSize)
+}
+
+async function fetchHistoryPage(recordsChainId: number, endpoint: string, cursor: string | null | undefined, pageSize: number): Promise<{ rows: HistoryRow[]; nextCursor: string | null }> {
+  const url = `${endpoint}?include=data&page_size=${pageSize}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`
   const res = await fetch(url, { headers: { accept: "application/json" } })
   if (res.status === 404) return { rows: [], nextCursor: null }
   if (!res.ok) throw new Error(`bigname ${res.status}`)
@@ -178,14 +201,23 @@ export async function fetchNameHistory(recordsChainId: number, name: string, cur
 
 /** The whole history, newest first, up to `max` events (a few indexer pages), so tabs can filter and page locally. */
 export async function fetchNameHistoryAll(recordsChainId: number, name: string, max = 500): Promise<HistoryRow[] | null> {
+  return fetchAll((cursor) => fetchNameHistory(recordsChainId, name, cursor, 100), max)
+}
+
+/** A wallet's whole history, newest first, up to `max` events. */
+export async function fetchAddressHistoryAll(recordsChainId: number, address: string, max = 500): Promise<HistoryRow[] | null> {
+  return fetchAll((cursor) => fetchAddressHistory(recordsChainId, address, cursor, 100), max)
+}
+
+async function fetchAll(page: (cursor: string | null) => Promise<{ rows: HistoryRow[]; nextCursor: string | null } | null>, max: number): Promise<HistoryRow[] | null> {
   const rows: HistoryRow[] = []
   let cursor: string | null = null
   while (rows.length < max) {
-    const page = await fetchNameHistory(recordsChainId, name, cursor, 100)
-    if (!page) return null
-    rows.push(...page.rows)
-    if (!page.nextCursor) break
-    cursor = page.nextCursor
+    const p = await page(cursor)
+    if (!p) return null
+    rows.push(...p.rows)
+    if (!p.nextCursor) break
+    cursor = p.nextCursor
   }
   return rows
 }

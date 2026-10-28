@@ -114,7 +114,7 @@ export default function Home() {
         <div className="mt-3 text-[12px] text-ink-dim">
           {isConnected && mine.data && mine.data.names.length > 0 ? (
             <>
-              <Link className="link-blue text-ink" to="/names">your names</Link> · {mine.data.names.length} found
+              <Link className="link-blue text-ink" to="/account">account</Link> · {mine.data.names.length} names
               <span className="mx-2">·</span>
             </>
           ) : null}
