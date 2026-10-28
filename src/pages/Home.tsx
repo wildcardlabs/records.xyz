@@ -29,6 +29,7 @@ const features = [
   { num: "06", title: "Who can edit", body: "Let another wallet edit some or all of the records." },
   { num: "07", title: "History", body: "Every change to the name, newest first." },
   { num: "08", title: "Any wallet's names", body: "Look up an address to see the names it owns or manages." },
+  { num: "09", title: "Renew", body: "Extend any .eth name by budget or by years. Pay in USDC or DAI." },
 ]
 
 const support = [
@@ -36,6 +37,7 @@ const support = [
   { what: "wallets on the record", where: "ENSv2" },
   { what: "shared profile, who can edit", where: "ENSv2" },
   { what: "history, any wallet's names", where: "every name" },
+  { what: "renew", where: "every .eth name" },
 ]
 
 const at = (iso: string) => BigInt(Math.floor(Date.parse(iso) / 1000))
@@ -145,7 +147,7 @@ export default function Home() {
       <Section>
         <SectionHeader eyebrow="what you can do" title="One page for the whole name" />
         <Figure n={2} name="what a record page holds" padded={false} dotted={false}>
-          <div className="grid divide-y divide-line sm:grid-cols-2 lg:grid-cols-4 sm:[&>*:nth-child(odd)]:border-r sm:[&>*]:border-line lg:[&>*:nth-child(odd)]:border-r-0 lg:[&>*:not(:nth-child(4n))]:border-r">
+          <div className="grid divide-y divide-line sm:grid-cols-2 lg:grid-cols-3 sm:[&>*:nth-child(odd)]:border-r sm:[&>*]:border-line lg:[&>*:nth-child(odd)]:border-r-0 lg:[&>*:not(:nth-child(3n))]:border-r">
             {features.map((f) => (
               <div key={f.num} className="p-5">
                 <div className="flex items-baseline gap-3">

@@ -11,6 +11,7 @@ import { ConnectButton } from "@/components/wallet/ConnectButton"
 import { pathFor } from "@/components/wallet/MyNames"
 import { useMyNames } from "@/hooks/useMyNames"
 import { chainById } from "@/lib/ens/chains"
+import { isEthSecondLevel } from "@/lib/ens/renew"
 import { daysUntil, fmtDate, shortAddr } from "@/lib/format"
 
 /**
@@ -111,7 +112,10 @@ export default function NamesPage({ address: given }: { address?: Address } = {}
                         )}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button size="sm" variant="outline" render={<Link to={pathFor(n)} />}>open</Button>
+                        <span className="inline-flex gap-1.5">
+                          {n.expiresAt && isEthSecondLevel(n.name) ? <Button size="sm" variant="ghost" render={<Link to={`/renew/${n.name}`} />}>extend</Button> : null}
+                          <Button size="sm" variant="outline" render={<Link to={pathFor(n)} />}>open</Button>
+                        </span>
                       </TableCell>
                     </TableRow>
                   ))}

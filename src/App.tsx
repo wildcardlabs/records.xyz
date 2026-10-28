@@ -4,6 +4,7 @@ import { ConnectButton } from "@/components/wallet/ConnectButton"
 import Home from "@/pages/Home"
 import DesignSystem from "@/pages/DesignSystem"
 import NamesPage from "@/pages/NamesPage"
+import RenewPage from "@/pages/RenewPage"
 import Lookup from "@/pages/Lookup"
 import NotFound from "@/pages/NotFound"
 
@@ -15,6 +16,8 @@ export default function App() {
           <Route index element={<Home />} />
           {import.meta.env.DEV ? <Route path="design" element={<DesignSystem />} /> : null}
           <Route path="names" element={<NamesPage />} />
+          <Route path="renew" element={<RenewPage />} />
+          <Route path="renew/:name" element={<RenewPage />} />
           <Route path=":name" element={<Lookup />} />
           <Route path="*" element={<NotFound />} />
         </Route>

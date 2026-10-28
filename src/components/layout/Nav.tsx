@@ -3,7 +3,7 @@ import { useConnection } from "wagmi"
 import { Logo } from "@/components/wrap/Logo"
 import { Wrap } from "@/components/wrap/Section"
 
-const links = [{ to: "/", label: "home" }, ...(import.meta.env.DEV ? [{ to: "/design", label: "design" }] : [])]
+const links = [{ to: "/", label: "home" }, { to: "/renew", label: "renew" }, ...(import.meta.env.DEV ? [{ to: "/design", label: "design" }] : [])]
 
 /** 62px white nav: pixel logo, lowercase links with a blue underline on hover, closed by a dotted rule. */
 function Nav({ right }: { right?: React.ReactNode }) {
