@@ -168,9 +168,12 @@ export default function RenewPage() {
               </TabsList>
             </Tabs>
 
-            {mode === "budget" ? (
-              <BudgetPicker usdText={usdText} setUsd={setUsd} budgetUnits={budgetUnits} pricing={pricing.data} label={label} ready={renewable} offer={offer} activeYears={tier?.years ?? 0} />
-            ) : (
+            {/* both panels share one grid cell: the hidden one still takes space, so the height never jumps between tabs */}
+            <div className="grid [&>*]:[grid-area:1/1]">
+              <div className={mode === "budget" ? undefined : "invisible"} inert={mode !== "budget"} aria-hidden={mode !== "budget"}>
+                <BudgetPicker usdText={usdText} setUsd={setUsd} budgetUnits={budgetUnits} pricing={pricing.data} label={label} ready={renewable} offer={offer} activeYears={tier?.years ?? 0} />
+              </div>
+              <div className={mode === "duration" ? undefined : "invisible"} inert={mode !== "duration"} aria-hidden={mode !== "duration"}>
               <div className="mt-5">
                 <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
                   <div>
@@ -190,7 +193,8 @@ export default function RenewPage() {
                   onPick={(y) => { setDurKind("years"); setYears(String(y)) }}
                 />
               </div>
-            )}
+              </div>
+            </div>
 
             <div className="mt-6">
               <Label>pay with</Label>
@@ -347,7 +351,7 @@ function BudgetPicker({ usdText, setUsd, budgetUnits, pricing, label, ready, off
         <div>
           {editing ? (
             <div className="flex items-baseline gap-1">
-              <span className="t-display text-ink-dim">$</span>
+              <span className="t-h2 text-ink-dim">$</span>
               <input
                 autoFocus
                 value={draft}
@@ -359,11 +363,11 @@ function BudgetPicker({ usdText, setUsd, budgetUnits, pricing, label, ready, off
                 }}
                 inputMode="decimal"
                 aria-label="budget in dollars"
-                className="t-display tabular w-[8ch] min-w-0 border-b border-blue bg-transparent text-ink outline-none"
+                className="t-h2 tabular w-[8ch] min-w-0 border-b border-blue bg-transparent text-ink outline-none"
               />
             </div>
           ) : (
-            <button type="button" onClick={() => { setDraft(usdText); setEditing(true) }} className="t-display tabular block border-b border-transparent text-ink transition-colors hover:border-line" title="tap to type an amount">
+            <button type="button" onClick={() => { setDraft(usdText); setEditing(true) }} className="t-h2 tabular block border-b border-transparent text-ink transition-colors hover:border-line" title="tap to type an amount">
               {budgetUnits !== null ? fmtUsd(budgetUnits) : "$—"}
             </button>
           )}
