@@ -1,29 +1,32 @@
-import { type ReactNode, useEffect, useMemo, useState } from "react"
+import { type CSSProperties, type ReactNode, useEffect, useMemo, useState } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import { useQueryClient } from "@tanstack/react-query"
+import { ArrowRight, BadgePercent } from "lucide-react"
 import { toast } from "sonner"
-import { type Hex, erc20Abi } from "viem"
+import { type Hex, erc20Abi, pad } from "viem"
 import { normalize } from "viem/ens"
 import { useConnection, useReadContract, useSwitchChain, useWriteContract } from "wagmi"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ConnectButton } from "@/components/wallet/ConnectButton"
-import { FaqRow, FigSplit, Figure, Section, SectionHeader, StatusText, V2 } from "@/components/wrap"
+import { FaqRow, FigSplit, Figure, Pager, Section, SectionHeader, StatusText, V2, usePager } from "@/components/wrap"
 import { useMyNames } from "@/hooks/useMyNames"
 import { renewInfoKey, useRenewInfo, useRenewQuote, useRentPricing } from "@/hooks/useRenew"
 import { publicClient } from "@/lib/ens/clients"
-import { PAY_TOKENS, type PayToken, YEAR, ceilToCents, durationForBudget, fmtDuration, fmtToken, fmtUsd, isEthSecondLevel, nextTierOffer, parseUsd, priceUnits, renewerAbi, tierFor, tiers, toAmount, yearsToSeconds } from "@/lib/ens/renew"
+import { PAY_TOKENS, type PayToken, type RentPricing, YEAR, ceilToCents, durationForBudget, fmtDuration, fmtToken, fmtUsd, isEthSecondLevel, nextTierOffer, parseUsd, priceUnits, renewerAbi, tierFor, tiers, toAmount, yearsToSeconds } from "@/lib/ens/renew"
 import { daysUntil, fmtDate, shortAddr } from "@/lib/format"
 import { asChainId } from "@/lib/wagmi"
 
 const MAINNET = 1
 const QUICK_YEARS = [1, 2, 3, 6]
-const ZERO_REF = `0x${"0".repeat(64)}` as Hex
+/** records.xyz is the referrer on every renewal it sends: the address, left-padded to 32 bytes */
+const REFERRER: Hex = pad("0x1208a26FAa0F4AC65B42098419EB4dAA5e580AC6", { size: 32 })
 
-type Mode = "budget" | "years"
+type Mode = "budget" | "duration"
+type DurationKind = "years" | "date"
 
 /**
  * Extend any .eth name. Pick the name, then either a term (the price follows) or a budget
@@ -57,6 +60,8 @@ export default function RenewPage() {
   const [token, setToken] = useState<PayToken>(PAY_TOKENS[0])
   const ratio = pricing.data?.ratios[token.address.toLowerCase()]
   const [years, setYears] = useState("1")
+  const [untilDate, setUntilDate] = useState("")
+  const [durKind, setDurKind] = useState<DurationKind>("years")
   const [usd, setUsd] = useState<string | null>(null)
 
   // the budget starts at the six-year entry price for this name, the point where a dollar buys the most time
@@ -70,13 +75,19 @@ export default function RenewPage() {
   const budgetUnits = parseUsd(usdText)
 
   const wantedSeconds = useMemo(() => {
-    if (mode === "years") {
+    if (mode === "duration") {
+      if (durKind === "date") {
+        const target = Date.parse(`${untilDate}T00:00:00Z`)
+        if (!Number.isFinite(target) || !info.data?.expiry) return 0n
+        const s = BigInt(Math.floor(target / 1000)) - info.data.expiry
+        return s > 0n && s <= 100n * YEAR ? s : 0n
+      }
       const y = Number(years)
       return Number.isFinite(y) && y > 0 ? yearsToSeconds(Math.min(y, 100)) : 0n
     }
     if (!pricing.data || !label || budgetUnits === null) return 0n
     return durationForBudget(pricing.data, label, budgetUnits)?.seconds ?? 0n
-  }, [mode, years, pricing.data, label, budgetUnits])
+  }, [mode, years, durKind, untilDate, info.data?.expiry, pricing.data, label, budgetUnits])
   const budgetAmount = mode === "budget" && budgetUnits !== null && ratio ? toAmount(budgetUnits, ratio) : undefined
   const quote = useRenewQuote(renewable ? info.data!.renewer : null, label, wantedSeconds, token.address, budgetAmount)
   const seconds = quote.data?.seconds ?? wantedSeconds
@@ -110,7 +121,7 @@ export default function RenewPage() {
         allowance.refetch()
       }
       setPhase("extending")
-      const hash = await writeContractAsync({ address: renewer, abi: renewerAbi, functionName: "renew", args: [{ label, duration: seconds, referrer: ZERO_REF }, token.address], chainId: asChainId(MAINNET) })
+      const hash = await writeContractAsync({ address: renewer, abi: renewerAbi, functionName: "renew", args: [{ label, duration: seconds, referrer: REFERRER }, token.address], chainId: asChainId(MAINNET) })
       toast("transaction sent", { description: shortAddr(hash, 8) })
       await publicClient(MAINNET).waitForTransactionReceipt({ hash })
       setDone({ hash, seconds, name: name! })
@@ -138,8 +149,10 @@ export default function RenewPage() {
         {/* ------------------------------------------------------------ the name */}
         <div className="border-b border-line p-4 sm:p-5">
           <Label htmlFor="renew-name">name</Label>
-          <Input id="renew-name" className="mt-2 sm:max-w-md" value={typed} onChange={(e) => setTyped(e.target.value)} placeholder="alice.eth" autoFocus={!given} />
-          <YourNames typed={typed} onPick={(n) => setTyped(n)} />
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <Input id="renew-name" className="sm:max-w-md" value={typed} onChange={(e) => setTyped(e.target.value)} placeholder="alice.eth" autoFocus={!given} />
+            <YourNamesPicker current={name} onPick={(n) => setTyped(n)} />
+          </div>
           <p className="t-caption mt-3 normal-case tracking-normal">
             <NameStatus typed={typed} name={name} info={info} />
           </p>
@@ -151,51 +164,31 @@ export default function RenewPage() {
             <Tabs value={mode} onValueChange={(v) => setMode(v as Mode)}>
               <TabsList>
                 <TabsTrigger value="budget">by budget</TabsTrigger>
-                <TabsTrigger value="years">by years</TabsTrigger>
+                <TabsTrigger value="duration">by duration</TabsTrigger>
               </TabsList>
             </Tabs>
 
             {mode === "budget" ? (
-              <div className="mt-5">
-                <Label htmlFor="renew-usd">budget</Label>
-                <div className="mt-2 flex items-center gap-2">
-                  <span className="t-h3 text-ink-dim">$</span>
-                  <Input id="renew-usd" inputMode="decimal" className="t-h3 h-12 sm:max-w-[12rem]" value={usdText} onChange={(e) => setUsd(e.target.value)} aria-invalid={usdText !== "" && budgetUnits === null} />
-                </div>
-                {pricing.data && label && renewable ? (
-                  <div className="mt-3 flex flex-wrap gap-1.5 text-[11px]">
-                    {[{ years: 1, start: YEAR, off: 0 }, ...tiers(pricing.data).filter((t) => t.start > 0n).sort((a, b) => (a.start < b.start ? -1 : 1))].map((t) => {
-                      const units = ceilToCents(priceUnits(pricing.data!, label, t.start))
-                      const text = fmtUsd(units).slice(1)
-                      return (
-                        <button key={t.years} type="button" onClick={() => setUsd(text)} className={`border px-2 py-0.5 ${usdText === text ? "border-blue text-blue" : "border-line text-ink-muted hover:border-blue hover:text-blue"}`}>
-                          {t.years} {t.years === 1 ? "year" : "years"} · ${text}
-                        </button>
-                      )
-                    })}
-                  </div>
-                ) : null}
-                {offer ? (
-                  <button type="button" onClick={() => setUsd(fmtUsd(offer.costUnits).slice(1))} className="link-blue mt-3 block text-left text-[12px] text-ink">
-                    add {fmtUsd(offer.extraUnits)} for {offer.tier.years} years · {fmtDuration(offer.gainSeconds)} more at {offer.tier.off}% off
-                  </button>
-                ) : null}
-              </div>
+              <BudgetPicker usdText={usdText} setUsd={setUsd} budgetUnits={budgetUnits} pricing={pricing.data} label={label} ready={renewable} offer={offer} activeYears={tier?.years ?? 0} />
             ) : (
               <div className="mt-5">
-                <Label htmlFor="renew-years">years</Label>
-                <Input id="renew-years" inputMode="decimal" className="t-h3 mt-2 h-12 sm:max-w-[12rem]" value={years} onChange={(e) => setYears(e.target.value)} aria-invalid={wantedSeconds === 0n} />
-                <div className="mt-3 flex flex-wrap gap-1.5 text-[11px]">
-                  {QUICK_YEARS.map((y) => {
-                    const off = pricing.data ? tierFor(pricing.data, yearsToSeconds(y)).off : 0
-                    return (
-                      <button key={y} type="button" onClick={() => setYears(String(y))} className={`border px-2 py-0.5 ${years === String(y) ? "border-blue text-blue" : "border-line text-ink-muted hover:border-blue hover:text-blue"}`}>
-                        {y} {y === 1 ? "year" : "years"}
-                        {off ? ` · −${off}%` : ""}
-                      </button>
-                    )
-                  })}
+                <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
+                  <div>
+                    <Label htmlFor="renew-years">years</Label>
+                    <Input id="renew-years" inputMode="decimal" className={`t-h3 mt-2 h-12 w-[9rem] ${durKind === "date" ? "text-ink-dim" : ""}`} value={durKind === "date" && seconds > 0n ? (Number(seconds) / Number(YEAR)).toFixed(2) : years} onChange={(e) => { setDurKind("years"); setYears(e.target.value) }} onFocus={() => setDurKind("years")} aria-invalid={durKind === "years" && wantedSeconds === 0n} />
+                  </div>
+                  <span className="t-caption pb-4 normal-case tracking-normal">or until</span>
+                  <div>
+                    <Label htmlFor="renew-until">new expiry date</Label>
+                    <Input id="renew-until" type="date" className={`mt-2 h-12 w-[11rem] ${durKind === "years" ? "text-ink-dim" : ""}`} min={info.data?.expiry ? fmtDate(info.data.expiry + 86_400n) : undefined} value={durKind === "date" ? untilDate : info.data?.expiry && seconds > 0n ? fmtDate(info.data.expiry + seconds) : ""} onChange={(e) => { setDurKind("date"); setUntilDate(e.target.value) }} onFocus={() => setDurKind("date")} aria-invalid={durKind === "date" && untilDate !== "" && wantedSeconds === 0n} />
+                  </div>
                 </div>
+                {durKind === "date" && untilDate && wantedSeconds === 0n && info.data?.expiry ? <p className="t-caption mt-2 normal-case tracking-normal"><StatusText tone="err">pick a date after {fmtDate(info.data.expiry)}.</StatusText></p> : null}
+                <TierCards
+                  items={QUICK_YEARS.map((y) => ({ years: y, off: pricing.data ? tierFor(pricing.data, yearsToSeconds(y)).off : 0 }))}
+                  activeYears={durKind === "years" && QUICK_YEARS.includes(Number(years)) ? Number(years) : -1}
+                  onPick={(y) => { setDurKind("years"); setYears(String(y)) }}
+                />
               </div>
             )}
 
@@ -223,6 +216,7 @@ export default function RenewPage() {
               {mode === "budget" ? <Row k="price" v={amount !== undefined && renewable ? `${fmtToken(amount, token.decimals)} ${token.symbol}` : "—"} /> : <Row k="term" v={renewable && seconds > 0n ? fmtDuration(seconds) : "—"} />}
               <Row k="rate" v={tier && renewable ? (tier.off ? `${tier.off}% off · ${tier.years}+ years` : "standard") : "—"} />
               <Row k="per year" v={perYear !== null && renewable ? `${fmtToken(perYear, token.decimals)} ${token.symbol}` : "—"} />
+              <Row k="seconds" v={renewable && seconds > 0n ? seconds.toLocaleString("en-US") : "—"} dim />
               {mode === "budget" && budgetUnits !== null && amount !== undefined && ratio && renewable && toAmount(budgetUnits, ratio) - amount >= 10n ** BigInt(token.decimals) / 100n ? <Row k="left over" v={`${fmtToken(toAmount(budgetUnits, ratio) - amount, token.decimals)} ${token.symbol}`} dim /> : null}
             </dl>
 
@@ -305,27 +299,179 @@ function NameStatus({ typed, name, info }: { typed: string; name: string | null;
   return <>{name} is not registered.</>
 }
 
-/** the connected wallet's .eth names, soonest to expire first, narrowed by what is typed */
-function YourNames({ typed, onPick }: { typed: string; onPick: (name: string) => void }) {
-  const { address } = useConnection()
-  const mine = useMyNames(address)
-  const names = useMemo(() => {
-    const all = (mine.data?.names ?? []).filter((n) => isEthSecondLevel(n.name) && n.expiresAt)
-    const q = typed.trim().toLowerCase()
-    const hit = q && !q.includes(".") ? all.filter((n) => n.name.startsWith(q)) : all
-    return hit.sort((a, b) => a.expiresAt! - b.expiresAt!).slice(0, 8)
-  }, [mine.data, typed])
-  if (!address || names.length === 0) return null
+const MONTH_SECONDS = 2_629_800
+
+/** "13 more months", or days when it is under a month */
+function fmtGain(seconds: bigint): string {
+  const months = Math.round(Number(seconds) / MONTH_SECONDS)
+  if (months >= 1) return `${months} more ${months === 1 ? "month" : "months"}`
+  const days = Math.max(1, Math.round(Number(seconds) / 86_400))
+  return `${days} more ${days === 1 ? "day" : "days"}`
+}
+
+type BudgetPickerProps = {
+  usdText: string
+  setUsd: (v: string) => void
+  budgetUnits: bigint | null
+  pricing: RentPricing | undefined
+  label: string | undefined
+  ready: boolean
+  offer: ReturnType<typeof nextTierOffer>
+  activeYears: number
+}
+
+/**
+ * The budget comes first: a big amount you tap to type, a slider to feel the range, a tip when
+ * a little more reaches the next tier, and the tiers themselves as cards that set the budget
+ * to their entry price.
+ */
+function BudgetPicker({ usdText, setUsd, budgetUnits, pricing, label, ready, offer, activeYears }: BudgetPickerProps) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState("")
+  const tierList = useMemo(() => (pricing ? tiers(pricing).filter((t) => t.start > 0n).sort((a, b) => (a.start < b.start ? -1 : 1)) : []), [pricing])
+  const costs = useMemo(() => (pricing ? tierList.map((t) => ceilToCents(priceUnits(pricing, label ?? "alice", t.start))) : []), [pricing, tierList, label])
+  // the slider runs to 1.6× the best tier's entry price, so the sweet spot sits at the top of the comfortable range
+  const max = costs.length ? (costs[costs.length - 1] * 8n) / 5n : 0n
+  const value = max > 0n && budgetUnits !== null ? Math.min(1, Number(budgetUnits) / Number(max)) : 0
+
+  function commit() {
+    const u = parseUsd(draft)
+    if (u !== null) setUsd(fmtUsd(u).slice(1))
+    setEditing(false)
+  }
+
   return (
-    <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[11px]">
-      <span className="text-ink-dim">yours, soonest first:</span>
-      {names.map((n) => (
-        <button key={n.name} type="button" onClick={() => onPick(n.name)} className={`border px-2 py-0.5 ${typed.trim().toLowerCase() === n.name ? "border-blue text-blue" : "border-line text-ink-muted hover:border-blue hover:text-blue"}`}>
-          {n.name}
-          {n.expiresAt && daysUntil(n.expiresAt) < 60 ? <Badge variant="dim" className="ml-1.5 px-1 py-0 text-[9px]">{daysUntil(n.expiresAt)}d</Badge> : null}
-        </button>
-      ))}
+    <div className="mt-5">
+      <Label>your budget</Label>
+      <div className="mt-2 flex flex-wrap items-start gap-x-6 gap-y-3">
+        <div>
+          {editing ? (
+            <div className="flex items-baseline gap-1">
+              <span className="t-display text-ink-dim">$</span>
+              <input
+                autoFocus
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onBlur={commit}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") commit()
+                  if (e.key === "Escape") setEditing(false)
+                }}
+                inputMode="decimal"
+                aria-label="budget in dollars"
+                className="t-display tabular w-[8ch] min-w-0 border-b border-blue bg-transparent text-ink outline-none"
+              />
+            </div>
+          ) : (
+            <button type="button" onClick={() => { setDraft(usdText); setEditing(true) }} className="t-display tabular block border-b border-transparent text-ink transition-colors hover:border-line" title="tap to type an amount">
+              {budgetUnits !== null ? fmtUsd(budgetUnits) : "$—"}
+            </button>
+          )}
+          <div className="t-caption mt-1.5 normal-case tracking-normal">tap the amount to type your own</div>
+        </div>
+        {offer && ready ? (
+          <button type="button" onClick={() => setUsd(fmtUsd(offer.costUnits).slice(1))} className="group self-center border-l border-line pl-4 text-left">
+            <span className="flex flex-wrap items-center gap-1.5 text-[12.5px] font-semibold text-blue">
+              <span>add {fmtUsd(offer.extraUnits)}</span>
+              <ArrowRight className="size-3.5 shrink-0" aria-hidden="true" />
+              <span className="font-medium text-ink group-hover:text-blue">get {fmtGain(offer.gainSeconds)}</span>
+            </span>
+            <span className="t-caption mt-0.5 block normal-case tracking-normal">{offer.tier.years}-year rate · {offer.tier.off}% off</span>
+          </button>
+        ) : null}
+      </div>
+      <input
+        type="range"
+        min={0}
+        max={1}
+        step={0.0005}
+        value={value}
+        disabled={!ready || max === 0n}
+        onChange={(e) => setUsd(fmtUsd(ceilToCents((max * BigInt(Math.round(Number(e.target.value) * 10_000))) / 10_000n)).slice(1))}
+        aria-label="budget"
+        aria-valuetext={`$${usdText}`}
+        className="budget-slider mt-4"
+        style={{ "--fill": `${value * 100}%` } as CSSProperties}
+      />
+      <TierCards items={tierList.map((t, i) => ({ years: t.years, off: t.off, sub: ready ? fmtUsd(costs[i]) : undefined }))} activeYears={ready ? activeYears : -1} onPick={(y) => { const i = tierList.findIndex((t) => t.years === y); if (i >= 0) setUsd(fmtUsd(costs[i]).slice(1)) }} />
+      <p className="t-caption mt-4 flex items-center gap-2 normal-case tracking-normal">
+        <BadgePercent className="size-3.5 shrink-0" aria-hidden="true" />
+        <span>
+          discounts follow{" "}
+          <a className="link-blue text-ink" href="https://docs.ens.domains/ensv2/eth-registrar/#multi-year-discounts" target="_blank" rel="noreferrer">
+            ENS's pricing tiers
+          </a>
+          . a little more can reach the next one.
+        </span>
+      </p>
     </div>
   )
 }
 
+/** the discount tiers as cards: badge in the corner, the active one filled */
+function TierCards({ items, activeYears, onPick }: { items: { years: number; off: number; sub?: string }[]; activeYears: number; onPick: (years: number) => void }) {
+  if (items.length === 0) return null
+  return (
+    <div className="mt-6 grid gap-2.5" style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}>
+      {items.map((t) => {
+        const active = t.years === activeYears
+        return (
+          <button key={t.years} type="button" aria-pressed={active} onClick={() => onPick(t.years)} className={`relative border px-1.5 py-4 text-center transition-colors ${active ? "border-blue bg-wash" : "border-line hover:border-blue"}`}>
+            {t.off ? <span className={`tabular absolute -top-2 right-1.5 border px-1.5 py-0.5 text-[10px] leading-none ${active ? "border-blue bg-blue text-blue-fg" : "border-line bg-paper text-ink-muted"}`}>−{t.off}%</span> : null}
+            <div className={`text-[13px] ${active ? "font-semibold text-ink" : "text-ink-muted"}`}>
+              {t.years} {t.years === 1 ? "year" : "years"}
+            </div>
+            {t.sub ? <div className="t-caption mt-1 normal-case tracking-normal">{t.sub}</div> : null}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+const PICK_PAGE = 8
+
+/** the connected wallet's .eth names in a dropdown: a filter, eight per page, soonest to expire first */
+function YourNamesPicker({ current, onPick }: { current: string | null; onPick: (name: string) => void }) {
+  const { address } = useConnection()
+  const mine = useMyNames(address)
+  const [open, setOpen] = useState(false)
+  const [q, setQ] = useState("")
+  const all = useMemo(() => (mine.data?.names ?? []).filter((n) => isEthSecondLevel(n.name) && n.expiresAt).sort((a, b) => a.expiresAt! - b.expiresAt!), [mine.data])
+  const shown = useMemo(() => {
+    const needle = q.trim().toLowerCase()
+    return needle ? all.filter((n) => n.name.includes(needle)) : all
+  }, [all, q])
+  const pager = usePager(shown, PICK_PAGE)
+  if (!address || all.length === 0) return null
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger render={<Button variant="outline" />}>your names ▾</PopoverTrigger>
+      <PopoverContent align="start" className="w-[22rem] p-0 font-mono">
+        {all.length > PICK_PAGE ? (
+          <div className="border-b border-line p-2">
+            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={`filter ${all.length} names`} aria-label="filter your names" className="h-8" autoFocus />
+          </div>
+        ) : null}
+        {shown.length === 0 ? (
+          <p className="p-3 text-[12px] text-ink-dim">nothing matches.</p>
+        ) : (
+          <ul className="divide-y divide-line">
+            {pager.slice.map((n) => {
+              const days = daysUntil(n.expiresAt!)
+              return (
+                <li key={n.name}>
+                  <button type="button" onClick={() => { onPick(n.name); setOpen(false) }} className={`flex w-full items-baseline justify-between gap-3 px-3 py-2 text-left text-[12.5px] hover:bg-wash ${n.name === current ? "text-blue" : "text-ink"}`}>
+                    <span className="truncate font-semibold">{n.name}</span>
+                    <span className={`shrink-0 text-[11px] ${days < 0 ? "text-err" : days < 30 ? "text-wait" : "text-ink-dim"}`}>{days < 0 ? "expired" : `${days} days`}</span>
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+        )}
+        <Pager page={pager.page} pages={pager.pages} from={pager.from} to={pager.to} total={pager.total} onPage={pager.setPage} />
+      </PopoverContent>
+    </Popover>
+  )
+}

@@ -428,6 +428,15 @@
 @layer utilities {
   .lowercase-all { text-transform: lowercase; }
   .tabular { font-variant-numeric: tabular-nums; }
+
+  /* budget slider on the renew page: 2px track filled to --fill, square blue thumb */
+  .budget-slider { -webkit-appearance: none; appearance: none; display: block; width: 100%; height: 28px; background: transparent; cursor: pointer; }
+  .budget-slider:disabled { opacity: .4; cursor: default; }
+  .budget-slider::-webkit-slider-runnable-track { height: 2px; background: linear-gradient(to right, var(--blue) var(--fill, 0%), var(--border-line) var(--fill, 0%)); }
+  .budget-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 14px; height: 14px; margin-top: -6px; background: var(--blue); border: 2px solid var(--bg); outline: 1px solid var(--blue); }
+  .budget-slider::-moz-range-track { height: 2px; background: var(--border-line); }
+  .budget-slider::-moz-range-progress { height: 2px; background: var(--blue); }
+  .budget-slider::-moz-range-thumb { width: 14px; height: 14px; border-radius: 0; background: var(--blue); border: 2px solid var(--bg); }
 }
 
 /* ---- motion ---- */
