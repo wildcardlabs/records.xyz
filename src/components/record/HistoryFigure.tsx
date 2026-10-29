@@ -7,7 +7,8 @@ import { useHistory } from "@/hooks/useNameHistory"
 import { useRecordNames } from "@/hooks/useRecordNames"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { type HistoryAction, buildActions } from "@/lib/ens/actions"
+import { keccak256, toBytes } from "viem"
+import { type HistoryAction, buildActions, isReverseName } from "@/lib/ens/actions"
 import type { HistoryRow } from "@/lib/ens/history"
 import { shortAddr } from "@/lib/format"
 
@@ -48,6 +49,7 @@ function HistoryFigure({ name, address, recordsChainId, explorer, enabled }: { n
   const pager = usePager(shown, 15, tab)
   const hca = useHcaOwners(pager.slice.map((a) => a.address))
   const current = TABS.find((t) => t.id === tab)!
+  const ownHash = address ? { hash: keccak256(toBytes(address.slice(2).toLowerCase())), address } : null
 
   return (
     <div>
@@ -84,7 +86,7 @@ function HistoryFigure({ name, address, recordsChainId, explorer, enabled }: { n
           </TableHeader>
           <TableBody>
             {pager.slice.map((a) => (
-              <ActionRows key={a.id} action={a} withName={!!address} explorer={explorer} open={open === a.id} onToggle={() => setOpen(open === a.id ? null : a.id)} hcaOwner={a.address ? hca.data?.[a.address.toLowerCase()] : undefined} />
+              <ActionRows key={a.id} action={a} withName={!!address} explorer={explorer} open={open === a.id} onToggle={() => setOpen(open === a.id ? null : a.id)} hcaOwner={a.address ? hca.data?.[a.address.toLowerCase()] : undefined} ownHash={ownHash} />
             ))}
           </TableBody>
         </Table>
@@ -118,7 +120,14 @@ function ActionText({ text, address }: { text: string; address?: string }) {
 }
 
 /** one action, and its events underneath when opened */
-function ActionRows({ action: a, withName, explorer, open, onToggle, hcaOwner }: { action: HistoryAction; withName: boolean; explorer: string; open: boolean; onToggle: () => void; hcaOwner?: `0x${string}` }) {
+/** "[9fd4…].addr.reverse" is the wallet's own reverse node when its label is the hash of the wallet address */
+function reverseLabel(n: string, own: { hash: string; address: string } | null): string {
+  const m = n.match(/^\[([0-9a-f]{64})\]\.addr\.reverse$/)
+  if (m && own && `0x${m[1]}` === own.hash) return shortAddr(own.address, 4)
+  return "another address"
+}
+
+function ActionRows({ action: a, withName, explorer, open, onToggle, hcaOwner, ownHash }: { action: HistoryAction; withName: boolean; explorer: string; open: boolean; onToggle: () => void; hcaOwner?: `0x${string}`; ownHash: { hash: string; address: string } | null }) {
   const Chevron = open ? ChevronDown : ChevronRight
   return (
     <>
@@ -130,7 +139,7 @@ function ActionRows({ action: a, withName, explorer, open, onToggle, hcaOwner }:
               a.names.map((n, i) => (
                 <span key={n}>
                   {i ? ", " : ""}
-                  <Link className="link-blue font-semibold text-ink" to={`/${n}`} onClick={(e) => e.stopPropagation()}>{n}</Link>
+                  {isReverseName(n) ? <span className="text-ink-dim">{reverseLabel(n, ownHash)}</span> : <Link className="link-blue font-semibold text-ink" to={`/${n}`} onClick={(e) => e.stopPropagation()}>{n}</Link>}
                 </span>
               ))
             ) : a.resolver ? (

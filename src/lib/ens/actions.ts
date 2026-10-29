@@ -53,6 +53,8 @@ function powerNames(list: string[] | undefined): string[] {
   return out
 }
 
+export const isReverseName = (n: string) => n.endsWith(".reverse")
+
 const list = (xs: string[]) => (xs.length <= 3 ? xs.join(", ") : `${xs.slice(0, 2).join(", ")} and ${xs.length - 2} more`)
 const uniq = <T,>(xs: T[]) => [...new Set(xs)]
 
@@ -63,6 +65,12 @@ function describe(b: Bucket, namesForRecord: (resolver: string, recordId: string
   const pieces: string[] = []
   let address: string | undefined
   let accessDescribed = false
+
+  // a reverse node is the plumbing behind a primary name: claiming it, setting its resolver and owner are one act
+  if (b.name && isReverseName(b.name)) {
+    const nameRow = rows.find((r) => r.meta.action === "record_changed" && r.label === "primary name")
+    return { text: nameRow ? (nameRow.meta.cleared ? "cleared primary name" : "primary name changed") : "primary name set up", groups: ["records"] }
+  }
 
   const records = rows.filter((r) => r.meta.action === "record_changed")
   const profileRows = records.filter((r) => r.meta.family !== "data" || r.meta.dataKind === "other")

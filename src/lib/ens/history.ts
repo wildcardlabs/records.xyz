@@ -94,8 +94,11 @@ const isEmptyHex = (v: unknown) => typeof v !== "string" || v === "" || v === "0
 /** A record write, by key family. */
 function recordRow(key: string, value: unknown, recordsChainId: number): Pick<HistoryRow, "group" | "label" | "detail" | "full" | "address"> & { meta: Omit<RowMeta, "action"> } {
   const str = typeof value === "string" ? value : ""
+  // the indexer leaves the value out of some events; that is "changed", not "cleared"
+  const unknown = value === undefined || value === null
   const [family, ...rest] = key.split(":")
   const arg = rest.join(":")
+  if (key === "name") return { group: "records", label: "primary name", detail: unknown ? "changed" : str ? clip(str) : "cleared", full: str || undefined, meta: { family: "other", cleared: !unknown && !str } }
   if (family === "text") {
     const def = textDef(arg)
     return { group: "records", label: def.label === arg ? arg : `${def.label}`, detail: str ? clip(str) : "cleared", full: str || undefined, meta: { family: "text", cleared: !str } }
@@ -125,7 +128,7 @@ function recordRow(key: string, value: unknown, recordsChainId: number): Pick<Hi
     return { group: "records", label: `data · ${arg}`, detail: isEmptyHex(str) ? "cleared" : clip(str, 40), full: str || undefined, meta: { family: "data", dataKind: "other", cleared: isEmptyHex(str) } }
   }
   if (family === "abi") return { group: "records", label: "abi", detail: isEmptyHex(str) ? "cleared" : "set", meta: { family: "abi", cleared: isEmptyHex(str) } }
-  return { group: "records", label: key, detail: str ? clip(str) : "changed", full: str || undefined, meta: { family: "other", cleared: !str } }
+  return { group: "records", label: key, detail: str ? clip(str) : unknown ? "changed" : "cleared", full: str || undefined, meta: { family: "other", cleared: !unknown && !str } }
 }
 
 /** "\x03seg\x03eth\x00" → "seg.eth" */
