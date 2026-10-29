@@ -141,10 +141,12 @@ function ActionRows({ action: a, withName, explorer, open, onToggle, hcaOwner }:
           </TableCell>
         ) : null}
         <TableCell data-label="what happened" className="whitespace-normal">
-          <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
-            <Chevron className="size-3.5 shrink-0 text-ink-dim" aria-hidden="true" />
-            <span className="text-ink"><ActionText text={a.text} address={a.address} /></span>
-            {hcaOwner ? <HcaPill owner={hcaOwner} /> : null}
+          <span className="flex items-start gap-2">
+            <Chevron className="mt-[3px] size-3.5 shrink-0 text-ink-dim" aria-hidden="true" />
+            <span className="min-w-0 flex-1 text-ink">
+              <ActionText text={a.text} address={a.address} />
+              {hcaOwner ? <> <HcaPill owner={hcaOwner} /></> : null}
+            </span>
           </span>
         </TableCell>
         <TableCell data-label="tx" className="text-right">
