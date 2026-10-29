@@ -99,6 +99,24 @@ function HistoryFigure({ name, address, recordsChainId, explorer, enabled }: { n
   )
 }
 
+/** the sentence, with the wallet it names turned into a link to that wallet's page */
+function ActionText({ text, address }: { text: string; address?: string }) {
+  if (!address) return <>{text}</>
+  const short = shortAddr(address, 4)
+  const parts = text.split(short)
+  if (parts.length === 1) return <>{text} <AddressLink address={address} chars={4} /></>
+  return (
+    <>
+      {parts.map((part, i) => (
+        <span key={i}>
+          {part}
+          {i < parts.length - 1 ? <AddressLink address={address} chars={4} /> : null}
+        </span>
+      ))}
+    </>
+  )
+}
+
 /** one action, and its events underneath when opened */
 function ActionRows({ action: a, withName, explorer, open, onToggle, hcaOwner }: { action: HistoryAction; withName: boolean; explorer: string; open: boolean; onToggle: () => void; hcaOwner?: `0x${string}` }) {
   const Chevron = open ? ChevronDown : ChevronRight
@@ -123,10 +141,9 @@ function ActionRows({ action: a, withName, explorer, open, onToggle, hcaOwner }:
           </TableCell>
         ) : null}
         <TableCell data-label="what happened" className="whitespace-normal">
-          <span className="inline-flex flex-wrap items-center gap-2">
+          <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
             <Chevron className="size-3.5 shrink-0 text-ink-dim" aria-hidden="true" />
-            <span className="text-ink">{a.text}</span>
-            {a.address ? <AddressLink address={a.address} chars={4} /> : null}
+            <span className="text-ink"><ActionText text={a.text} address={a.address} /></span>
             {hcaOwner ? <HcaPill owner={hcaOwner} /> : null}
           </span>
         </TableCell>
