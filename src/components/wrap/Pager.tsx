@@ -3,13 +3,18 @@ import { Button } from "@/components/ui/button"
 
 export const PAGE_SIZE = 25
 
-/** Client-side paging over a list already in memory. The page resets whenever the list changes shape. */
-export function usePager<T>(items: T[], size = PAGE_SIZE) {
+/**
+ * Client-side paging over a list already in memory. The page goes back to the first whenever
+ * `resetKey` changes (a filter, a tab); without one, whenever the list changes length. A list
+ * that only grows, such as streamed history, should pass a key so paging holds still.
+ */
+export function usePager<T>(items: T[], size = PAGE_SIZE, resetKey?: unknown) {
   const [page, setPage] = useState(0)
   const pages = Math.max(1, Math.ceil(items.length / size))
+  const trigger = resetKey === undefined ? items.length : resetKey
   useEffect(() => {
     setPage(0)
-  }, [items.length])
+  }, [trigger])
   const current = Math.min(page, pages - 1)
   const slice = useMemo(() => items.slice(current * size, current * size + size), [items, current, size])
   return { page: current, pages, slice, total: items.length, from: items.length === 0 ? 0 : current * size + 1, to: Math.min(items.length, (current + 1) * size), setPage }

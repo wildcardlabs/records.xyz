@@ -11,5 +11,6 @@ export function useHcaOwners(addresses: (string | undefined)[]) {
     queryFn: () => fetchHcaOwners(publicClient(1), list as Address[]),
     enabled: list.length > 0,
     staleTime: 24 * 60 * 60_000,
+    placeholderData: (prev) => prev,
   })
 }

@@ -45,7 +45,7 @@ function HistoryFigure({ name, address, recordsChainId, explorer, enabled }: { n
   const recordNames = useRecordNames(recordsChainId, rows.map((r) => r.resolver))
   const actions = useMemo(() => buildActions(rows, recordNames.namesForRecord), [rows, recordNames.namesForRecord])
   const shown = useMemo(() => actions.filter((a) => tab === "all" || a.groups.includes(tab)), [actions, tab])
-  const pager = usePager(shown, 15)
+  const pager = usePager(shown, 15, tab)
   const hca = useHcaOwners(pager.slice.map((a) => a.address))
   const current = TABS.find((t) => t.id === tab)!
 

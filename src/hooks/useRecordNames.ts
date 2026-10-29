@@ -21,6 +21,8 @@ export function useRecordNames(chainId: number, resolvers: (string | undefined)[
     },
     enabled: list.length > 0,
     staleTime: 5 * 60_000,
+    // more resolvers arrive as history streams in: keep what is known while the rest loads
+    placeholderData: (prev) => prev,
   })
   const data = q.data
   const namesForRecord = useCallback((resolver: string, recordId: string): string[] => (data?.[resolver.toLowerCase()] ?? []).filter((l) => !l.isDefault && l.recordId === recordId).map((l) => l.name), [data])
