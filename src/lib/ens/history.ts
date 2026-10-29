@@ -29,6 +29,27 @@ export type HistoryRow = {
   recordId?: string
   /** a wallet the row is about, linked to its names */
   address?: string
+  /** what the indexer called it, plus the bits the action builder needs */
+  meta: RowMeta
+}
+
+export type RowMeta = {
+  action: string
+  /** record writes: the key family and whether the value was cleared */
+  family?: "text" | "addr" | "contenthash" | "abi" | "data" | "other"
+  dataKind?: "chains" | "listing" | "proof" | "other"
+  cleared?: boolean
+  /** resolver_record_linked: the name that was linked */
+  linkedName?: string
+  /** permissions */
+  added?: string[]
+  removed?: string[]
+  approved?: boolean
+  /** registrations and transfers */
+  expiresAt?: string
+  from?: string
+  to?: string
+  owner?: string
 }
 
 type RawEvent = {
@@ -54,6 +75,9 @@ type RawEvent = {
     removed_powers?: string[]
     name?: string
     sender?: string
+    approved?: boolean
+    dns_encoded_name?: string
+    registrant?: string
   }
 }
 type RawHistory = { data?: RawEvent[]; page?: { has_more?: boolean; next_cursor?: string | null } }
@@ -62,44 +86,64 @@ const clip = (s: string, n = 64) => (s.length > n ? `${s.slice(0, n - 1)}…` : 
 const isEmptyHex = (v: unknown) => typeof v !== "string" || v === "" || v === "0x"
 
 /** A record write, by key family. */
-function recordRow(key: string, value: unknown, recordsChainId: number): Pick<HistoryRow, "group" | "label" | "detail" | "full" | "address"> {
+function recordRow(key: string, value: unknown, recordsChainId: number): Pick<HistoryRow, "group" | "label" | "detail" | "full" | "address"> & { meta: Omit<RowMeta, "action"> } {
   const str = typeof value === "string" ? value : ""
   const [family, ...rest] = key.split(":")
   const arg = rest.join(":")
   if (family === "text") {
     const def = textDef(arg)
-    return { group: "records", label: def.label === arg ? arg : `${def.label}`, detail: str ? clip(str) : "cleared", full: str || undefined }
+    return { group: "records", label: def.label === arg ? arg : `${def.label}`, detail: str ? clip(str) : "cleared", full: str || undefined, meta: { family: "text", cleared: !str } }
   }
   if (family === "addr") {
     const ct = Number(arg)
     const def = addressDef(ct)
     const decoded = isEmptyHex(str) ? "" : decodeValue(def, str)
-    return { group: "records", label: `${addressLabel(ct, recordsChainId).label} address`, detail: decoded ? (decoded.length > 20 ? shortAddr(decoded, 6) : decoded) : "cleared", full: decoded || undefined }
+    return { group: "records", label: `${addressLabel(ct, recordsChainId).label} address`, detail: decoded ? (decoded.length > 20 ? shortAddr(decoded, 6) : decoded) : "cleared", full: decoded || undefined, meta: { family: "addr", cleared: !decoded } }
   }
   if (family === "contenthash") {
     const decoded = isEmptyHex(str) ? "" : decodeValue(contenthashDef, str)
-    return { group: "records", label: "content hash", detail: decoded ? clip(decoded) : "cleared", full: decoded || undefined }
+    return { group: "records", label: "content hash", detail: decoded ? clip(decoded) : "cleared", full: decoded || undefined, meta: { family: "contenthash", cleared: !decoded } }
   }
   if (family === "data") {
     if (arg === CHAINS_KEY) {
       const chains = isEmptyHex(str) ? [] : (decodeChains(str as Hex) ?? [])
-      return { group: "accounts", label: "chains with wallets", detail: chains.length ? chains.map((c) => chainById(c)?.label ?? `chain ${c}`).join(", ") : "none" }
+      return { group: "accounts", label: "chains with wallets", detail: chains.length ? chains.map((c) => chainById(c)?.label ?? `chain ${c}`).join(", ") : "none", meta: { family: "data", dataKind: "chains", cleared: chains.length === 0 } }
     }
     const proof = parseProofKey(arg)
-    if (proof) return { group: "accounts", label: "consent", address: proof.account, detail: isEmptyHex(str) ? `removed on ${chainById(proof.chainId)?.label ?? proof.chainId}` : `signed on ${chainById(proof.chainId)?.label ?? proof.chainId}` }
+    if (proof) return { group: "accounts", label: "consent", address: proof.account, detail: isEmptyHex(str) ? `removed on ${chainById(proof.chainId)?.label ?? proof.chainId}` : `signed on ${chainById(proof.chainId)?.label ?? proof.chainId}`, meta: { family: "data", dataKind: "proof", cleared: isEmptyHex(str) } }
     const listing = parseListingKey(arg)
     if (listing) {
       const accounts = isEmptyHex(str) ? [] : (decodeListing(str as Hex) ?? [])
-      return { group: "accounts", label: `wallets on ${chainById(listing.chainId)?.label ?? listing.chainId}`, detail: accounts.length ? accounts.map((a) => shortAddr(a, 4)).join(", ") : "none" }
+      return { group: "accounts", label: `wallets on ${chainById(listing.chainId)?.label ?? listing.chainId}`, detail: accounts.length ? accounts.map((a) => shortAddr(a, 4)).join(", ") : "none", meta: { family: "data", dataKind: "listing", cleared: accounts.length === 0 } }
     }
-    return { group: "records", label: `data · ${arg}`, detail: isEmptyHex(str) ? "cleared" : clip(str, 40), full: str || undefined }
+    return { group: "records", label: `data · ${arg}`, detail: isEmptyHex(str) ? "cleared" : clip(str, 40), full: str || undefined, meta: { family: "data", dataKind: "other", cleared: isEmptyHex(str) } }
   }
-  if (family === "abi") return { group: "records", label: "abi", detail: isEmptyHex(str) ? "cleared" : "set" }
-  return { group: "records", label: key, detail: str ? clip(str) : "changed", full: str || undefined }
+  if (family === "abi") return { group: "records", label: "abi", detail: isEmptyHex(str) ? "cleared" : "set", meta: { family: "abi", cleared: isEmptyHex(str) } }
+  return { group: "records", label: key, detail: str ? clip(str) : "changed", full: str || undefined, meta: { family: "other", cleared: !str } }
+}
+
+/** "\x03seg\x03eth\x00" → "seg.eth" */
+function decodeDnsName(hex: string): string | undefined {
+  const bytes = hex.startsWith("0x") ? hex.slice(2) : hex
+  const labels: string[] = []
+  let i = 0
+  while (i + 2 <= bytes.length) {
+    const len = parseInt(bytes.slice(i, i + 2), 16)
+    i += 2
+    if (len === 0) break
+    const chunk = bytes.slice(i, i + len * 2)
+    i += len * 2
+    try {
+      labels.push(new TextDecoder().decode(new Uint8Array(chunk.match(/../g)!.map((h) => parseInt(h, 16)))))
+    } catch {
+      return undefined
+    }
+  }
+  return labels.length ? labels.join(".") : undefined
 }
 
 /** a date, or "none" for the sentinel expiries some registrations carry */
-function expiryText(v: string | number): string {
+export function expiryText(v: string | number): string {
   const n = Number(v)
   return Number.isFinite(n) && n > 0 && n < 4_102_444_800 ? new Date(n * 1000).toISOString().slice(0, 10) : "none"
 }
@@ -107,12 +151,18 @@ function expiryText(v: string | number): string {
 function toRow(e: RawEvent, recordsChainId: number): HistoryRow | null {
   if (!e.id || !e.timestamp || !e.transaction_hash) return null
   const d = e.data ?? {}
-  const base = { id: e.id, at: Number(e.timestamp), block: e.block_number ?? 0, tx: e.transaction_hash as Hex, name: e.name ?? null, resolver: d.resolver?.address, recordId: d.record_id }
+  const action = d.action ?? e.type ?? "event"
+  const base = { id: e.id, at: Number(e.timestamp), block: e.block_number ?? 0, tx: e.transaction_hash as Hex, name: e.name ?? null, resolver: d.resolver?.address, recordId: d.record_id, meta: { action, expiresAt: d.expires_at, from: d.from, to: d.to, owner: d.owner, approved: d.approved, added: d.added_powers, removed: d.removed_powers } as RowMeta }
   switch (d.action) {
-    case "record_changed":
-      return d.key ? { ...base, ...recordRow(d.key, d.value, recordsChainId) } : null
-    case "resolver_record_linked":
-      return { ...base, group: "links", label: "profile", detail: d.record_id && d.record_id !== "0" ? "started using a profile on this resolver" : "detached from its profile" }
+    case "record_changed": {
+      if (!d.key) return null
+      const r = recordRow(d.key, d.value, recordsChainId)
+      return { ...base, ...r, meta: { ...base.meta, ...r.meta } }
+    }
+    case "resolver_record_linked": {
+      const linkedName = d.dns_encoded_name ? decodeDnsName(d.dns_encoded_name) : undefined
+      return { ...base, group: "links", label: "profile", name: linkedName ?? base.name, meta: { ...base.meta, linkedName }, detail: d.record_id && d.record_id !== "0" ? "started using a profile on this resolver" : "detached from its profile" }
+    }
     case "resolver_changed":
       return { ...base, group: "name", label: "resolver", detail: d.resolver?.address ? `set to ${shortAddr(d.resolver.address, 6)}` : "changed" }
     case "permission_changed":
@@ -144,6 +194,8 @@ function toRow(e: RawEvent, recordsChainId: number): HistoryRow | null {
       const parts = [added.length ? `may now change ${added.join(", ")}` : "", removed.length ? `may no longer change ${removed.join(", ")}` : ""].filter(Boolean)
       return { ...base, group: "access", label: "permissions", address: d.address, detail: parts.join(" · ") || "changed" }
     }
+    case "operator_approval_changed":
+      return { ...base, group: "access", label: "operator", address: d.address, detail: d.approved === false ? "removed" : "approved" }
     case "reverse_changed":
       return { ...base, group: "name", label: "primary name", detail: d.address ? `set for ${shortAddr(d.address, 4)}` : "changed" }
     case "registration_granted":
