@@ -101,17 +101,18 @@ function recordRow(key: string, value: unknown, recordsChainId: number): Pick<Hi
   if (key === "name") return { group: "records", label: "primary name", detail: unknown ? "changed" : str ? clip(str) : "cleared", full: str || undefined, meta: { family: "other", cleared: !unknown && !str } }
   if (family === "text") {
     const def = textDef(arg)
-    return { group: "records", label: def.label === arg ? arg : `${def.label}`, detail: str ? clip(str) : "cleared", full: str || undefined, meta: { family: "text", cleared: !str } }
+    return { group: "records", label: def.label === arg ? arg : `${def.label}`, detail: str ? clip(str) : unknown ? "changed" : "cleared", full: str || undefined, meta: { family: "text", cleared: !unknown && !str } }
   }
   if (family === "addr") {
     const ct = Number(arg)
     const def = addressDef(ct)
-    const decoded = isEmptyHex(str) ? "" : decodeValue(def, str)
-    return { group: "records", label: `${addressLabel(ct, recordsChainId).label} address`, detail: decoded ? (decoded.length > 20 ? shortAddr(decoded, 6) : decoded) : "cleared", full: decoded || undefined, meta: { family: "addr", cleared: !decoded } }
+    const raw = isEmptyHex(str) ? "" : decodeValue(def, str)
+    const decoded = /^0x0{40}$/i.test(raw) ? "" : raw
+    return { group: "records", label: `${addressLabel(ct, recordsChainId).label} address`, detail: decoded ? (decoded.length > 20 ? shortAddr(decoded, 6) : decoded) : unknown ? "changed" : "cleared", full: decoded || undefined, meta: { family: "addr", cleared: !unknown && !decoded } }
   }
   if (family === "contenthash") {
     const decoded = isEmptyHex(str) ? "" : decodeValue(contenthashDef, str)
-    return { group: "records", label: "content hash", detail: decoded ? clip(decoded) : "cleared", full: decoded || undefined, meta: { family: "contenthash", cleared: !decoded } }
+    return { group: "records", label: "content hash", detail: decoded ? clip(decoded) : unknown ? "changed" : "cleared", full: decoded || undefined, meta: { family: "contenthash", cleared: !unknown && !decoded } }
   }
   if (family === "data") {
     if (arg === CHAINS_KEY) {
@@ -127,7 +128,7 @@ function recordRow(key: string, value: unknown, recordsChainId: number): Pick<Hi
     }
     return { group: "records", label: `data · ${arg}`, detail: isEmptyHex(str) ? "cleared" : clip(str, 40), full: str || undefined, meta: { family: "data", dataKind: "other", cleared: isEmptyHex(str) } }
   }
-  if (family === "abi") return { group: "records", label: "abi", detail: isEmptyHex(str) ? "cleared" : "set", meta: { family: "abi", cleared: isEmptyHex(str) } }
+  if (family === "abi") return { group: "records", label: "abi", detail: unknown ? "changed" : isEmptyHex(str) ? "cleared" : "set", meta: { family: "abi", cleared: !unknown && isEmptyHex(str) } }
   return { group: "records", label: key, detail: str ? clip(str) : unknown ? "changed" : "cleared", full: str || undefined, meta: { family: "other", cleared: !unknown && !str } }
 }
 
