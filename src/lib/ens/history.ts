@@ -44,6 +44,10 @@ export type RowMeta = {
   /** permissions */
   added?: string[]
   removed?: string[]
+  /** some permission events carry the full set after the change instead of a diff */
+  powersNow?: string[]
+  /** "registry", "registration" or "resolver" */
+  scopeKind?: string
   approved?: boolean
   /** registrations and transfers */
   expiresAt?: string
@@ -78,6 +82,8 @@ type RawEvent = {
     approved?: boolean
     dns_encoded_name?: string
     registrant?: string
+    powers?: string[]
+    grant_scope?: { kind?: string }
   }
 }
 type RawHistory = { data?: RawEvent[]; page?: { has_more?: boolean; next_cursor?: string | null } }
@@ -152,7 +158,7 @@ function toRow(e: RawEvent, recordsChainId: number): HistoryRow | null {
   if (!e.id || !e.timestamp || !e.transaction_hash) return null
   const d = e.data ?? {}
   const action = d.action ?? e.type ?? "event"
-  const base = { id: e.id, at: Number(e.timestamp), block: e.block_number ?? 0, tx: e.transaction_hash as Hex, name: e.name ?? null, resolver: d.resolver?.address, recordId: d.record_id, meta: { action, expiresAt: d.expires_at, from: d.from, to: d.to, owner: d.owner, approved: d.approved, added: d.added_powers, removed: d.removed_powers } as RowMeta }
+  const base = { id: e.id, at: Number(e.timestamp), block: e.block_number ?? 0, tx: e.transaction_hash as Hex, name: e.name ?? null, resolver: d.resolver?.address, recordId: d.record_id, meta: { action, expiresAt: d.expires_at, from: d.from, to: d.to, owner: d.owner, approved: d.approved, added: d.added_powers, removed: d.removed_powers, powersNow: d.powers, scopeKind: d.grant_scope?.kind } as RowMeta }
   switch (d.action) {
     case "record_changed": {
       if (!d.key) return null
@@ -178,6 +184,12 @@ function toRow(e: RawEvent, recordsChainId: number): HistoryRow | null {
         renew: "renewal",
         burn: "burning",
         set_token_observer: "the token observer",
+        registration_control: "the registration",
+        set_uri: "the token uri",
+        set_parent: "the parent",
+        unregister: "unregistering",
+        registrar: "registrations",
+        register_reserved: "reserved registrations",
       }
       const names = (list: string[] | undefined) => {
         const { powers } = powersFromBigName(list ?? [])
@@ -192,7 +204,8 @@ function toRow(e: RawEvent, recordsChainId: number): HistoryRow | null {
       const added = names(d.added_powers)
       const removed = names(d.removed_powers)
       const parts = [added.length ? `may now change ${added.join(", ")}` : "", removed.length ? `may no longer change ${removed.join(", ")}` : ""].filter(Boolean)
-      return { ...base, group: "access", label: "permissions", address: d.address, detail: parts.join(" · ") || "changed" }
+      if (!parts.length && d.powers) parts.push(d.powers.length ? `now ${names(d.powers).join(", ") || d.powers.join(", ").replace(/_/g, " ")}` : "no longer has access")
+      return { ...base, group: "access", label: d.grant_scope?.kind === "registration" ? "registration control" : "permissions", address: d.address, detail: parts.join(" · ") || "changed" }
     }
     case "operator_approval_changed":
       return { ...base, group: "access", label: "operator", address: d.address, detail: d.approved === false ? "removed" : "approved" }

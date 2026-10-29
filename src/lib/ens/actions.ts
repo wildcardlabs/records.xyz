@@ -36,6 +36,10 @@ const REGISTRY_POWER: Record<string, string> = {
   set_token_observer: "the token observer",
   registrar: "registrations",
   register_reserved: "reserved registrations",
+  registration_control: "the registration",
+  set_uri: "the token uri",
+  set_parent: "the parent",
+  unregister: "unregistering",
 }
 
 function powerNames(list: string[] | undefined): string[] {
@@ -53,11 +57,12 @@ const list = (xs: string[]) => (xs.length <= 3 ? xs.join(", ") : `${xs.slice(0, 
 const uniq = <T,>(xs: T[]) => [...new Set(xs)]
 
 /** the sentence for one bucket of events from one transaction */
-function describe(b: Bucket, namesForRecord: (resolver: string, recordId: string) => string[], txHasMigration: boolean): { text: string; address?: string } {
+function describe(b: Bucket, namesForRecord: (resolver: string, recordId: string) => string[], txHasMigration: boolean): { text: string; address?: string; groups: HistoryRow["group"][] } {
   const rows = b.rows
   const has = (a: string) => rows.some((r) => r.meta.action === a)
   const pieces: string[] = []
   let address: string | undefined
+  let accessDescribed = false
 
   const records = rows.filter((r) => r.meta.action === "record_changed")
   const profileRows = records.filter((r) => r.meta.family !== "data" || r.meta.dataKind === "other")
@@ -124,24 +129,35 @@ function describe(b: Bucket, namesForRecord: (resolver: string, recordId: string
     if (cleared.length) pieces.push(`cleared ${list(cleared)}`)
   }
 
-  const perms = rows.filter((r) => ["permission_changed", "root_permission_changed", "roles_changed", "eac_roles_changed"].includes(r.meta.action))
+  // ENSv2 role changes come as diffs and are real actions. ENSv1 approvals come as the whole set after the fact and
+  // mostly mirror something else in the same transaction (a resolver change, a transfer): only read them on their own
+  const allPerms = rows.filter((r) => ["permission_changed", "root_permission_changed", "roles_changed", "eac_roles_changed"].includes(r.meta.action))
+  const onlyPerms = allPerms.length === rows.length
+  const perms = allPerms.filter((r) => r.meta.added || r.meta.removed || onlyPerms)
   if (perms.length && !migrated && !has("registration_granted")) {
-    const byAddr = new Map<string, { added: string[]; removed: string[] }>()
+    const byAddr = new Map<string, { added: string[]; removed: string[]; cleared: boolean; now: string[] }>()
     for (const r of perms) {
       const k = r.address ?? "?"
-      const e = byAddr.get(k) ?? { added: [], removed: [] }
+      const e = byAddr.get(k) ?? { added: [], removed: [], cleared: false, now: [] }
       e.added.push(...powerNames(r.meta.added))
       e.removed.push(...powerNames(r.meta.removed))
+      // events that carry the whole set after the change: empty means the access was taken away
+      if (r.meta.powersNow && !r.meta.added && !r.meta.removed) {
+        if (r.meta.powersNow.length === 0) e.cleared = true
+        else e.now.push(...powerNames(r.meta.powersNow))
+      }
       byAddr.set(k, e)
     }
     for (const [who, e] of byAddr) {
-      const added = uniq(e.added)
+      const added = uniq([...e.added, ...e.now])
       const removed = uniq(e.removed)
       const name = who === "?" ? "a wallet" : shortAddr(who, 4)
-      if (added.length && !removed.length) pieces.push(`allowed ${name} to edit ${list(added)}`)
-      else if (removed.length && !added.length) pieces.push(`revoked ${name}: ${list(removed)}`)
-      else pieces.push(`changed what ${name} may edit`)
+      if (added.length && !removed.length && !e.cleared) pieces.push(`allowed ${name} to edit ${list(added)}`)
+      else if ((removed.length || e.cleared) && !added.length) pieces.push(removed.length ? `revoked ${name}: ${list(removed)}` : `removed ${name}'s access`)
+      else if (added.length || removed.length) pieces.push(`changed what ${name} may edit`)
+      else pieces.push(`updated ${name}'s access`)
       address = address ?? (who === "?" ? undefined : who)
+      accessDescribed = true
     }
   }
 
@@ -149,6 +165,7 @@ function describe(b: Bucket, namesForRecord: (resolver: string, recordId: string
     if (migrated || has("registration_granted")) break
     pieces.push(r.address ? `${r.meta.approved === false ? "removed" : "approved"} operator ${shortAddr(r.address, 4)}` : r.meta.approved === false ? "removed an operator" : "approved an operator")
     address = address ?? r.address
+    accessDescribed = true
   }
 
   if (has("reverse_changed")) {
@@ -160,7 +177,9 @@ function describe(b: Bucket, namesForRecord: (resolver: string, recordId: string
     const rest = uniq(rows.map((r) => `${r.label}${r.detail ? ` ${r.detail}` : ""}`))
     pieces.push(...rest.slice(0, 3))
   }
-  return { text: pieces.join(" · "), address }
+  // the tabs filter on what the sentence says: a v1 approval that only mirrored a resolver change is not an access action
+  const groups = uniq(rows.map((r) => r.group)).filter((g) => g !== "access" || accessDescribed || migrated)
+  return { text: pieces.join(" · "), address, groups }
 }
 
 /**
@@ -212,13 +231,13 @@ export function buildActions(rows: HistoryRow[], namesForRecord: (resolver: stri
       }
     }
     for (const b of buckets.values()) {
-      const { text, address } = describe(b, namesForRecord, txHasMigration)
+      const { text, address, groups } = describe(b, namesForRecord, txHasMigration)
       const names = b.name ? [b.name] : b.resolver && b.recordId ? namesForRecord(b.resolver, b.recordId) : []
       out.push({
         id: `${tx}:${b.key}`,
         at: b.rows[0].at,
         tx: tx as Hex,
-        groups: uniq(b.rows.map((r) => r.group)),
+        groups,
         names,
         resolver: b.resolver,
         recordId: b.recordId,
