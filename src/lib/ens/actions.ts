@@ -79,9 +79,13 @@ function describe(b: Bucket, namesForRecord: (resolver: string, recordId: string
 
   // a migration transaction reserves or registers the name in the new registry as it goes: that is the upgrade, not a fresh registration
   const migrated = has("migration_applied") || (txHasMigration && has("registration_granted"))
+  // the launch reserved every v1 name in the new registry and pointed it at the read-only mirror: one act, the reservation
+  const reserved = has("registration_reserved")
   if (migrated) {
     pieces.push("upgraded to ENSv2")
     if (profileRows.length) pieces.push(`profile copied: ${list(uniq(profileRows.map((r) => r.label)))}`)
+  } else if (reserved) {
+    pieces.push("reserved on ENSv2")
   } else if (has("registration_granted")) {
     const exp = rows.find((r) => r.meta.action === "registration_granted")?.meta.expiresAt
     const until = exp ? expiryText(exp) : "none"
@@ -93,7 +97,7 @@ function describe(b: Bucket, namesForRecord: (resolver: string, recordId: string
   if (has("registration_released")) pieces.push("released")
   if (has("name_wrapped")) pieces.push("wrapped (v1)")
 
-  if (!migrated && !has("registration_granted")) {
+  if (!migrated && !reserved && !has("registration_granted")) {
     const transfer = rows.find((r) => r.meta.action === "token_transferred" || r.meta.action === "token_control_transferred" || r.meta.action === "authority_changed")
     if (transfer) {
       const to = transfer.meta.to ?? transfer.meta.owner

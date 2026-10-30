@@ -217,6 +217,8 @@ function toRow(e: RawEvent, recordsChainId: number): HistoryRow | null {
       return { ...base, group: "name", label: "primary name", detail: d.address ? `set for ${shortAddr(d.address, 4)}` : "changed" }
     case "registration_granted":
       return { ...base, group: "name", label: "registered", detail: d.expires_at ? `until ${expiryText(d.expires_at)}` : "" }
+    case "registration_reserved":
+      return { ...base, group: "name", label: "reserved on ENSv2", detail: d.expires_at ? `until ${expiryText(d.expires_at)}` : "" }
     case "registration_renewed":
     case "expiry_changed":
       return { ...base, group: "name", label: "expiry", detail: d.expires_at ? `now ${expiryText(d.expires_at)}` : "changed" }
