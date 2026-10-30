@@ -144,7 +144,7 @@ function ProfileCard({
                 {profile?.socials.map((s) =>
                   s.href ? (
                     <a key={s.key} className="link-blue" href={s.href} target="_blank" rel="noreferrer">
-                      <Badge>{s.label} · {s.value.replace(/^@/, "")}</Badge>
+                      <Badge>{s.label} · {s.value}</Badge>
                     </a>
                   ) : (
                     <Badge key={s.key}>{s.label} · {s.value}</Badge>
