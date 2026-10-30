@@ -97,7 +97,7 @@ function ProfileCard({
   /** returns the chain label when the address's primary name on that coin type's chain is this name */
   primary?: (coinType: number, address: string) => string | null
 }) {
-  const empty = !loading && profile && !profile.avatar && !profile.displayName && !profile.description && !profile.url && !profile.contenthash && profile.socials.length === 0 && profile.addresses.length === 0
+  const empty = !loading && profile && !profile.avatar && !profile.displayName && !profile.description && !profile.url && !profile.contenthash && profile.socials.length === 0 && profile.other.length === 0 && profile.addresses.length === 0
   const site = profile?.contenthash ? siteFor(name, profile.contenthash) : null
   const hasBanner = !!(profile?.header || (profile?.theme && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(profile.theme)))
   return (
@@ -146,6 +146,25 @@ function ProfileCard({
                   )
                 )}
               </div>
+              {profile?.other.length ? (
+                <div className="mt-3">
+                  <Tooltip>
+                    <TooltipTrigger render={<span className="t-caption cursor-help normal-case tracking-normal" />}>other text records</TooltipTrigger>
+                    <TooltipContent className="max-w-xs font-mono text-[11px] whitespace-normal">keys apps don't read. the standard ones are lowercase: avatar, url, com.github.</TooltipContent>
+                  </Tooltip>
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {profile.other.map((o) =>
+                      /^https?:\/\//.test(o.value) ? (
+                        <a key={o.key} className="link-blue" href={o.value} target="_blank" rel="noreferrer">
+                          <Badge variant="dim">{o.key} · {host(o.value)}</Badge>
+                        </a>
+                      ) : (
+                        <Badge key={o.key} variant="dim">{o.key} · {o.value.length > 40 ? `${o.value.slice(0, 39)}…` : o.value}</Badge>
+                      )
+                    )}
+                  </div>
+                </div>
+              ) : null}
             </div>
           </div>
           {empty ? <p className="t-caption mt-4 normal-case tracking-normal">no profile yet.</p> : null}

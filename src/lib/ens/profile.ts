@@ -1,7 +1,7 @@
 import type { Address } from "viem"
 import { isAddressEqual, zeroAddress } from "viem"
 import type { RecordSet } from "./recordset"
-import { COIN_TYPE_DEFAULT, COIN_TYPE_ETH, type RecordDef, addressDef, chainIdForCoinType, coinMeta, coinTypeForChain, coinTypeForName, contenthashDef, decodeValue, isEvmCoinType, textDef } from "@/lib/records"
+import { TEXT_SPECS, COIN_TYPE_DEFAULT, COIN_TYPE_ETH, type RecordDef, addressDef, chainIdForCoinType, coinMeta, coinTypeForChain, coinTypeForName, contenthashDef, decodeValue, isEvmCoinType, textDef } from "@/lib/records"
 
 export type Social = { key: string; label: string; value: string; href?: string }
 export type ChainAddress = {
@@ -30,6 +30,8 @@ export type Profile = {
   /** decoded content hash (ipfs://…, ar://…, ton://…) */
   contenthash: string | null
   socials: Social[]
+  /** text records under keys no app reads, such as "Avatar" or "Website": shown so they are not lost */
+  other: { key: string; value: string }[]
   addresses: ChainAddress[]
   /** featured EVM chains that have no address of their own and so resolve to the default (empty when no default is set) */
   fallbackChains: string[]
@@ -132,6 +134,10 @@ export function profileFromRecordSet(set: RecordSet, name: string, recordsChainI
         .map((d) => d.label)
     : []
   const ch = set.values[contenthashDef.id]
+  const known = new Set([...TEXT_SPECS.map((t) => t.key), "theme"])
+  const other = Object.entries(set.values)
+    .filter(([id, v]) => id.startsWith("text:") && !!v && !known.has(id.slice(5)))
+    .map(([id, value]) => ({ key: id.slice(5), value }))
   return {
     displayName: text("name"),
     avatar: text("avatar"),
@@ -143,6 +149,7 @@ export function profileFromRecordSet(set: RecordSet, name: string, recordsChainI
     url: text("url"),
     contenthash: ch && ch !== "0x" ? decodeValue(contenthashDef, ch) || null : null,
     socials: socialsFrom(text),
+    other,
     addresses,
     fallbackChains,
     source: set.source,

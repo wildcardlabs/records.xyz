@@ -65,6 +65,7 @@ const exampleProfile: Profile = {
     { coinType: coinTypeFor(10), label: "optimism", isDefault: false, address: "0x77ab1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f91fe", evm: true },
     { coinType: 0, label: "btc", isDefault: false, address: "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq", evm: false },
   ],
+  other: [],
   fallbackChains: ["arbitrum"],
   source: "chain",
 }
