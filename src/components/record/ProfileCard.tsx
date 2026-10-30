@@ -20,7 +20,7 @@ function Avatar({ src, name, ring = false }: { src: string | null; name: string;
       </div>
     )
   }
-  return <img src={src} alt="" width={64} height={64} className={cn("size-16 shrink-0 border border-line bg-paper object-cover", ring && "outline outline-4 outline-paper")} onError={() => setBroken(true)} />
+  return <img src={src} alt="" width={64} height={64} referrerPolicy="no-referrer" className={cn("size-16 shrink-0 border border-line bg-paper object-cover", ring && "outline outline-4 outline-paper")} onError={() => setBroken(true)} />
 }
 
 /** `header` record as a wide banner; falls back to the `theme` colour, then to nothing. */
@@ -30,7 +30,7 @@ function Banner({ src, theme }: { src: string | null; theme: string | null }) {
   if ((!src || broken) && !color) return null
   return (
     <div className="h-32 w-full overflow-hidden border-b border-line sm:h-40" style={color ? { background: color } : undefined}>
-      {src && !broken ? <img src={src} alt="" className="size-full object-cover" onError={() => setBroken(true)} /> : null}
+      {src && !broken ? <img referrerPolicy="no-referrer" src={src} alt="" className="size-full object-cover" onError={() => setBroken(true)} /> : null}
     </div>
   )
 }
