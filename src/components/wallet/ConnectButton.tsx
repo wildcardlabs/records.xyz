@@ -12,7 +12,7 @@ const fallbackAvatar = (address: string) => `https://api.dicebear.com/10.x/waves
 function WalletAvatar({ address, src }: { address: string; src: string | null | undefined }) {
   const [broken, setBroken] = useState(false)
   const url = src && !broken ? src : fallbackAvatar(address)
-  return <img src={url} alt="" width={20} height={20} className="size-5 shrink-0 border border-line bg-paper object-cover" onError={() => setBroken(true)} />
+  return <img referrerPolicy="no-referrer" src={url} alt="" width={20} height={20} className="size-5 shrink-0 border border-line bg-paper object-cover" onError={() => setBroken(true)} />
 }
 
 /** Wallet menu in the nav: connector list when disconnected, address + chain + disconnect when connected. */
