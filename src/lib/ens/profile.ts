@@ -1,7 +1,7 @@
 import type { Address } from "viem"
 import { isAddressEqual, zeroAddress } from "viem"
 import type { RecordSet } from "./recordset"
-import { TEXT_SPECS, COIN_TYPE_DEFAULT, COIN_TYPE_ETH, type RecordDef, addressDef, chainIdForCoinType, coinMeta, coinTypeForChain, coinTypeForName, contenthashDef, decodeValue, isEvmCoinType, textDef } from "@/lib/records"
+import { TEXT_SPECS, COIN_TYPE_DEFAULT, COIN_TYPE_ETH, type RecordDef, addressDef, chainIdForCoinType, coinMeta, coinTypeForChain, coinTypeForName, contenthashDef, decodeValue, isEvmCoinType } from "@/lib/records"
 
 export type Social = { key: string; label: string; value: string; href?: string }
 export type ChainAddress = {
@@ -106,10 +106,60 @@ function avatarUrlFor(avatar: string | null, name: string, recordsChainId: numbe
   return `https://metadata.ens.domains/${metadataNet(recordsChainId)}/avatar/${name}`
 }
 
+/**
+ * People write keys their own way: "GitHub", "Twitter", "Website", "Avatar". ENS keys are
+ * case-sensitive and other apps will not find these, but the card can still read them as
+ * the standard record they meant.
+ */
+const KEY_ALIASES: Record<string, string> = {
+  github: "com.github",
+  twitter: "com.twitter",
+  x: "com.twitter",
+  "x.com": "com.twitter",
+  telegram: "org.telegram",
+  discord: "com.discord",
+  linkedin: "com.linkedin",
+  reddit: "com.reddit",
+  farcaster: "xyz.farcaster",
+  warpcast: "xyz.farcaster",
+  website: "url",
+  site: "url",
+  web: "url",
+  homepage: "url",
+  banner: "header",
+  bio: "description",
+  "display name": "name",
+  displayname: "name",
+}
+
+/** the standard key a written key means, or null when it is not one the app knows */
+export function canonicalKey(key: string): string | null {
+  const lower = key.trim().toLowerCase()
+  if (TEXT_SPECS.some((t) => t.key === lower) || lower === "theme") return lower
+  return KEY_ALIASES[lower] ?? null
+}
+
+/** a social value may be a handle or a full link; return a link to the profile and the handle to show */
+function socialLink(spec: (typeof SOCIAL_KEYS)[number], v: string): { href?: string; shown: string } {
+  if (/^https?:\/\//i.test(v)) {
+    try {
+      const u = new URL(v)
+      const tail = u.pathname.replace(/\/+$/, "").split("/").filter(Boolean)
+      return { href: v, shown: tail.length ? tail.join("/") : u.host }
+    } catch {
+      return { href: v, shown: v }
+    }
+  }
+  if (spec.key === "email") return { href: spec.href(v), shown: v }
+  return { href: spec.href(v), shown: v.replace(/^@/, "") }
+}
+
 function socialsFrom(get: (key: string) => string | null | undefined): Social[] {
   return SOCIAL_KEYS.flatMap((s) => {
     const v = get(s.key)
-    return v ? [{ key: s.key, label: s.label, value: v, href: s.href(v) }] : []
+    if (!v) return []
+    const { href, shown } = socialLink(s, v)
+    return [{ key: s.key, label: s.label, value: shown, href }]
   })
 }
 
@@ -117,7 +167,17 @@ const isEmpty = (v: string | undefined) => !v || v === "0x" || v === zeroAddress
 
 /** Build the display Profile from a record set, so the card does not care where values came from. */
 export function profileFromRecordSet(set: RecordSet, name: string, recordsChainId: number): Profile {
-  const text = (k: string) => set.values[textDef(k).id] || null
+  // standard keys win; a key written another way ("Avatar", "GitHub") fills in where the standard one is empty
+  const byCanon: Record<string, string> = {}
+  const other: { key: string; value: string }[] = []
+  for (const [id, v] of Object.entries(set.values)) {
+    if (!id.startsWith("text:") || !v) continue
+    const raw = id.slice(5)
+    const canon = canonicalKey(raw)
+    if (!canon) other.push({ key: raw, value: v })
+    else if (raw === canon || !byCanon[canon]) byCanon[canon] = v
+  }
+  const text = (k: string) => byCanon[k] || null
   const addresses: ChainAddress[] = Object.entries(set.values)
     .filter(([id, raw]) => id.startsWith("address:") && !isEmpty(raw))
     .map(([id, raw]) => ({ coinType: Number(id.slice(8)), raw }))
@@ -134,10 +194,6 @@ export function profileFromRecordSet(set: RecordSet, name: string, recordsChainI
         .map((d) => d.label)
     : []
   const ch = set.values[contenthashDef.id]
-  const known = new Set([...TEXT_SPECS.map((t) => t.key), "theme"])
-  const other = Object.entries(set.values)
-    .filter(([id, v]) => id.startsWith("text:") && !!v && !known.has(id.slice(5)))
-    .map(([id, value]) => ({ key: id.slice(5), value }))
   return {
     displayName: text("name"),
     avatar: text("avatar"),
