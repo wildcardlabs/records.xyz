@@ -40,9 +40,9 @@ function shortHash(h: string) {
   return h.length <= 30 ? h : `${h.slice(0, 18)}…${h.slice(-8)}`
 }
 
-/** a public gateway for .eth names on mainnet; other names have no well-known one */
+/** eth.limo serves any .eth name, subnames included; other names have no well-known gateway */
 function siteFor(name: string, contenthash: string) {
-  if (!name.endsWith(".eth") || name.split(".").length !== 2) return null
+  if (!name.endsWith(".eth")) return null
   if (!/^(ipfs|ipns|bzz|ar):\/\//.test(contenthash)) return null
   return `https://${name}.limo`
 }
@@ -135,6 +135,11 @@ function ProfileCard({
                       content hash · {profile.contenthash}{site ? " · opens through eth.limo" : ""}
                     </TooltipContent>
                   </Tooltip>
+                ) : null}
+                {site ? (
+                  <a className="link-blue" href={site} target="_blank" rel="noreferrer">
+                    <Badge variant="blue"><ExternalLink className="size-3" /> open site</Badge>
+                  </a>
                 ) : null}
                 {profile?.socials.map((s) =>
                   s.href ? (
