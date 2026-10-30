@@ -9,6 +9,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { FigSplit } from "@/components/wrap"
 import type { Profile } from "@/lib/ens/profile"
 import { VerifiedSeal } from "./StatusMark"
+import { ContentIcon, SocialIcon } from "./ProfileIcons"
 import { shortAddr } from "@/lib/format"
 
 function Avatar({ src, name, ring = false }: { src: string | null; name: string; ring?: boolean }) {
@@ -123,13 +124,13 @@ function ProfileCard({
               <div className="mt-2.5 flex flex-wrap gap-1.5">
                 {profile?.url ? (
                   <a className="link-blue" href={profile.url.startsWith("http") ? profile.url : `https://${profile.url}`} target="_blank" rel="noreferrer">
-                    <Badge variant="blue">{host(profile.url)}</Badge>
+                    <Badge variant="blue"><Globe className="size-3" /> {host(profile.url)}</Badge>
                   </a>
                 ) : null}
                 {profile?.contenthash ? (
                   <Tooltip>
                     <TooltipTrigger render={site ? <a className="link-blue" href={site} target="_blank" rel="noreferrer" /> : <span />}>
-                      <Badge variant="outline"><Globe className="size-3" /> {shortHash(profile.contenthash)}</Badge>
+                      <Badge variant="outline"><ContentIcon contenthash={profile.contenthash} /> {shortHash(profile.contenthash)}</Badge>
                     </TooltipTrigger>
                     <TooltipContent className="max-w-xs font-mono text-[11px] whitespace-normal break-all">
                       content hash · {profile.contenthash}{site ? " · opens through eth.limo" : ""}
@@ -143,11 +144,11 @@ function ProfileCard({
                 ) : null}
                 {profile?.socials.map((s) =>
                   s.href ? (
-                    <a key={s.key} className="link-blue" href={s.href} target="_blank" rel="noreferrer">
-                      <Badge>{s.label} · {s.value}</Badge>
+                    <a key={s.key} className="link-blue" href={s.href} target="_blank" rel="noreferrer" title={s.label}>
+                      <Badge><SocialIcon keyName={s.key} /> {s.value}</Badge>
                     </a>
                   ) : (
-                    <Badge key={s.key}>{s.label} · {s.value}</Badge>
+                    <Badge key={s.key} title={s.label}><SocialIcon keyName={s.key} /> {s.value}</Badge>
                   )
                 )}
               </div>
