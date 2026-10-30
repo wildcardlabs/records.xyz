@@ -33,6 +33,8 @@ export type RecordData = {
   /** records can be read and written on this resolver (ENSIP-24 data profile) */
   supportsData: boolean
   capabilities: ResolverCapabilities | null
+  /** an unmigrated v1 name with no resolver set: reads come from the read-only mirror and nothing can be written */
+  noResolver: boolean
   /** chain ids that carry a listing (from accounts-chains, or probed) */
   chains: ChainListing[]
   fetchedAt: number
@@ -55,7 +57,7 @@ export async function fetchRecord(name: string, recordsChainId: number): Promise
   const client = publicClient(recordsChainId)
   const node = namehash(name)
   let resolver = await findResolver(client, name)
-  const base: RecordData = { name, node, recordsChainId, resolver, supportsData: false, capabilities: null, chains: [], fetchedAt: Date.now() }
+  const base: RecordData = { name, node, recordsChainId, resolver, supportsData: false, capabilities: null, noResolver: false, chains: [], fetchedAt: Date.now() }
   if (!resolver) return base
   let caps = await resolverCapabilities(client, name, resolver)
   // ENSv2's Universal Resolver answers for an unmigrated v1 name through a read-only mirror of the
@@ -63,6 +65,7 @@ export async function fetchRecord(name: string, recordsChainId: number): Promise
   // mirror exposes no setters and the registry has a different resolver with some.
   if (caps.writeFlavour === null && caps.profileWrite === null) {
     const v1 = await client.readContract({ address: ENS_REGISTRY, abi: registryResolverAbi, functionName: "resolver", args: [node] }).catch(() => null)
+    if (v1 && /^0x0{40}$/.test(v1)) base.noResolver = true
     if (v1 && !/^0x0{40}$/.test(v1) && v1.toLowerCase() !== resolver.toLowerCase()) {
       const v1caps = await resolverCapabilities(client, name, v1)
       if (v1caps.writeFlavour !== null || v1caps.profileWrite !== null) {

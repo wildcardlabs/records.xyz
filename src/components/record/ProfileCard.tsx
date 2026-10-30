@@ -48,6 +48,12 @@ function siteFor(name: string, contenthash: string) {
   return `https://${name}.limo`
 }
 
+/** what kind of site the content hash points at, for the button */
+function siteKind(contenthash: string): string {
+  const scheme = contenthash.split(":")[0].toLowerCase()
+  return { ipfs: "ipfs site", ipns: "ipns site", bzz: "swarm site", ar: "arweave site", onion: "onion site", onion3: "onion site", sia: "sia site" }[scheme] ?? "site"
+}
+
 function host(u: string) {
   try {
     return new URL(u.startsWith("http") ? u : `https://${u}`).host.replace(/^www\./, "")
@@ -139,7 +145,7 @@ function ProfileCard({
                 ) : null}
                 {site ? (
                   <a className="link-blue" href={site} target="_blank" rel="noreferrer">
-                    <Badge variant="blue"><ExternalLink className="size-3" /> open site</Badge>
+                    <Badge variant="blue"><ExternalLink className="size-3" /> open {siteKind(profile!.contenthash!)}</Badge>
                   </a>
                 ) : null}
                 {profile?.socials.map((s) =>

@@ -93,7 +93,14 @@ export default function RecordPage() {
   const checkingEdit = editTextAuthority.isLoading || editAddrAuthority.isLoading
   const canPublish = accountsAuthority.data?.canPublish ?? false
   const profileWritable = !!data?.capabilities?.profileWrite
-  // why editing is off, in order of what matters most: the name is gone, no wallet, the resolver, then permission
+  // why editing is off, in order of what matters most: the name is gone, no wallet, not yours, then the resolver
+  const isOwnerOrManager = sameAddr(owner.data?.owner, address) || sameAddr(owner.data?.manager, address)
+  const notYours = !checkingEdit && !canEditProfile && !isOwnerOrManager && owner.data !== undefined
+  const ownerLine = (
+    <>
+      owned by {owner.data?.owner ? <AddressLink address={owner.data.owner} chars={4} /> : "another wallet"} · only the owner{data?.capabilities?.roles ? ", or a wallet it allowed," : owner.data?.manager ? " or manager" : ""} can edit.
+    </>
+  )
   const renewInfo = useRenewInfo(name && isEthSecondLevel(name) ? name : null)
   const expired = renewInfo.data && (renewInfo.data.status === "grace" || renewInfo.data.status === "expired") ? renewInfo.data : null
   const editBlock: ReactNode = expired ? (
@@ -109,16 +116,18 @@ export default function RecordPage() {
     </>
   ) : !isConnected ? (
     "connect your wallet to edit."
+  ) : notYours ? (
+    ownerLine
+  ) : data?.noResolver ? (
+    `${name} has no resolver, so it has no records yet. set one in the ENS app.`
   ) : !profileWritable ? (
     "this name's resolver can't be edited here."
   ) : checkingEdit ? (
     "checking permissions…"
   ) : !canEditProfile ? (
-    <>
-      owned by {owner.data?.owner ? <AddressLink address={owner.data.owner} chars={4} /> : "another wallet"} · only the owner{data?.capabilities?.roles ? ", or a wallet it allowed," : owner.data?.manager ? " or manager" : ""} can edit.
-    </>
+    ownerLine
   ) : null
-  const editBlockText = expired ? `${name} expired on ${fmtDate(expired.expiry!)}.` : !isConnected ? "connect your wallet to edit." : !profileWritable ? "this name's resolver can't be edited here." : !canEditProfile ? `only the owner of ${name} can edit.` : undefined
+  const editBlockText = expired ? `${name} expired on ${fmtDate(expired.expiry!)}.` : !isConnected ? "connect your wallet to edit." : notYours ? `only the owner of ${name} can edit.` : data?.noResolver ? `${name} has no resolver.` : !profileWritable ? "this name's resolver can't be edited here." : !canEditProfile ? `only the owner of ${name} can edit.` : undefined
   const hasLinks = !!data?.capabilities?.links
   const hasRoles = !!data?.capabilities?.roles
   const isV2 = !!data?.capabilities && (data.capabilities.writeFlavour === "name" || data.capabilities.canModifyName || data.capabilities.roles)
@@ -357,7 +366,7 @@ export default function RecordPage() {
                   canPublish={recordsAuthority.data?.canPublish ?? false}
                   checking={recordsAuthority.isLoading}
                   capable={profileWritable}
-                  incapableReason="this name's resolver can't be edited here."
+                  incapableReason={data?.noResolver ? `${name} has no resolver.` : "this name's resolver can't be edited here."}
                   explorer={explorer}
                   state={stateFor("records")}
                   onPublish={publishRecords}
