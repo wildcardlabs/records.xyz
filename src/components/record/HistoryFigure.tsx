@@ -75,21 +75,29 @@ function HistoryFigure({ name, address, recordsChainId, explorer, enabled }: { n
       ) : shown.length === 0 ? (
         <p className="t-fig-body p-4 text-ink-dim sm:p-5">{actions.length === 0 ? "nothing recorded yet." : "nothing here yet."}</p>
       ) : (
-        <Table stack>
-          <TableHeader>
-            <TableRow>
-              <TableHead>when</TableHead>
-              {address ? <TableHead>name</TableHead> : null}
-              <TableHead>what happened</TableHead>
-              <TableHead className="text-right">tx</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+        <>
+          {/* phones: one line per action, tap to open */}
+          <ul className="divide-y divide-line sm:hidden">
             {pager.slice.map((a) => (
-              <ActionRows key={a.id} action={a} withName={!!address} explorer={explorer} open={open === a.id} onToggle={() => setOpen(open === a.id ? null : a.id)} hcaOwner={a.address ? hca.data?.[a.address.toLowerCase()] : undefined} ownHash={ownHash} />
+              <MobileAction key={a.id} action={a} withName={!!address} explorer={explorer} open={open === a.id} onToggle={() => setOpen(open === a.id ? null : a.id)} hcaOwner={a.address ? hca.data?.[a.address.toLowerCase()] : undefined} ownHash={ownHash} />
             ))}
-          </TableBody>
-        </Table>
+          </ul>
+          <Table className="max-sm:hidden">
+            <TableHeader>
+              <TableRow>
+                <TableHead>when</TableHead>
+                {address ? <TableHead>name</TableHead> : null}
+                <TableHead>what happened</TableHead>
+                <TableHead className="text-right">tx</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {pager.slice.map((a) => (
+                <ActionRows key={a.id} action={a} withName={!!address} explorer={explorer} open={open === a.id} onToggle={() => setOpen(open === a.id ? null : a.id)} hcaOwner={a.address ? hca.data?.[a.address.toLowerCase()] : undefined} ownHash={ownHash} />
+              ))}
+            </TableBody>
+          </Table>
+        </>
       )}
       <Pager page={pager.page} pages={pager.pages} from={pager.from} to={pager.to} total={pager.total} onPage={pager.setPage} />
       {!autoLoad && q.hasNextPage ? (
@@ -135,18 +143,7 @@ function ActionRows({ action: a, withName, explorer, open, onToggle, hcaOwner, o
         <TableCell data-label="when" className="tabular text-ink-dim">{when(a.at)}</TableCell>
         {withName ? (
           <TableCell data-label="name">
-            {a.names.length ? (
-              a.names.map((n, i) => (
-                <span key={n}>
-                  {i ? ", " : ""}
-                  {isReverseName(n) ? <span className="text-ink-dim">{reverseLabel(n, ownHash)}</span> : <Link className="link-blue font-semibold text-ink" to={`/${n}`} onClick={(e) => e.stopPropagation()}>{n}</Link>}
-                </span>
-              ))
-            ) : a.resolver ? (
-              <span className="text-ink-dim">{a.recordId ? `record ${a.recordId} · ` : ""}{shortAddr(a.resolver, 4)}</span>
-            ) : (
-              <span className="text-ink-dim">—</span>
-            )}
+            <ActionNames a={a} ownHash={ownHash} onClick={(e) => e.stopPropagation()} />
           </TableCell>
         ) : null}
         <TableCell data-label="what happened" className="whitespace-normal">
@@ -165,26 +162,94 @@ function ActionRows({ action: a, withName, explorer, open, onToggle, hcaOwner, o
       {open ? (
         <TableRow className="bg-wash/40">
           <TableCell colSpan={withName ? 4 : 3} className="whitespace-normal py-2">
-            <ul className="divide-y divide-line-soft text-[11.5px]">
-              {a.events.map((r) => (
-                <li key={r.id} className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 py-1">
-                  <span className="min-w-[10rem] text-ink-muted">{r.label}</span>
-                  {r.full && r.full !== r.detail ? (
-                    <Tooltip>
-                      <TooltipTrigger render={<span className="cursor-help text-ink-dim" />}>{r.detail}</TooltipTrigger>
-                      <TooltipContent className="max-w-sm font-mono text-[11px] break-all whitespace-normal">{r.full}</TooltipContent>
-                    </Tooltip>
-                  ) : (
-                    <span className="text-ink-dim">{r.detail}</span>
-                  )}
-                  {r.address ? <AddressLink address={r.address} chars={4} /> : null}
-                </li>
-              ))}
-            </ul>
+            <EventList events={a.events} />
           </TableCell>
         </TableRow>
       ) : null}
     </>
+  )
+}
+
+/** the indexer's events behind an action */
+function EventList({ events }: { events: HistoryRow[] }) {
+  return (
+    <ul className="divide-y divide-line-soft text-[11.5px]">
+      {events.map((r) => (
+        <li key={r.id} className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 py-1">
+          <span className="min-w-[10rem] text-ink-muted">{r.label}</span>
+          {r.full && r.full !== r.detail ? (
+            <Tooltip>
+              <TooltipTrigger render={<span className="cursor-help text-ink-dim" />}>{r.detail}</TooltipTrigger>
+              <TooltipContent className="max-w-sm font-mono text-[11px] break-all whitespace-normal">{r.full}</TooltipContent>
+            </Tooltip>
+          ) : (
+            <span className="text-ink-dim">{r.detail}</span>
+          )}
+          {r.address ? <AddressLink address={r.address} chars={4} /> : null}
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+/** the names an action is about, linked; reverse nodes read as the wallet they belong to */
+function ActionNames({ a, ownHash, onClick }: { a: HistoryAction; ownHash: { hash: string; address: string } | null; onClick?: (e: React.MouseEvent) => void }) {
+  if (a.names.length)
+    return (
+      <>
+        {a.names.map((n, i) => (
+          <span key={n}>
+            {i ? ", " : ""}
+            {isReverseName(n) ? <span className="text-ink-dim">{reverseLabel(n, ownHash)}</span> : <Link className="link-blue font-semibold text-ink" to={`/${n}`} onClick={onClick}>{n}</Link>}
+          </span>
+        ))}
+      </>
+    )
+  if (a.resolver) return <span className="text-ink-dim">{a.recordId ? `record ${a.recordId} · ` : ""}{shortAddr(a.resolver, 4)}</span>
+  return <span className="text-ink-dim">—</span>
+}
+
+/** one action on a phone: date, name and sentence on a single line, the rest when opened */
+function MobileAction({ action: a, withName, explorer, open, onToggle, hcaOwner, ownHash }: { action: HistoryAction; withName: boolean; explorer: string; open: boolean; onToggle: () => void; hcaOwner?: `0x${string}`; ownHash: { hash: string; address: string } | null }) {
+  const Chevron = open ? ChevronDown : ChevronRight
+  const first = a.names[0]
+  const lead = withName ? (first ? (isReverseName(first) ? reverseLabel(first, ownHash) : first) : a.resolver ? shortAddr(a.resolver, 4) : null) : null
+  return (
+    <li>
+      <button type="button" onClick={onToggle} aria-expanded={open} className="flex w-full items-center gap-2 px-4 py-2.5 text-left">
+        <span className="tabular shrink-0 text-[11px] text-ink-dim">{new Date(a.at * 1000).toISOString().slice(0, 10)}</span>
+        <span className="min-w-0 flex-1 truncate text-[12px] text-ink">
+          {lead ? <span className="font-semibold">{lead} · </span> : null}
+          {a.text}
+        </span>
+        <Chevron className="size-3.5 shrink-0 text-ink-dim" aria-hidden="true" />
+      </button>
+      {open ? (
+        <div className="space-y-2 bg-wash/40 px-4 pb-3 pt-1 text-[12px]">
+          {withName ? (
+            <div>
+              <span className="t-label block text-ink-dim">name</span>
+              <ActionNames a={a} ownHash={ownHash} />
+            </div>
+          ) : null}
+          <div>
+            <span className="t-label block text-ink-dim">what happened</span>
+            <span className="text-ink">
+              <ActionText text={a.text} address={a.address} />
+              {hcaOwner ? <> <HcaPill owner={hcaOwner} /></> : null}
+            </span>
+          </div>
+          <div>
+            <span className="t-label block text-ink-dim">transaction</span>
+            <a className="link-blue text-ink" href={`${explorer}/tx/${a.tx}`} target="_blank" rel="noreferrer">{shortAddr(a.tx, 6)}</a>
+          </div>
+          <div>
+            <span className="t-label block text-ink-dim">details</span>
+            <EventList events={a.events} />
+          </div>
+        </div>
+      ) : null}
+    </li>
   )
 }
 
