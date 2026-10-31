@@ -1,25 +1,27 @@
 import { describe, expect, it } from "vitest"
-import { type RentPricing, USD_UNITS, YEAR, ceilToCents, durationForBudget, fmtDuration, fmtUsd, fromAmount, nextTierOffer, parseUsd, priceUnits, tierFor, tiers, toAmount } from "./renew"
+import { type Pricing, YEAR, ceilToCent, fmtDollars, fmtDuration, fmtToken, parseDollars, priceFor, solveBudget, tierFor, tiers } from "./renew"
 
-// the mainnet oracle as read on 2026-10-28
-const p: RentPricing = {
+// the mainnet oracle as read on 2026-10-28, priced in USDC (6 decimals)
+const p: Pricing = {
+  oracle: "0x76f29609a363a8a1a2a6abe2e859c0f8916af469",
+  token: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
   baseRates: [0n, 0n, 20_294_267n, 5_073_567n, 253_679n],
-  points: [
+  discountPoints: [
     { duration: 2n * YEAR, numer: 87_500_000_000_000_000_000_000_000_000_000_000_000n },
     { duration: 3n * YEAR, numer: 68_750_000_000_000_000_000_000_000_000_000_000_000n },
     { duration: 6n * YEAR, numer: 56_250_000_000_000_000_000_000_000_000_000_000_000n },
   ],
-  denom: 100_000_000_000_000_000_000_000_000_000_000_000_000n,
-  ratios: { usdc: { numer: 1n, denom: 1_000_000n }, dai: { numer: 1_000_000n, denom: 1n } },
+  discountDenominator: 100_000_000_000_000_000_000_000_000_000_000_000_000n,
+  tokenRatio: { numer: 1n, denom: 1_000_000n },
 }
-const usd = (s: string) => parseUsd(s)!
+const usdc = (s: string) => parseDollars(s, 6)!
 
-describe("rent pricing", () => {
+describe("renewals through ens-budget", () => {
   it("prices a year at the headline rates", () => {
-    expect(fmtUsd(priceUnits(p, "alice", YEAR))).toBe("$8.00")
-    expect(fmtUsd(priceUnits(p, "nick", YEAR))).toBe("$160.00")
-    expect(fmtUsd(priceUnits(p, "seg", YEAR))).toBe("$640.00")
-    expect(fmtUsd(toAmount(priceUnits(p, "alice", YEAR), p.ratios.usdc) * 1_000_000n)).toBe("$8.00")
+    expect(fmtDollars(priceFor(p, "alice", YEAR), 6)).toBe("$8.00")
+    expect(fmtDollars(priceFor(p, "nick", YEAR), 6)).toBe("$160.00")
+    expect(fmtDollars(priceFor(p, "seg", YEAR), 6)).toBe("$640.00")
+    expect(priceFor(p, "ab", YEAR)).toBe(0n)
   })
 
   it("lists the tiers best first with their discounts", () => {
@@ -35,45 +37,37 @@ describe("rent pricing", () => {
 
   it("turns a budget into the longest term it buys", () => {
     // the six-year sweet spot: $27.01 buys six years, $27.00 does not reach the tier
-    const six = durationForBudget(p, "alice", usd("27.01"))!
-    expect(six.tier.years).toBe(6)
-    expect(six.seconds).toBe(189_285_584n)
-    expect(fmtDuration(six.seconds)).toBe("6 years")
-    const five = durationForBudget(p, "alice", usd("27.00"))!
-    expect(five.tier.years).toBe(3)
-    expect(five.seconds).toBeLessThan(6n * YEAR)
-    expect(fmtDuration(durationForBudget(p, "alice", usd("8.01"))!.seconds)).toBe("1 year")
-    expect(fmtDuration(durationForBudget(p, "alice", usd("8"))!.seconds)).toBe("11 months, 30 days")
-    expect(durationForBudget(p, "alice", 0n)!.seconds).toBe(0n)
-    expect(durationForBudget(p, "ab", usd("100"))).toBeNull()
+    const six = solveBudget(p, "alice", usd("27.01"))!
+    expect(six.duration).toBe(189_285_584n)
+    expect(six.tier?.discountBps).toBe(4375)
+    expect(fmtDuration(six.duration)).toBe("6 years")
+    const five = solveBudget(p, "alice", usd("27.00"))!
+    expect(five.tier?.discountBps).toBe(3125)
+    expect(five.nextTier?.discountBps).toBe(4375)
+    expect(fmtDollars(five.nextTier!.extraAmount, 6)).toBe("$0.00")
+    expect(fmtDollars(ceilToCent(five.nextTier!.amount, 6), 6)).toBe("$27.01")
+    expect(fmtDuration(solveBudget(p, "alice", usd("8.01"))!.duration)).toBe("1 year")
+    expect(solveBudget(p, "ab", usd("100"))).toBeNull()
   })
 
-  it("never quotes above the budget once rounded to the token", () => {
+  it("never quotes above the budget", () => {
     for (const dollars of ["8", "13.99", "14", "27", "27.01", "100", "0.37"]) {
-      const units = usd(dollars)
-      const { seconds } = durationForBudget(p, "alice", units)!
-      for (const r of [p.ratios.usdc, p.ratios.dai]) {
-        const budget = toAmount(units, r)
-        expect(toAmount(priceUnits(p, "alice", seconds), r) <= budget).toBe(true)
-        expect(fromAmount(budget, r)).toBe(units)
-      }
+      const budget = usd(dollars)
+      const { duration, amount } = solveBudget(p, "alice", budget)!
+      expect(amount <= budget).toBe(true)
+      expect(priceFor(p, "alice", duration)).toBe(amount)
+      if (duration > 0n) expect(priceFor(p, "alice", duration + 1n) > budget).toBe(true)
     }
   })
 
-  it("offers the next tier when it is close", () => {
-    const offer = nextTierOffer(p, "alice", usd("25"))!
-    expect(offer.tier.years).toBe(6)
-    expect(fmtUsd(offer.extraUnits)).toBe("$2.01")
-    expect(offer.gainSeconds > YEAR).toBe(true)
-    expect(nextTierOffer(p, "alice", usd("8"))).toBeNull()
-  })
-
   it("parses and prints dollars", () => {
-    expect(parseUsd("$1,234.5")).toBe(1234n * USD_UNITS + USD_UNITS / 2n)
-    expect(parseUsd("abc")).toBeNull()
-    expect(parseUsd("")).toBeNull()
-    expect(fmtUsd(parseUsd(".5")!)).toBe("$0.50")
-    expect(fmtUsd(ceilToCents(priceUnits(p, "alice", 6n * YEAR)))).toBe("$27.01")
+    expect(parseDollars("$1,234.5", 6)).toBe(1_234_500_000n)
+    expect(parseDollars("27.01", 18)).toBe(27_010_000_000_000_000_000n)
+    expect(parseDollars("abc", 6)).toBeNull()
+    expect(parseDollars("", 6)).toBeNull()
+    expect(fmtToken(8_000_022n, 6)).toBe("8.00")
     expect(fmtDuration(YEAR + 45n * 86_400n)).toBe("1 year, 1 month, 14 days")
   })
 })
+
+const usd = usdc

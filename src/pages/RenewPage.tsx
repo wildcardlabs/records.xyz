@@ -5,7 +5,7 @@ import { ArrowRight, BadgePercent, Copy, ExternalLink } from "lucide-react"
 import { toast } from "sonner"
 import { type Hex, erc20Abi, pad } from "viem"
 import { normalize } from "viem/ens"
-import { useConnection, useReadContract, useSwitchChain, useWriteContract } from "wagmi"
+import { useConnection, useReadContract, useSendTransaction, useSwitchChain } from "wagmi"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -16,7 +16,7 @@ import { FaqRow, FigSplit, Figure, Pager, Section, SectionHeader, StatusText, V2
 import { useMyNames } from "@/hooks/useMyNames"
 import { renewInfoKey, useRenewInfo, useRenewQuote, useRentPricing } from "@/hooks/useRenew"
 import { publicClient } from "@/lib/ens/clients"
-import { PAY_TOKENS, type PayToken, type RentPricing, YEAR, ceilToCents, durationForBudget, fmtDuration, fmtToken, fmtUsd, isEthSecondLevel, nextTierOffer, parseUsd, priceUnits, renewerAbi, tierFor, tiers, toAmount, yearsToSeconds } from "@/lib/ens/renew"
+import { PAY_TOKENS, type PayToken, type Pricing, YEAR, ceilToCent, fmtDollars, fmtDuration, fmtToken, isEthSecondLevel, parseDollars, priceFor, renewCalls, solveBudget, tierFor, tiers, yearsToSeconds } from "@/lib/ens/renew"
 import { daysUntil, fmtDate, shortAddr } from "@/lib/format"
 import { asChainId } from "@/lib/wagmi"
 
@@ -52,13 +52,12 @@ export default function RenewPage() {
     if (name && name !== given) nav(`/renew/${name}`, { replace: true })
   }, [name, given, nav])
 
-  const pricing = useRentPricing()
   const info = useRenewInfo(name)
   const label = info.data?.label
   const renewable = !!info.data?.renewer && (info.data.status === "registered" || info.data.status === "grace")
   const [mode, setMode] = useState<Mode>("budget")
   const [token, setToken] = useState<PayToken>(PAY_TOKENS[0])
-  const ratio = pricing.data?.ratios[token.address.toLowerCase()]
+  const pricing = useRentPricing(token.address)
   const [years, setYears] = useState("1")
   const [untilDate, setUntilDate] = useState("")
   const [durKind, setDurKind] = useState<DurationKind>("years")
@@ -68,11 +67,13 @@ export default function RenewPage() {
   const defaultUsd = useMemo(() => {
     if (!pricing.data) return ""
     const best = tiers(pricing.data)[0]
-    const units = priceUnits(pricing.data, label && renewable ? label : "alice", best.start)
-    return units > 0n ? fmtUsd(ceilToCents(units)).slice(1) : ""
-  }, [pricing.data, label, renewable])
+    const cost = priceFor(pricing.data, label && renewable ? label : "alice", best.start)
+    return cost > 0n ? fmtToken(ceilToCent(cost, token.decimals), token.decimals) : ""
+  }, [pricing.data, label, renewable, token.decimals])
   const usdText = usd ?? defaultUsd
-  const budgetUnits = parseUsd(usdText)
+  const budgetAmount = parseDollars(usdText, token.decimals)
+  // ens-budget's solver, run locally on every change so the slider and cards answer at once
+  const solution = useMemo(() => (mode === "budget" && pricing.data && label && budgetAmount !== null ? solveBudget(pricing.data, label, budgetAmount) : null), [mode, pricing.data, label, budgetAmount])
 
   const wantedSeconds = useMemo(() => {
     if (mode === "duration") {
@@ -85,15 +86,24 @@ export default function RenewPage() {
       const y = Number(years)
       return Number.isFinite(y) && y > 0 ? yearsToSeconds(Math.min(y, 100)) : 0n
     }
-    if (!pricing.data || !label || budgetUnits === null) return 0n
-    return durationForBudget(pricing.data, label, budgetUnits)?.seconds ?? 0n
-  }, [mode, years, durKind, untilDate, info.data?.expiry, pricing.data, label, budgetUnits])
-  const budgetAmount = mode === "budget" && budgetUnits !== null && ratio ? toAmount(budgetUnits, ratio) : undefined
-  const quote = useRenewQuote(renewable ? info.data!.renewer : null, label, wantedSeconds, token.address, budgetAmount)
-  const seconds = quote.data?.seconds ?? wantedSeconds
+    return solution?.duration ?? 0n
+  }, [mode, years, durKind, untilDate, info.data?.expiry, solution])
+  // the contract-confirmed quote: ens-budget's quoteRenewal for a budget, getRenewPrice for a term
+  const quote = useRenewQuote(
+    mode === "budget" ? { mode, label, token: token.address, budget: budgetAmount } : { mode, label, token: token.address, renewer: info.data?.renewer ?? null, duration: wantedSeconds, pricing: pricing.data },
+    renewable
+  )
+  const seconds = quote.data?.duration ?? wantedSeconds
   const amount = quote.data?.amount
   const tier = pricing.data && seconds > 0n ? tierFor(pricing.data, seconds) : null
-  const offer = mode === "budget" && pricing.data && label && renewable && budgetUnits !== null ? nextTierOffer(pricing.data, label, budgetUnits) : null
+  // the next tier up, when it is within reach of the budget
+  const offer = useMemo(() => {
+    const n = solution?.nextTier
+    if (!n || !renewable || budgetAmount === null || budgetAmount <= 0n) return null
+    if (Number(n.extraAmount) > Number(budgetAmount) * 0.35) return null
+    const t = pricing.data ? tierFor(pricing.data, n.duration) : null
+    return { years: t?.years ?? 0, off: n.discountBps / 100, cost: ceilToCent(n.amount, token.decimals), extraAmount: n.extraAmount, extraDuration: n.extraDuration }
+  }, [solution, renewable, budgetAmount, pricing.data, token.decimals])
   const perYear = amount && seconds > 0n ? (amount * YEAR) / seconds : null
 
   // wallet side: balance and allowance for the chosen token
@@ -103,29 +113,30 @@ export default function RenewPage() {
   const approved = amount !== undefined && allowance.data !== undefined && allowance.data >= amount
 
   const { switchChainAsync } = useSwitchChain()
-  const { writeContractAsync } = useWriteContract()
+  const { sendTransactionAsync } = useSendTransaction()
   const qc = useQueryClient()
   const [phase, setPhase] = useState<"idle" | "approving" | "extending">("idle")
   const [done, setDone] = useState<{ hash: Hex; seconds: bigint; name: string } | null>(null)
 
   async function extend() {
-    if (!address || !info.data?.renewer || !label || !amount || seconds <= 0n) return
-    const renewer = info.data.renewer
+    const q = quote.data
+    if (!address || !q || q.amount <= 0n || q.duration <= 0n) return
     try {
       if (walletChainId !== MAINNET) await switchChainAsync({ chainId: asChainId(MAINNET) })
-      if (!approved) {
-        setPhase("approving")
-        const hash = await writeContractAsync({ address: token.address, abi: erc20Abi, functionName: "approve", args: [renewer, amount], chainId: asChainId(MAINNET) })
-        toast("approval sent", { description: shortAddr(hash, 8) })
-        await publicClient(MAINNET).waitForTransactionReceipt({ hash })
-        allowance.refetch()
+      // ens-budget builds the calls: an approval for exactly the quoted amount when the allowance is short, then the renewal
+      const calls = await renewCalls(publicClient(MAINNET), q, address, REFERRER)
+      let hash: Hex = "0x"
+      for (const [i, call] of calls.entries()) {
+        const isApproval = calls.length === 2 && i === 0
+        setPhase(isApproval ? "approving" : "extending")
+        hash = await sendTransactionAsync({ to: call.to, data: call.data, chainId: asChainId(MAINNET) })
+        toast(isApproval ? "approval sent" : "transaction sent", { description: shortAddr(hash, 8) })
+        const receipt = await publicClient(MAINNET).waitForTransactionReceipt({ hash })
+        if (receipt.status !== "success") throw new Error(`transaction ${shortAddr(hash, 6)} reverted`)
+        if (isApproval) allowance.refetch()
       }
-      setPhase("extending")
-      const hash = await writeContractAsync({ address: renewer, abi: renewerAbi, functionName: "renew", args: [{ label, duration: seconds, referrer: REFERRER }, token.address], chainId: asChainId(MAINNET) })
-      toast("transaction sent", { description: shortAddr(hash, 8) })
-      await publicClient(MAINNET).waitForTransactionReceipt({ hash })
-      setDone({ hash, seconds, name: name! })
-      toast.success(`${name} extended`, { description: fmtDuration(seconds) })
+      setDone({ hash, seconds: q.duration, name: name! })
+      toast.success(`${name} extended`, { description: fmtDuration(q.duration) })
       qc.invalidateQueries({ queryKey: renewInfoKey(name!) })
       qc.invalidateQueries({ queryKey: ["my-names"] })
       balance.refetch()
@@ -181,7 +192,7 @@ export default function RenewPage() {
             {/* both panels share one grid cell: the hidden one still takes space, so the height never jumps between tabs */}
             <div className="grid [&>*]:[grid-area:1/1]">
               <div className={mode === "budget" ? undefined : "invisible"} inert={mode !== "budget"} aria-hidden={mode !== "budget"}>
-                <BudgetPicker usdText={usdText} setUsd={setUsd} budgetUnits={budgetUnits} pricing={pricing.data} label={label} ready={renewable} offer={offer} activeYears={tier?.years ?? 0} />
+                <BudgetPicker usdText={usdText} setUsd={setUsd} budgetAmount={budgetAmount} decimals={token.decimals} pricing={pricing.data} label={label} ready={renewable} offer={offer} activeYears={tier?.years ?? 0} />
               </div>
               <div className={mode === "duration" ? undefined : "invisible"} inert={mode !== "duration"} aria-hidden={mode !== "duration"}>
               <div className="mt-5">
@@ -231,7 +242,7 @@ export default function RenewPage() {
               <Row k="rate" v={tier && renewable ? (tier.off ? `${tier.off}% off · ${tier.years}+ years` : "standard") : "—"} />
               <Row k="per year" v={perYear !== null && renewable ? `${fmtToken(perYear, token.decimals)} ${token.symbol}` : "—"} />
               <Row k="seconds" v={renewable && seconds > 0n ? seconds.toLocaleString("en-US") : "—"} dim />
-              {mode === "budget" && budgetUnits !== null && amount !== undefined && ratio && renewable && toAmount(budgetUnits, ratio) - amount >= 10n ** BigInt(token.decimals) / 100n ? <Row k="left over" v={`${fmtToken(toAmount(budgetUnits, ratio) - amount, token.decimals)} ${token.symbol}`} dim /> : null}
+              {mode === "budget" && budgetAmount !== null && amount !== undefined && renewable && budgetAmount - amount >= 10n ** BigInt(token.decimals) / 100n ? <Row k="left over" v={`${fmtToken(budgetAmount - amount, token.decimals)} ${token.symbol}`} dim /> : null}
             </dl>
 
             <div className="mt-auto pt-5">
@@ -243,7 +254,7 @@ export default function RenewPage() {
                     {payLabel}
                   </Button>
                   <span className="t-caption normal-case tracking-normal">
-                    {!renewable ? "pick a name that can be extended." : amount !== undefined && !enough ? `not enough ${token.symbol} in ${shortAddr(address!, 4)}.` : busy ? "two transactions: approve, then extend." : approved ? "one transaction." : "two transactions: approve, then extend."}
+                    {!renewable ? "pick a name that can be extended." : quote.isError ? <StatusText tone="err">{(quote.error as Error).message}</StatusText> : amount !== undefined && !enough ? `not enough ${token.symbol} in ${shortAddr(address!, 4)}.` : busy ? "two transactions: approve, then extend." : approved ? "one transaction." : "two transactions: approve, then extend."}
                   </span>
                 </div>
               )}
@@ -323,14 +334,17 @@ function fmtGain(seconds: bigint): string {
   return `${days} more ${days === 1 ? "day" : "days"}`
 }
 
+type Offer = { years: number; off: number; cost: bigint; extraAmount: bigint; extraDuration: bigint }
+
 type BudgetPickerProps = {
   usdText: string
   setUsd: (v: string) => void
-  budgetUnits: bigint | null
-  pricing: RentPricing | undefined
+  budgetAmount: bigint | null
+  decimals: number
+  pricing: Pricing | undefined
   label: string | undefined
   ready: boolean
-  offer: ReturnType<typeof nextTierOffer>
+  offer: Offer | null
   activeYears: number
 }
 
@@ -339,18 +353,19 @@ type BudgetPickerProps = {
  * a little more reaches the next tier, and the tiers themselves as cards that set the budget
  * to their entry price.
  */
-function BudgetPicker({ usdText, setUsd, budgetUnits, pricing, label, ready, offer, activeYears }: BudgetPickerProps) {
+function BudgetPicker({ usdText, setUsd, budgetAmount, decimals, pricing, label, ready, offer, activeYears }: BudgetPickerProps) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState("")
+  const dollars = (amount: bigint) => fmtToken(amount, decimals)
   const tierList = useMemo(() => (pricing ? tiers(pricing).filter((t) => t.start > 0n).sort((a, b) => (a.start < b.start ? -1 : 1)) : []), [pricing])
-  const costs = useMemo(() => (pricing ? tierList.map((t) => ceilToCents(priceUnits(pricing, label ?? "alice", t.start))) : []), [pricing, tierList, label])
+  const costs = useMemo(() => (pricing ? tierList.map((t) => ceilToCent(priceFor(pricing, label ?? "alice", t.start), decimals)) : []), [pricing, tierList, label, decimals])
   // the slider runs to 1.6× the best tier's entry price, so the sweet spot sits at the top of the comfortable range
   const max = costs.length ? (costs[costs.length - 1] * 8n) / 5n : 0n
-  const value = max > 0n && budgetUnits !== null ? Math.min(1, Number(budgetUnits) / Number(max)) : 0
+  const value = max > 0n && budgetAmount !== null ? Math.min(1, Number(budgetAmount) / Number(max)) : 0
 
   function commit() {
-    const u = parseUsd(draft)
-    if (u !== null) setUsd(fmtUsd(u).slice(1))
+    const a = parseDollars(draft, decimals)
+    if (a !== null) setUsd(dollars(a))
     setEditing(false)
   }
 
@@ -378,19 +393,19 @@ function BudgetPicker({ usdText, setUsd, budgetUnits, pricing, label, ready, off
             </div>
           ) : (
             <button type="button" onClick={() => { setDraft(usdText); setEditing(true) }} className="t-h2 tabular block border-b border-transparent text-ink transition-colors hover:border-line" title="tap to type an amount">
-              {budgetUnits !== null ? fmtUsd(budgetUnits) : "$—"}
+              {budgetAmount !== null ? fmtDollars(budgetAmount, decimals) : "$—"}
             </button>
           )}
           <div className="t-caption mt-1.5 normal-case tracking-normal">tap the amount to type your own</div>
         </div>
         {offer && ready ? (
-          <button type="button" onClick={() => setUsd(fmtUsd(offer.costUnits).slice(1))} className="group self-center border-l border-line pl-4 text-left">
+          <button type="button" onClick={() => setUsd(dollars(offer.cost))} className="group self-center border-l border-line pl-4 text-left">
             <span className="flex flex-wrap items-center gap-1.5 text-[12.5px] font-semibold text-blue">
-              <span>add {fmtUsd(offer.extraUnits)}</span>
+              <span>add {fmtDollars(offer.cost - (budgetAmount ?? 0n), decimals)}</span>
               <ArrowRight className="size-3.5 shrink-0" aria-hidden="true" />
-              <span className="font-medium text-ink group-hover:text-blue">get {fmtGain(offer.gainSeconds)}</span>
+              <span className="font-medium text-ink group-hover:text-blue">get {fmtGain(offer.extraDuration)}</span>
             </span>
-            <span className="t-caption mt-0.5 block normal-case tracking-normal">{offer.tier.years}-year rate · {offer.tier.off}% off</span>
+            <span className="t-caption mt-0.5 block normal-case tracking-normal">{offer.years}-year rate · {offer.off}% off</span>
           </button>
         ) : null}
       </div>
@@ -401,13 +416,13 @@ function BudgetPicker({ usdText, setUsd, budgetUnits, pricing, label, ready, off
         step={0.0005}
         value={value}
         disabled={!ready || max === 0n}
-        onChange={(e) => setUsd(fmtUsd(ceilToCents((max * BigInt(Math.round(Number(e.target.value) * 10_000))) / 10_000n)).slice(1))}
+        onChange={(e) => setUsd(dollars(ceilToCent((max * BigInt(Math.round(Number(e.target.value) * 10_000))) / 10_000n, decimals)))}
         aria-label="budget"
         aria-valuetext={`$${usdText}`}
         className="budget-slider mt-4"
         style={{ "--fill": `${value * 100}%` } as CSSProperties}
       />
-      <TierCards items={tierList.map((t, i) => ({ years: t.years, off: t.off, sub: ready ? fmtUsd(costs[i]) : undefined }))} activeYears={ready ? activeYears : -1} onPick={(y) => { const i = tierList.findIndex((t) => t.years === y); if (i >= 0) setUsd(fmtUsd(costs[i]).slice(1)) }} />
+      <TierCards items={tierList.map((t, i) => ({ years: t.years, off: t.off, sub: ready ? fmtDollars(costs[i], decimals) : undefined }))} activeYears={ready ? activeYears : -1} onPick={(y) => { const i = tierList.findIndex((t) => t.years === y); if (i >= 0) setUsd(dollars(costs[i])) }} />
       <p className="t-caption mt-4 flex items-center gap-2 normal-case tracking-normal">
         <BadgePercent className="size-3.5 shrink-0" aria-hidden="true" />
         <span>
