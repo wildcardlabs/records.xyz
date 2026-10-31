@@ -1,5 +1,8 @@
 import { NavLink, Link } from "react-router-dom"
+import { Menu } from "lucide-react"
 import { useConnection } from "wagmi"
+import { Button } from "@/components/ui/button"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Logo } from "@/components/wrap/Logo"
 import { Wrap } from "@/components/wrap/Section"
 
@@ -30,7 +33,19 @@ function Nav({ right }: { right?: React.ReactNode }) {
             renew
           </NavLink>
         </nav>
-        <div className="ml-auto flex items-center gap-2">{right}</div>
+        <div className="ml-auto flex items-center gap-2">
+          {right}
+          <DropdownMenu>
+            <DropdownMenuTrigger render={<Button variant="outline" size="icon" className="sm:hidden" aria-label="menu" />}>
+              <Menu className="size-4" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="font-mono">
+              <DropdownMenuItem render={<Link to="/" />}>home</DropdownMenuItem>
+              {isConnected ? <DropdownMenuItem render={<Link to="/account" />}>account</DropdownMenuItem> : null}
+              <DropdownMenuItem render={<Link to="/renew" />}>renew</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </Wrap>
       <div className="rule-dotted" />
     </header>

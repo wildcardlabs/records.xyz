@@ -1,5 +1,6 @@
 import { AddressLink } from "@/components/wrap"
 import { useMemo, useState } from "react"
+import { ChevronDown, ChevronRight } from "lucide-react"
 import { Link } from "react-router-dom"
 import { useConnection } from "wagmi"
 import type { Address } from "viem"
@@ -27,6 +28,7 @@ export default function NamesPage({ address: given }: { address?: Address } = {}
   const mine = useMyNames(address)
   const [q, setQ] = useState("")
   const [chain, setChain] = useState<number | "all">("all")
+  const [openName, setOpenName] = useState<string | null>(null)
 
   const names = mine.data?.names ?? []
   const chains = useMemo(() => [...new Set(names.map((n) => n.chainId))], [names])
@@ -79,7 +81,46 @@ export default function NamesPage({ address: given }: { address?: Address } = {}
             ) : shown.length === 0 ? (
               <p className="t-fig-body p-4 text-ink-dim sm:p-5">nothing matches.</p>
             ) : (
-              <Table stack>
+              <>
+                {/* phones: one line per name, tap for the rest */}
+                <ul className="divide-y divide-line sm:hidden">
+                  {pager.slice.map((n) => {
+                    const key = `${n.chainId}:${n.name}`
+                    const open = openName === key
+                    const Chevron = open ? ChevronDown : ChevronRight
+                    const days = n.expiresAt ? daysUntil(n.expiresAt) : null
+                    return (
+                      <li key={key}>
+                        <button type="button" onClick={() => setOpenName(open ? null : key)} aria-expanded={open} className="flex w-full items-center gap-2 px-4 py-2.5 text-left">
+                          <span className="min-w-0 flex-1 truncate text-[12.5px] font-semibold text-ink">
+                            {n.name}
+                            {n.authority === "ens_v2" ? <> <V2 /></> : null}
+                          </span>
+                          {n.isPrimary ? <LivePill pulse={false}>primary</LivePill> : null}
+                          <span className={`tabular shrink-0 text-[11px] ${days === null ? "text-ink-dim" : days < 0 ? "text-err" : days < 30 ? "text-wait" : "text-ink-dim"}`}>{days === null ? "—" : days < 0 ? "expired" : `${days} days`}</span>
+                          <Chevron className="size-3.5 shrink-0 text-ink-dim" aria-hidden="true" />
+                        </button>
+                        {open ? (
+                          <div className="space-y-2 bg-wash/40 px-4 pb-3 pt-1 text-[12px]">
+                            <div className="flex flex-wrap gap-x-6 gap-y-2">
+                              <div><span className="t-label block text-ink-dim">chain</span><span className="inline-flex items-center gap-1.5"><span className="dot text-blue-2" />{chainById(n.chainId)?.label ?? n.chainId}</span></div>
+                              <div><span className="t-label block text-ink-dim">role</span>{n.relations.length ? n.relations.join(" · ") : "—"}</div>
+                              <div>
+                                <span className="t-label block text-ink-dim">expires</span>
+                                {n.expiresAt ? (days! < 0 ? <span className="text-err">{fmtDate(n.expiresAt)} · expired{n.renewBy && daysUntil(n.renewBy) >= 0 ? <span className="text-ink-dim"> · renew by {fmtDate(n.renewBy)}</span> : null}</span> : <span>{fmtDate(n.expiresAt)} · {days} days</span>) : <span className="text-ink-dim">—</span>}
+                              </div>
+                            </div>
+                            <div className="flex gap-1.5">
+                              <Button size="sm" variant="outline" render={<Link to={pathFor(n)} />}>open</Button>
+                              {n.expiresAt && isEthSecondLevel(n.name) ? <Button size="sm" variant="ghost" render={<Link to={`/renew/${n.name}`} />}>extend</Button> : null}
+                            </div>
+                          </div>
+                        ) : null}
+                      </li>
+                    )
+                  })}
+                </ul>
+              <Table className="max-sm:hidden">
                 <TableHeader>
                   <TableRow>
                     <TableHead>name</TableHead>
@@ -123,6 +164,7 @@ export default function NamesPage({ address: given }: { address?: Address } = {}
                   ))}
                 </TableBody>
               </Table>
+              </>
             )}
             {!mine.isLoading && shown.length > 0 ? <Pager page={pager.page} pages={pager.pages} from={pager.from} to={pager.to} total={pager.total} onPage={pager.setPage} /> : null}
           </Figure>
