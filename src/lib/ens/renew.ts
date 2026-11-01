@@ -122,9 +122,16 @@ export function fmtToken(amount: bigint, decimals: number): string {
 /** "$27.01" from a stablecoin amount */
 export const fmtDollars = (amount: bigint, decimals: number) => `$${fmtToken(amount, decimals)}`
 
-/** "6 years", "1 year, 2 months, 3 days" — nothing under a day */
+/** "6 years", "1 year, 2 months, 3 days", "5 hours", "40 seconds" */
 export function fmtDuration(seconds: bigint): string {
-  if (seconds < DAY) return "—"
+  if (seconds <= 0n) return "—"
+  if (seconds < DAY) {
+    const hours = seconds / 3600n
+    const minutes = (seconds % 3600n) / 60n
+    if (hours) return `${hours} ${hours === 1n ? "hour" : "hours"}${minutes ? `, ${minutes} min` : ""}`
+    if (minutes) return `${minutes} ${minutes === 1n ? "minute" : "minutes"}`
+    return `${seconds} seconds`
+  }
   const years = seconds / YEAR
   const months = (seconds % YEAR) / MONTH
   const days = ((seconds % YEAR) % MONTH) / DAY

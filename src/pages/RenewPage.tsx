@@ -1,7 +1,7 @@
 import { type CSSProperties, type ReactNode, useEffect, useMemo, useState } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import { useQueryClient } from "@tanstack/react-query"
-import { ArrowRight, BadgePercent, Copy, ExternalLink } from "lucide-react"
+import { ArrowRight, BadgePercent, Check, Copy, ExternalLink } from "lucide-react"
 import { toast } from "sonner"
 import { type Hex, erc20Abi, pad } from "viem"
 import { normalize } from "viem/ens"
@@ -15,6 +15,8 @@ import { ConnectButton } from "@/components/wallet/ConnectButton"
 import { FaqRow, FigSplit, Figure, Pager, Section, SectionHeader, StatusText, V2, usePager } from "@/components/wrap"
 import { useMyNames } from "@/hooks/useMyNames"
 import { renewInfoKey, useRenewInfo, useRenewQuote, useRentPricing } from "@/hooks/useRenew"
+import { useHistory } from "@/hooks/useNameHistory"
+import { expiryText } from "@/lib/ens/history"
 import { publicClient } from "@/lib/ens/clients"
 import { PAY_TOKENS, type PayToken, type Pricing, YEAR, ceilToCent, fmtDollars, fmtDuration, fmtToken, isEthSecondLevel, parseDollars, priceFor, renewCalls, solveBudget, tierFor, tiers, yearsToSeconds } from "@/lib/ens/renew"
 import { daysUntil, fmtDate, shortAddr } from "@/lib/format"
@@ -116,7 +118,7 @@ export default function RenewPage() {
   const { sendTransactionAsync } = useSendTransaction()
   const qc = useQueryClient()
   const [phase, setPhase] = useState<"idle" | "approving" | "extending">("idle")
-  const [done, setDone] = useState<{ hash: Hex; seconds: bigint; name: string } | null>(null)
+  const [done, setDone] = useState<{ hash: Hex; seconds: bigint; name: string; amount: bigint; token: PayToken; from: bigint | null } | null>(null)
 
   async function extend() {
     const q = quote.data
@@ -135,9 +137,10 @@ export default function RenewPage() {
         if (receipt.status !== "success") throw new Error(`transaction ${shortAddr(hash, 6)} reverted`)
         if (isApproval) allowance.refetch()
       }
-      setDone({ hash, seconds: q.duration, name: name! })
+      setDone({ hash, seconds: q.duration, name: name!, amount: q.amount, token, from: info.data?.expiry ?? null })
       toast.success(`${name} extended`, { description: fmtDuration(q.duration) })
       qc.invalidateQueries({ queryKey: renewInfoKey(name!) })
+      qc.invalidateQueries({ queryKey: ["history", MAINNET, "name", name!] })
       qc.invalidateQueries({ queryKey: ["my-names"] })
       balance.refetch()
       allowance.refetch()
@@ -231,6 +234,25 @@ export default function RenewPage() {
           </div>
 
           {/* ------------------------------------------------------------ what you get */}
+          {done && done.name === name ? (
+            <div className="flex flex-col p-4 sm:p-5">
+              <Label>extended</Label>
+              <div className="t-h2 mt-2 flex items-center gap-2 text-ink">
+                <Check className="size-6 shrink-0 text-ok" aria-hidden="true" />
+                {done.name}
+              </div>
+              <dl className="mt-4 divide-y divide-line text-[12.5px]">
+                <Row k="added" v={fmtDuration(done.seconds)} />
+                <Row k="expiry" v={done.from ? <>{fmtDate(done.from)} <span className="text-ink-dim">→</span> {fmtDate(done.from + done.seconds)}</> : fmtDate(info.data?.expiry ?? 0n)} />
+                <Row k="paid" v={`${fmtToken(done.amount, done.token.decimals)} ${done.token.symbol}`} />
+                <Row k="transaction" v={<a className="link-blue" href={`https://etherscan.io/tx/${done.hash}`} target="_blank" rel="noreferrer">{shortAddr(done.hash, 6)} ↗</a>} />
+              </dl>
+              <div className="mt-auto flex flex-wrap gap-2 pt-5">
+                <Button variant="accent" render={<Link to={`/${done.name}`} />}>open record</Button>
+                <Button variant="outline" onClick={() => setDone(null)}>extend again</Button>
+              </div>
+            </div>
+          ) : (
           <div className="flex flex-col p-4 sm:p-5">
             <Label>{mode === "budget" ? "buys" : "costs"}</Label>
             <div className="t-h2 mt-2 text-ink">
@@ -258,19 +280,13 @@ export default function RenewPage() {
                   </span>
                 </div>
               )}
-              {done ? (
-                <p className="t-caption mt-3 normal-case tracking-normal">
-                  <StatusText tone="ok">{done.name} extended by {fmtDuration(done.seconds)}</StatusText> ·{" "}
-                  <a className="link-blue" href={`https://etherscan.io/tx/${done.hash}`} target="_blank" rel="noreferrer">
-                    {shortAddr(done.hash, 8)}
-                  </a>{" "}
-                  · <Link className="link-blue" to={`/${done.name}`}>open the record</Link>
-                </p>
-              ) : null}
             </div>
           </div>
+          )}
         </FigSplit>
       </Figure>
+
+      {name && isEthSecondLevel(name) ? <ExtensionsFigure name={name} /> : null}
 
       {/* ------------------------------------------------------------ details */}
       <div className="mt-8 border-t border-line">
@@ -502,5 +518,57 @@ function YourNamesPicker({ current, onPick }: { current: string | null; onPick: 
         <Pager page={pager.page} pages={pager.pages} from={pager.from} to={pager.to} total={pager.total} onPage={pager.setPage} />
       </PopoverContent>
     </Popover>
+  )
+}
+
+const EXTENSION_ACTIONS = new Set(["registration_renewed", "expiry_changed", "registration_granted", "registration_reserved"])
+
+/** every time this name's expiry moved, newest first, from the indexer */
+function ExtensionsFigure({ name }: { name: string }) {
+  const q = useHistory({ name }, MAINNET, true)
+  const rows = useMemo(() => {
+    const all = q.data?.pages.flatMap((p) => p?.rows ?? []) ?? []
+    const migrations = new Set(all.filter((r) => r.meta.action === "migration_applied").map((r) => r.tx))
+    const seen = new Set<string>()
+    return all
+      .filter((r) => EXTENSION_ACTIONS.has(r.meta.action) && r.meta.expiresAt)
+      .filter((r) => {
+        if (seen.has(r.tx)) return false
+        seen.add(r.tx)
+        return true
+      })
+      .map((r) => ({
+        id: r.id,
+        at: r.at,
+        tx: r.tx,
+        what: migrations.has(r.tx) ? "upgraded to ENSv2" : r.meta.action === "registration_reserved" ? "reserved on ENSv2" : r.meta.action === "registration_granted" ? "registered" : "extended",
+        until: expiryText(r.meta.expiresAt!),
+      }))
+  }, [q.data])
+  return (
+    <Figure n={2} name={`extensions · ${name}`} className="mt-8" padded={false} dotted={false}>
+      {q.isLoading ? (
+        <div className="space-y-2 p-4"><div className="h-3 w-56 bg-wash" /><div className="h-3 w-40 bg-wash" /></div>
+      ) : rows.length === 0 ? (
+        <p className="t-fig-body p-4 text-ink-dim sm:p-5">no extensions recorded yet.</p>
+      ) : (
+        <ul className="divide-y divide-line text-[12.5px]">
+          {rows.slice(0, 10).map((r) => (
+            <li key={r.id} className="flex flex-wrap items-baseline gap-x-4 gap-y-1 px-4 py-2.5 sm:px-5">
+              <span className="tabular text-ink-dim">{fmtDate(BigInt(r.at))}</span>
+              <span className="min-w-0 flex-1 text-ink">
+                {r.what} {r.until === "none" ? "" : <>until <span className="font-semibold">{r.until}</span></>}
+              </span>
+              <a className="link-blue tabular text-ink-dim" href={`https://etherscan.io/tx/${r.tx}`} target="_blank" rel="noreferrer">{shortAddr(r.tx, 4)}</a>
+            </li>
+          ))}
+        </ul>
+      )}
+      {rows.length > 10 ? (
+        <div className="border-t border-line px-4 py-2 text-right text-[11px] sm:px-5">
+          <Link className="link-blue text-ink" to={`/${name}`}>full history on the record page</Link>
+        </div>
+      ) : null}
+    </Figure>
   )
 }
