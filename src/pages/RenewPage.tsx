@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ConnectButton } from "@/components/wallet/ConnectButton"
-import { FaqRow, FigSplit, Figure, Pager, Section, SectionHeader, StatusText, V2, usePager } from "@/components/wrap"
+import { FaqRow, FigSplit, Figure, LivePill, Pager, Section, SectionHeader, StatusText, V2, usePager } from "@/components/wrap"
 import { useMyNames } from "@/hooks/useMyNames"
 import { renewInfoKey, useRenewInfo, useRenewQuote, useRentPricing } from "@/hooks/useRenew"
 import { useHistory } from "@/hooks/useNameHistory"
@@ -286,7 +286,7 @@ export default function RenewPage() {
         </FigSplit>
       </Figure>
 
-      {name && isEthSecondLevel(name) ? <ExtensionsFigure name={name} /> : null}
+      {name && isEthSecondLevel(name) ? <ExtensionsFigure name={name} fresh={done && done.name === name && done.from ? { tx: done.hash, at: Math.floor(Date.now() / 1000), until: fmtDate(done.from + done.seconds) } : null} /> : null}
 
       {/* ------------------------------------------------------------ details */}
       <div className="mt-8 border-t border-line">
@@ -523,14 +523,28 @@ function YourNamesPicker({ current, onPick }: { current: string | null; onPick: 
 
 const EXTENSION_ACTIONS = new Set(["registration_renewed", "expiry_changed", "registration_granted", "registration_reserved"])
 
-/** every time this name's expiry moved, newest first, from the indexer */
-function ExtensionsFigure({ name }: { name: string }) {
+type FreshExtension = { tx: Hex; at: number; until: string }
+
+/**
+ * Every time this name's expiry moved, newest first, from the indexer. A renewal just sent
+ * from this page goes straight to the top and stays until the indexer reports the same
+ * transaction.
+ */
+function ExtensionsFigure({ name, fresh }: { name: string; fresh: FreshExtension | null }) {
   const q = useHistory({ name }, MAINNET, true)
+  // poll the indexer while the fresh row is still only known here
+  const pendingTx = fresh?.tx.toLowerCase()
+  const indexedHas = !!pendingTx && (q.data?.pages.flatMap((p) => p?.rows ?? []) ?? []).some((r) => r.tx.toLowerCase() === pendingTx)
+  useEffect(() => {
+    if (!pendingTx || indexedHas) return
+    const t = setInterval(() => q.refetch(), 15_000)
+    return () => clearInterval(t)
+  }, [pendingTx, indexedHas, q.refetch])
   const rows = useMemo(() => {
     const all = q.data?.pages.flatMap((p) => p?.rows ?? []) ?? []
     const migrations = new Set(all.filter((r) => r.meta.action === "migration_applied").map((r) => r.tx))
     const seen = new Set<string>()
-    return all
+    const indexed = all
       .filter((r) => EXTENSION_ACTIONS.has(r.meta.action) && r.meta.expiresAt)
       .filter((r) => {
         if (seen.has(r.tx)) return false
@@ -543,8 +557,13 @@ function ExtensionsFigure({ name }: { name: string }) {
         tx: r.tx,
         what: migrations.has(r.tx) ? "upgraded to ENSv2" : r.meta.action === "registration_reserved" ? "reserved on ENSv2" : r.meta.action === "registration_granted" ? "registered" : "extended",
         until: expiryText(r.meta.expiresAt!),
+        pending: false,
       }))
-  }, [q.data])
+    if (fresh && !indexed.some((r) => r.tx.toLowerCase() === fresh.tx.toLowerCase())) {
+      indexed.unshift({ id: `fresh:${fresh.tx}`, at: fresh.at, tx: fresh.tx, what: "extended", until: fresh.until, pending: true })
+    }
+    return indexed
+  }, [q.data, fresh])
   return (
     <Figure n={2} name={`extensions · ${name}`} className="mt-8" padded={false} dotted={false}>
       {q.isLoading ? (
@@ -558,6 +577,7 @@ function ExtensionsFigure({ name }: { name: string }) {
               <span className="tabular text-ink-dim">{fmtDate(BigInt(r.at))}</span>
               <span className="min-w-0 flex-1 text-ink">
                 {r.what} {r.until === "none" ? "" : <>until <span className="font-semibold">{r.until}</span></>}
+                {r.pending ? <> <LivePill>just now</LivePill></> : null}
               </span>
               <a className="link-blue tabular text-ink-dim" href={`https://etherscan.io/tx/${r.tx}`} target="_blank" rel="noreferrer">{shortAddr(r.tx, 4)}</a>
             </li>
