@@ -163,13 +163,13 @@ async function fetchChecks(contract: Address, name: string): Promise<Checks> {
   return { owner, forward, resolver, safe };
 }
 
-export default function ContractPrimaryPage() {
+export default function ContractNamesPage() {
   const { address, chainId: walletChainId } = useConnection();
   const [contractText, setContractText] = useState("");
   const [name, setName] = useState("");
   const contract = isAddress(contractText) ? (contractText as Address) : null;
   const checks = useQuery({
-    queryKey: ["contract-primary", contract, name],
+    queryKey: ["contract-names", contract, name],
     queryFn: () => fetchChecks(contract!, name.trim()),
     enabled: !!contract,
     retry: 1,
