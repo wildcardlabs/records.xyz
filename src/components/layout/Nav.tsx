@@ -32,6 +32,9 @@ function Nav({ right }: { right?: React.ReactNode }) {
           <NavLink to="/renew" className="nav-link">
             renew
           </NavLink>
+          <NavLink to="/contract-names" className="nav-link">
+            contract names
+          </NavLink>
         </nav>
         <div className="ml-auto flex items-center gap-2">
           {right}
@@ -43,6 +46,7 @@ function Nav({ right }: { right?: React.ReactNode }) {
               <DropdownMenuItem render={<Link to="/" />}>home</DropdownMenuItem>
               {isConnected ? <DropdownMenuItem render={<Link to="/account" />}>account</DropdownMenuItem> : null}
               <DropdownMenuItem render={<Link to="/renew" />}>renew</DropdownMenuItem>
+              <DropdownMenuItem render={<Link to="/contract-names" />}>contract names</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
