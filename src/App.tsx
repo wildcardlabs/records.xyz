@@ -5,6 +5,7 @@ import Home from "@/pages/Home"
 import DesignSystem from "@/pages/DesignSystem"
 import NamesPage from "@/pages/NamesPage"
 import RenewPage from "@/pages/RenewPage"
+import ContractPrimaryPage from "@/pages/ContractPrimaryPage"
 import Lookup from "@/pages/Lookup"
 import NotFound from "@/pages/NotFound"
 
@@ -19,6 +20,7 @@ export default function App() {
           <Route path="names" element={<NamesPage />} />
           <Route path="renew" element={<RenewPage />} />
           <Route path="renew/:name" element={<RenewPage />} />
+          <Route path="contract-primary" element={<ContractPrimaryPage />} />
           <Route path=":name" element={<Lookup />} />
           <Route path="*" element={<NotFound />} />
         </Route>
