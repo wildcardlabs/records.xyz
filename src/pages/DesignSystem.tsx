@@ -42,7 +42,7 @@ export default function DesignSystem() {
 
       <Section>
         <SectionHeader eyebrow="colour" title="Blue is ink, not paint" lede="It colours text and 1px outlines. It fills only the subnav, the blue button and one full-bleed band. Yellow appears on at most two buttons per page." />
-        <Figure n={1} name="palette" padded={false} dotted={false}>
+        <Figure name="palette" padded={false} dotted={false}>
           <div className="grid grid-cols-2 gap-px bg-line sm:grid-cols-4 lg:grid-cols-7">
             {colors.map(([name, v, note]) => (
               <div key={name} className="bg-paper p-3">
@@ -57,7 +57,7 @@ export default function DesignSystem() {
 
       <Section>
         <SectionHeader eyebrow="type" title="One monospace, weight 500, tightly tracked" lede="Azeret Mono everywhere. Inter only for labels inside figures. Never bold above 600, never italic." />
-        <Figure n={2} name="type scale" padded={false} dotted={false}>
+        <Figure name="type scale" padded={false} dotted={false}>
           <div className="divide-y divide-line">
             {[
               ["t-display", "56 / 1.05 / -2px", "Put your accounts on the record"],
@@ -82,7 +82,7 @@ export default function DesignSystem() {
 
       <Section>
         <SectionHeader eyebrow="buttons" title="Square, lowercase, 600. Hover recolours, never moves" />
-        <Figure n={3} name="buttons">
+        <Figure name="buttons">
           <div className="flex flex-wrap items-center gap-3">
             <Button>primary</Button>
             <Button variant="outline">ghost outline</Button>
@@ -127,7 +127,7 @@ export default function DesignSystem() {
 
       <Section>
         <SectionHeader eyebrow="badges" title="Outlined rectangles, pills only for status" />
-        <Figure n={4} name="badges · chips">
+        <Figure name="badges · chips">
           <div className="flex flex-wrap items-center gap-3">
             <Badge>pass</Badge>
             <Badge>best</Badge>
@@ -147,7 +147,7 @@ export default function DesignSystem() {
 
       <Section>
         <SectionHeader eyebrow="forms" title="Hairline inputs, dim uppercase labels" />
-        <Figure n={5} name="form">
+        <Figure name="form">
           <div className="grid gap-5 sm:grid-cols-2">
             <div className="grid gap-2">
               <Label htmlFor="name">ens name</Label>
@@ -172,8 +172,8 @@ export default function DesignSystem() {
       </Section>
 
       <Section>
-        <SectionHeader eyebrow="figures" title="Every product visual is a numbered figure" lede="Frame, fig-bar, lavender dotted panel. Real-looking data inside: timestamps, chains, pass and fail." />
-        <Figure n={6} name="hero · cell grid">
+        <SectionHeader eyebrow="figures" title="Every product visual is a figure" lede="Frame, fig-bar, lavender dotted panel. Real-looking data inside: timestamps, chains, pass and fail." />
+        <Figure name="hero · cell grid">
           <div className="flex flex-wrap items-start justify-between gap-6">
             <CellGrid lit={lit} />
             <div className="flex flex-col items-end gap-2">
@@ -190,7 +190,7 @@ export default function DesignSystem() {
         </Figure>
 
         <div className="mt-6 grid gap-6 lg:grid-cols-2">
-          <Figure n={7} name="run list" padded={false} dotted={false}>
+          <Figure name="run list" padded={false} dotted={false}>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -216,7 +216,7 @@ export default function DesignSystem() {
             </Table>
           </Figure>
 
-          <Figure n={8} name="quickstart" padded={false}>
+          <Figure name="quickstart" padded={false}>
             <Code lines={[
               [c("# accounts[8453] · base")],
               [k("name"), p(": "), s("alice.eth")],
@@ -231,7 +231,7 @@ export default function DesignSystem() {
           </Figure>
         </div>
 
-        <Figure n={9} name="feature rail" className="mt-6" padded={false} dotted={false}>
+        <Figure name="feature rail" className="mt-6" padded={false} dotted={false}>
           <FigSplit>
             <div className="divide-y divide-line">
               {[["01", "List", "Add any account on any chain."], ["02", "Consent", "Each account signs an EIP-712 consent."], ["03", "Publish", "One batch writes listing and proofs."]].map(([num, t, b], i) => (
@@ -258,7 +258,7 @@ export default function DesignSystem() {
 
       <Section>
         <SectionHeader eyebrow="navigation" title="Tabs and faq rows" />
-        <Figure n={10} name="tabs">
+        <Figure name="tabs">
           <Tabs defaultValue="accounts">
             <TabsList>
               <TabsTrigger value="accounts">accounts</TabsTrigger>

@@ -330,9 +330,9 @@ export default function RecordPage() {
           </p>
         ) : null}
 
-        {/* fig 1 · profile */}
+        {/* profile */}
         {data?.resolver || record.isLoading ? (
-          <Figure n={1} name={`profile · ${name}`} className="mt-8" padded={false} dotted={false}>
+          <Figure name={`profile · ${name}`} className="mt-8" padded={false} dotted={false}>
             {editingProfile ? (
               <RecordEditor
                 recordsChainId={recordsChainId}
@@ -381,8 +381,8 @@ export default function RecordPage() {
           </p>
         ) : null}
 
-        {/* fig 2 · wallets on the record */}
-        <Figure n={2} name={`wallets on the record · ${name}`} className="mt-6" padded={false} dotted={false} id="accounts">
+        {/* wallets on the record */}
+        <Figure name={`wallets on the record · ${name}`} className="mt-6" padded={false} dotted={false} id="accounts">
           <div className="border-b border-line px-4 py-2 sm:px-5">
             <span className="t-caption normal-case tracking-normal">wallets that have signed to say they belong to {name}</span>
           </div>
@@ -449,7 +449,7 @@ export default function RecordPage() {
 
         {/* fig 3 · history */}
         {hasBigName(recordsChainId) ? (
-          <Figure n={3} name={`history · ${name}`} className="mt-6" padded={false} dotted={false}>
+          <Figure name={`history · ${name}`} className="mt-6" padded={false} dotted={false}>
             <HistoryFigure name={name} recordsChainId={recordsChainId} explorer={explorer} enabled />
           </Figure>
         ) : null}
@@ -459,7 +459,7 @@ export default function RecordPage() {
       {hasLinks ? (
         <Section>
           <SectionHeader eyebrow="ensv2" title="Shared profile" />
-          <Figure n={4} name={`shared profile · ${data?.resolver ? shortAddr(data.resolver) : ""}`} padded={false} dotted={false}>
+          <Figure name={`shared profile · ${data?.resolver ? shortAddr(data.resolver) : ""}`} padded={false} dotted={false}>
             <SharedFigure
               name={name}
               rows={links.data?.rows}
@@ -490,7 +490,7 @@ export default function RecordPage() {
       {hasRoles ? (
         <Section>
           <SectionHeader eyebrow="ensv2" title={`Who can edit ${name}`} />
-          <Figure n={hasLinks ? 5 : 4} name={`access · ${name}`} padded={false} dotted={false}>
+          <Figure name={`access · ${name}`} padded={false} dotted={false}>
             <AccessFigure
               recordsChainId={recordsChainId}
               rows={resolverRoles.data}
