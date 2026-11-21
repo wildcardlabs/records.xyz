@@ -447,7 +447,7 @@ export default function RecordPage() {
           ]}
         />
 
-        {/* fig 3 · history */}
+        {/* history */}
         {hasBigName(recordsChainId) ? (
           <Figure name={`history · ${name}`} className="mt-6" padded={false} dotted={false}>
             <HistoryFigure name={name} recordsChainId={recordsChainId} explorer={explorer} enabled />
