@@ -159,7 +159,7 @@ export default function RenewPage() {
     <Section>
       <SectionHeader eyebrow="renew" title="Extend a name" lede="Any wallet can extend any .eth name. Longer terms cost less per year." />
 
-      <Figure n={1} name={`extend · ${name ?? "…"}`} padded={false} dotted={false}>
+      <Figure name={`extend · ${name ?? "…"}`} padded={false} dotted={false}>
         {/* ------------------------------------------------------------ the name */}
         <div className="border-b border-line p-4 sm:p-5">
           <Label htmlFor="renew-name">name</Label>
@@ -565,7 +565,7 @@ function ExtensionsFigure({ name, fresh }: { name: string; fresh: FreshExtension
     return indexed
   }, [q.data, fresh])
   return (
-    <Figure n={2} name={`extensions · ${name}`} className="mt-8" padded={false} dotted={false}>
+    <Figure name={`extensions · ${name}`} className="mt-8" padded={false} dotted={false}>
       {q.isLoading ? (
         <div className="space-y-2 p-4"><div className="h-3 w-56 bg-wash" /><div className="h-3 w-40 bg-wash" /></div>
       ) : rows.length === 0 ? (

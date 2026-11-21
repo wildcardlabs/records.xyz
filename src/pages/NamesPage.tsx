@@ -60,7 +60,7 @@ export default function NamesPage({ address: given }: { address?: Address } = {}
               { label: "source", value: indexed ? "bigname" : "primary only", hint: indexed ? "owned and managed names" : "no indexer on this chain yet" },
             ]}
           />
-          <Figure n={1} name={`names · ${shortAddr(address, 4)}`} padded={false} dotted={false}>
+          <Figure name={`names · ${shortAddr(address, 4)}`} padded={false} dotted={false}>
             <div className="flex flex-col gap-2 border-b border-line px-4 py-3 sm:flex-row sm:items-center sm:px-5">
               <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="filter by name" aria-label="filter names" className="h-9 sm:max-w-xs" />
               <div className="flex flex-wrap gap-1.5 text-[11px]">
@@ -172,7 +172,7 @@ export default function NamesPage({ address: given }: { address?: Address } = {}
             from <a className="link-blue" href="https://bigname.sh" target="_blank" rel="noreferrer">bigname</a>
           </p>
           <SectionHeader className="mt-14" eyebrow="account" title="History" />
-          <Figure n={2} name={`history · ${shortAddr(address, 4)}`} padded={false} dotted={false}>
+          <Figure name={`history · ${shortAddr(address, 4)}`} padded={false} dotted={false}>
             <HistoryFigure address={address} recordsChainId={DEFAULT_RECORDS_CHAIN.chain.id} explorer={DEFAULT_RECORDS_CHAIN.explorer} enabled />
           </Figure>
         </>

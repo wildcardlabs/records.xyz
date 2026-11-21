@@ -279,8 +279,7 @@ export default function ContractNamesPage() {
         lede="Set the primary name of an Ownable contract from its owner wallet."
       />
       <Figure
-        n={1}
-        name={`contract primary · ${name || "…"}`}
+        name="contract names"
         padded={false}
         dotted={false}
       >

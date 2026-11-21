@@ -2,8 +2,6 @@ import * as React from "react"
 import { cn } from "cn"
 
 type FigureProps = React.ComponentProps<"figure"> & {
-  /** figure number, rendered as `fig. N` */
-  n?: number | string
   /** short name shown in the bar, e.g. "quickstart" or "taste loop · sample shift" */
   name: string
   /** draw the dotted lavender panel behind the body */
@@ -13,24 +11,24 @@ type FigureProps = React.ComponentProps<"figure"> & {
 }
 
 /**
- * The signature numbered figure: hairline frame, a `>_ ——— [ fig. N · name ] ——— ⌗` bar,
+ * The signature figure: hairline frame, a `>_ ——— [ name ] ——— ⌗` bar,
  * and a pale lavender dotted panel. Every product visual is drawn inside one of these.
  */
-function Figure({ n, name, dotted = true, padded = true, className, children, ...props }: FigureProps) {
+function Figure({ name, dotted = true, padded = true, className, children, ...props }: FigureProps) {
   return (
     <figure data-slot="figure" className={cn("fig m-0 flex min-w-0 flex-col", className)} {...props}>
-      <FigBar n={n} name={name} />
+      <FigBar name={name} />
       <div className={cn("min-w-0 flex-1", dotted && "fig-body", padded && "p-4 sm:p-5")}>{children}</div>
     </figure>
   )
 }
 
-function FigBar({ n, name, className }: { n?: number | string; name: string; className?: string }) {
+function FigBar({ name, className }: { name: string; className?: string }) {
   return (
     <div className={cn("fig-bar", className)} aria-hidden="true">
       <span className="ic">&gt;_</span>
       <span className="rule" />
-      <span className="truncate">[ {n !== undefined ? `fig. ${n} · ` : ""}{name} ]</span>
+      <span className="truncate">[ {name} ]</span>
       <span className="rule" />
       <span className="ic">⌗</span>
     </div>

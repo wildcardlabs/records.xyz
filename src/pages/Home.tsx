@@ -123,7 +123,7 @@ export default function Home() {
         </div>
 
 
-        <Figure n={1} name="example · a record page" className="mt-10" padded={false} dotted={false}>
+        <Figure name="example · a record page" className="mt-10" padded={false} dotted={false}>
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-2.5">
             <span className="t-caption inline-flex items-center gap-2 normal-case tracking-normal"><VerifiedSeal className="size-3.5 text-ok" /> alice.eth is made up</span>
             <Badge variant="dim">example</Badge>
@@ -147,7 +147,7 @@ export default function Home() {
 
       <Section>
         <SectionHeader eyebrow="what you can do" title="One page for the whole name" />
-        <Figure n={2} name="what a record page holds" padded={false} dotted={false}>
+        <Figure name="what a record page holds" padded={false} dotted={false}>
           <div className="grid divide-y divide-line sm:grid-cols-2 lg:grid-cols-3 sm:[&>*:nth-child(odd)]:border-r sm:[&>*]:border-line lg:[&>*:nth-child(odd)]:border-r-0 lg:[&>*:not(:nth-child(3n))]:border-r">
             {features.map((f) => (
               <div key={f.num} className="p-5">
@@ -164,7 +164,7 @@ export default function Home() {
 
       <Section>
         <SectionHeader eyebrow="wallets on the record" title="Three steps, one transaction" lede="Any wallet you control can sign to say it belongs to your name." />
-        <Figure n={3} name="how a wallet gets on the record" padded={false} dotted={false}>
+        <Figure name="how a wallet gets on the record" padded={false} dotted={false}>
           <FigSplit>
             <div className="divide-y divide-line">
               {steps.map((st) => (
